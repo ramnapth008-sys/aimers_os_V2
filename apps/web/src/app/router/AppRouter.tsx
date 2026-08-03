@@ -15,6 +15,10 @@ import {
   StudentOnboardingGate,
   StudentOnboardingPage,
 } from "../../pages/onboarding";
+import {
+  SubjectsPage,
+} from "../../pages/subjects";
+
 import { ModulePage } from "../../pages/shared/ModulePage";
 
 const modules = [
@@ -45,13 +49,6 @@ const modules = [
     title: "Planner",
     description:
       "Organise tasks, study sessions, lectures and revision schedules.",
-  },
-  {
-    path: "subjects",
-    eyebrow: "SYLLABUS INTELLIGENCE",
-    title: "Subjects",
-    description:
-      "Track chapters, topics, resources and subject-wise mastery.",
   },
   {
     path: "analytics",
@@ -204,6 +201,11 @@ export function AppRouter() {
           <Route
             path="dashboard"
             element={<DashboardPage />}
+          />
+
+          <Route
+            path="subjects"
+            element={<SubjectsPage />}
           />
 
           {modules.map((module) => (
