@@ -1,929 +1,1321 @@
 import {
+  useAuth,
+} from "@aimers/auth";
+
+import {
   Activity,
-  AppWindow,
-  ArrowUpRight,
+  AlertTriangle,
+  ArrowRight,
   BarChart3,
   BookOpenCheck,
-  Bot,
   Brain,
-  Check,
+  CheckCircle2,
   ChevronRight,
-  CircleCheckBig,
+  CircleDashed,
   Clock3,
-  Flame,
-  Globe2,
-  Headphones,
-  Library,
-  Mic2,
-  Play,
-  Radio,
+  FlaskConical,
+  GraduationCap,
+  Leaf,
+  LoaderCircle,
+  RefreshCw,
   Sparkles,
   Target,
   TrendingUp,
-  Video,
   Zap,
 } from "lucide-react";
 
-import type {
-  CSSProperties,
-  ReactNode,
+import {
+  type CSSProperties,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
 } from "react";
 
-import { Link } from "react-router-dom";
+import {
+  Link,
+} from "react-router-dom";
+
+import {
+  getAcademicWorkspace,
+} from "../subjects/subjects.service";
+
+import type {
+  AcademicChapter,
+  AcademicSyllabusSubject,
+  AcademicWorkspace,
+  ChapterProgress,
+  TopicMastery,
+} from "../subjects/subjects.types";
 
 import "./dashboard.css";
 
-interface MetricCardProps {
+type MetricTone =
+  | "violet"
+  | "blue"
+  | "green"
+  | "orange"
+  | "pink";
+
+interface MetricProps {
   label: string;
   value: string;
-  unit?: string;
   detail: string;
-  change: string;
   icon: ReactNode;
-  tone: "orange" | "blue" | "violet" | "pink" | "green";
-  points: string;
+  tone: MetricTone;
+  progress?: number;
 }
 
-const missions = [
-  {
-    title: "Physics: Electrostatics",
-    detail: "20 Questions",
-    completed: true,
-  },
-  {
-    title: "Chemistry: Organic Reactions",
-    detail: "25 Questions",
-    completed: true,
-  },
-  {
-    title: "Biology: Human Physiology",
-    detail: "Read & Notes",
-    completed: false,
-  },
-  {
-    title: "Physics: Current Electricity",
-    detail: "15 Questions",
-    completed: false,
-  },
-];
-
-const weakTopics = [
-  {
-    topic: "Electrostatics",
-    value: "72% Weak",
-    tone: "danger",
-  },
-  {
-    topic: "Organic Reactions",
-    value: "65% Weak",
-    tone: "danger",
-  },
-  {
-    topic: "Human Physiology",
-    value: "58% Weak",
-    tone: "warning",
-  },
-  {
-    topic: "Current Electricity",
-    value: "47% Weak",
-    tone: "success",
-  },
-];
-
-const quickActions = [
-  {
-    label: "Start Mock Test",
-    icon: Target,
-    path: "/mock-tests",
-  },
-  {
-    label: "Flashcards",
-    icon: LayersIcon,
-    path: "/flashcards",
-  },
-  {
-    label: "AI Doubt Solver",
-    icon: Bot,
-    path: "/ai-mentor",
-  },
-  {
-    label: "Voice Notes",
-    icon: Mic2,
-    path: "/notes",
-  },
-  {
-    label: "Memory Review",
-    icon: Brain,
-    path: "/memory-engine",
-  },
-  {
-    label: "Question Bank",
-    icon: Library,
-    path: "/question-bank",
-  },
-  {
-    label: "Study Planner",
-    icon: Clock3,
-    path: "/planner",
-  },
-  {
-    label: "Focus Music",
-    icon: Headphones,
-    path: "/focus-room",
-  },
-];
-
-function LayersIcon() {
-  return <BookOpenCheck size={16} />;
+interface ChapterEntry {
+  subject: AcademicSyllabusSubject;
+  chapter: AcademicChapter;
 }
 
-function MetricCard({
+function clampPercent(
+  value: number,
+): number {
+  return Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(value),
+    ),
+  );
+}
+
+function chapterPriority(
+  progress: ChapterProgress | undefined,
+): number {
+  if (
+    progress?.state === "IN_PROGRESS"
+  ) {
+    return 0;
+  }
+
+  if (
+    !progress ||
+    progress.state === "NOT_STARTED"
+  ) {
+    return 1;
+  }
+
+  if (
+    progress.state === "SKIPPED"
+  ) {
+    return 2;
+  }
+
+  return 3;
+}
+
+function isAssessed(
+  mastery: TopicMastery | undefined,
+): mastery is TopicMastery {
+  return Boolean(
+    mastery &&
+    (
+      mastery.attempts > 0 ||
+      mastery.lastAssessedAt ||
+      mastery.level !== "NOT_ASSESSED"
+    ),
+  );
+}
+
+function subjectTone(
+  code: string,
+): string {
+  const normalized =
+    code.toUpperCase();
+
+  if (normalized.includes("PHYS")) {
+    return "physics";
+  }
+
+  if (normalized.includes("CHEM")) {
+    return "chemistry";
+  }
+
+  if (
+    normalized.includes("BIO") ||
+    normalized.includes("BOT") ||
+    normalized.includes("ZOO")
+  ) {
+    return "biology";
+  }
+
+  return "other";
+}
+
+function SubjectIcon({
+  code,
+}: {
+  code: string;
+}) {
+  const tone = subjectTone(code);
+
+  if (tone === "physics") {
+    return <Zap size={18} />;
+  }
+
+  if (tone === "chemistry") {
+    return <FlaskConical size={18} />;
+  }
+
+  if (tone === "biology") {
+    return <Leaf size={18} />;
+  }
+
+  return <BookOpenCheck size={18} />;
+}
+
+function formatDate(
+  value: string | null,
+): string {
+  if (!value) {
+    return "Not studied yet";
+  }
+
+  return new Intl.DateTimeFormat(
+    "en-IN",
+    {
+      day: "numeric",
+      month: "short",
+      hour: "numeric",
+      minute: "2-digit",
+    },
+  ).format(new Date(value));
+}
+
+function Metric({
   label,
   value,
-  unit,
   detail,
-  change,
   icon,
   tone,
-  points,
-}: MetricCardProps) {
+  progress,
+}: MetricProps) {
   return (
     <article
-      className={`metric-card metric-${tone}`}
+      className={`live-metric live-metric-${tone}`}
     >
       <header>
-        <div className="metric-icon">
-          {icon}
-        </div>
-
-        <span>{label}</span>
-
-        <button
-          type="button"
-          aria-label={`Open ${label}`}
-        >
-          <ArrowUpRight size={13} />
-        </button>
+        <span>{icon}</span>
+        <small>{label}</small>
       </header>
 
-      <div className="metric-value">
-        <strong>{value}</strong>
-
-        {unit && <span>{unit}</span>}
-      </div>
-
+      <strong>{value}</strong>
       <p>{detail}</p>
 
-      <svg
-        className="metric-sparkline"
-        viewBox="0 0 120 28"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <polyline
-          points={points}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        />
-      </svg>
-
-      <small>{change}</small>
-    </article>
-  );
-}
-
-function Panel({
-  title,
-  eyebrow,
-  action,
-  children,
-  className = "",
-}: {
-  title: string;
-  eyebrow?: string;
-  action?: ReactNode;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <article
-      className={`dashboard-panel ${className}`}
-    >
-      <header className="panel-heading">
-        <div>
-          {eyebrow && (
-            <span>{eyebrow}</span>
-          )}
-
-          <h2>{title}</h2>
+      {typeof progress === "number" && (
+        <div className="live-metric-track">
+          <i
+            style={{
+              width:
+                `${clampPercent(progress)}%`,
+            }}
+          />
         </div>
-
-        {action}
-      </header>
-
-      {children}
+      )}
     </article>
   );
 }
 
-function ProgressRing({
-  value,
-  size = 112,
-}: {
-  value: number;
-  size?: number;
-}) {
-  const style = {
-    "--ring-value": `${value * 3.6}deg`,
-    width: `${size}px`,
-    height: `${size}px`,
-  } as CSSProperties;
-
+function LoadingState() {
   return (
-    <div
-      className="progress-ring"
-      style={style}
-    >
-      <div>
-        <strong>{value}%</strong>
-        <span>Completed</span>
-      </div>
-    </div>
+    <section className="live-dashboard-state">
+      <LoaderCircle
+        className="live-dashboard-spinner"
+        size={30}
+      />
+
+      <h1>
+        Loading your learning system
+      </h1>
+
+      <p>
+        Connecting syllabus progress,
+        mastery and practice data…
+      </p>
+    </section>
+  );
+}
+
+function ErrorState({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
+  return (
+    <section className="live-dashboard-state error">
+      <AlertTriangle size={30} />
+
+      <h1>
+        Dashboard data is unavailable
+      </h1>
+
+      <p>{message}</p>
+
+      <button
+        type="button"
+        onClick={onRetry}
+      >
+        <RefreshCw size={16} />
+        Try again
+      </button>
+    </section>
   );
 }
 
 export function DashboardPage() {
+  const {
+    apiFetch,
+    user,
+  } = useAuth();
+
+  const [
+    workspace,
+    setWorkspace,
+  ] = useState<AcademicWorkspace | null>(
+    null,
+  );
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    refreshing,
+    setRefreshing,
+  ] = useState(false);
+
+  const [
+    error,
+    setError,
+  ] = useState("");
+
+  const loadWorkspace =
+    useCallback(
+      async (
+        refresh = false,
+      ) => {
+        if (refresh) {
+          setRefreshing(true);
+        } else {
+          setLoading(true);
+        }
+
+        setError("");
+
+        try {
+          const result =
+            await getAcademicWorkspace(
+              apiFetch,
+            );
+
+          setWorkspace(result);
+        } catch (caught) {
+          setError(
+            caught instanceof Error
+              ? caught.message
+              : "Unable to load academic data.",
+          );
+        } finally {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      },
+      [apiFetch],
+    );
+
+  useEffect(() => {
+    void loadWorkspace();
+  }, [loadWorkspace]);
+
+  const dashboard =
+    useMemo(() => {
+      if (!workspace) {
+        return null;
+      }
+
+      const subjects =
+        workspace
+          .syllabusVersion
+          .subjects;
+
+      const chapterEntries:
+        ChapterEntry[] =
+        subjects.flatMap(
+          (subject) =>
+            subject.units.flatMap(
+              (unit) =>
+                unit.chapters.map(
+                  (chapter) => ({
+                    subject,
+                    chapter,
+                  }),
+                ),
+            ),
+        );
+
+      const topicEntries =
+        chapterEntries.flatMap(
+          ({
+            subject,
+            chapter,
+          }) =>
+            chapter.topics.map(
+              (topic) => ({
+                subject,
+                chapter,
+                topic,
+              }),
+            ),
+        );
+
+      const progressByChapter =
+        new Map(
+          workspace.chapterProgress.map(
+            (progress) => [
+              progress.chapterId,
+              progress,
+            ],
+          ),
+        );
+
+      const masteryByTopic =
+        new Map(
+          workspace.topicMastery.map(
+            (mastery) => [
+              mastery.topicId,
+              mastery,
+            ],
+          ),
+        );
+
+      const overallProgress =
+        chapterEntries.length === 0
+          ? 0
+          : clampPercent(
+              chapterEntries.reduce(
+                (
+                  total,
+                  {
+                    chapter,
+                  },
+                ) =>
+                  total +
+                  (
+                    progressByChapter.get(
+                      chapter.id,
+                    )?.completionPercent ??
+                    0
+                  ),
+                0,
+              ) /
+              chapterEntries.length,
+            );
+
+      const completedChapters =
+        chapterEntries.filter(
+          ({
+            chapter,
+          }) =>
+            progressByChapter.get(
+              chapter.id,
+            )?.state === "COMPLETED",
+        ).length;
+
+      const inProgressChapters =
+        chapterEntries.filter(
+          ({
+            chapter,
+          }) =>
+            progressByChapter.get(
+              chapter.id,
+            )?.state === "IN_PROGRESS",
+        ).length;
+
+      const questionAttempts =
+        workspace.chapterProgress.reduce(
+          (
+            total,
+            progress,
+          ) =>
+            total +
+            progress.questionAttempts,
+          0,
+        );
+
+      const correctAnswers =
+        workspace.chapterProgress.reduce(
+          (
+            total,
+            progress,
+          ) =>
+            total +
+            progress.correctAnswers,
+          0,
+        );
+
+      const accuracy =
+        questionAttempts === 0
+          ? 0
+          : clampPercent(
+              (
+                correctAnswers /
+                questionAttempts
+              ) * 100,
+            );
+
+      const assessedMasteries =
+        workspace.topicMastery.filter(
+          (mastery) =>
+            isAssessed(mastery),
+        );
+
+      const masteryScore =
+        assessedMasteries.length === 0
+          ? 0
+          : clampPercent(
+              assessedMasteries.reduce(
+                (
+                  total,
+                  mastery,
+                ) =>
+                  total +
+                  mastery.masteryScore,
+                0,
+              ) /
+              assessedMasteries.length,
+            );
+
+      const masteredTopics =
+        workspace.topicMastery.filter(
+          (mastery) =>
+            mastery.level === "MASTERED",
+        ).length;
+
+      const subjectProgress =
+        subjects.map((subject) => {
+          const chapters =
+            subject.units.flatMap(
+              (unit) =>
+                unit.chapters,
+            );
+
+          const progress =
+            chapters.length === 0
+              ? 0
+              : clampPercent(
+                  chapters.reduce(
+                    (
+                      total,
+                      chapter,
+                    ) =>
+                      total +
+                      (
+                        progressByChapter.get(
+                          chapter.id,
+                        )
+                          ?.completionPercent ??
+                        0
+                      ),
+                    0,
+                  ) /
+                  chapters.length,
+                );
+
+          return {
+            id: subject.id,
+            code:
+              subject.subject.code,
+            name:
+              subject.subject.name,
+            progress,
+          };
+        });
+
+      const queue =
+        [...chapterEntries]
+          .sort(
+            (
+              left,
+              right,
+            ) => {
+              const leftProgress =
+                progressByChapter.get(
+                  left.chapter.id,
+                );
+
+              const rightProgress =
+                progressByChapter.get(
+                  right.chapter.id,
+                );
+
+              const priority =
+                chapterPriority(
+                  leftProgress,
+                ) -
+                chapterPriority(
+                  rightProgress,
+                );
+
+              if (priority !== 0) {
+                return priority;
+              }
+
+              return (
+                (
+                  rightProgress
+                    ?.completionPercent ??
+                  0
+                ) -
+                (
+                  leftProgress
+                    ?.completionPercent ??
+                  0
+                )
+              );
+            },
+          )
+          .slice(0, 5)
+          .map(
+            ({
+              subject,
+              chapter,
+            }) => {
+              const progress =
+                progressByChapter.get(
+                  chapter.id,
+                );
+
+              return {
+                id: chapter.id,
+                subject:
+                  subject.subject.name,
+                chapter: chapter.name,
+                topics:
+                  chapter.topics.length,
+                percent:
+                  progress
+                    ?.completionPercent ??
+                  0,
+                state:
+                  progress?.state ??
+                  "NOT_STARTED",
+              };
+            },
+          );
+
+      const weakTopics =
+        topicEntries
+          .map(
+            ({
+              subject,
+              topic,
+            }) => {
+              const mastery =
+                masteryByTopic.get(
+                  topic.id,
+                );
+
+              const assessed =
+                isAssessed(mastery);
+
+              return {
+                id: topic.id,
+                subject:
+                  subject.subject.name,
+                topic: topic.name,
+                assessed,
+                score:
+                  mastery
+                    ?.masteryScore ?? 0,
+              };
+            },
+          )
+          .filter(
+            (item) =>
+              !item.assessed ||
+              item.score < 60,
+          )
+          .sort(
+            (
+              left,
+              right,
+            ) => {
+              if (
+                left.assessed !==
+                right.assessed
+              ) {
+                return left.assessed
+                  ? -1
+                  : 1;
+              }
+
+              return (
+                left.score -
+                right.score
+              );
+            },
+          )
+          .slice(0, 5);
+
+      const chapterLookup =
+        new Map(
+          chapterEntries.map(
+            (entry) => [
+              entry.chapter.id,
+              entry,
+            ],
+          ),
+        );
+
+      const recentActivity =
+        [...workspace.chapterProgress]
+          .filter(
+            (progress) =>
+              Boolean(
+                progress.lastStudiedAt,
+              ),
+          )
+          .sort(
+            (
+              left,
+              right,
+            ) =>
+              new Date(
+                right.lastStudiedAt ??
+                0,
+              ).getTime() -
+              new Date(
+                left.lastStudiedAt ??
+                0,
+              ).getTime(),
+          )
+          .slice(0, 5)
+          .flatMap(
+            (progress) => {
+              const entry =
+                chapterLookup.get(
+                  progress.chapterId,
+                );
+
+              if (!entry) {
+                return [];
+              }
+
+              return [
+                {
+                  id: progress.id,
+                  subject:
+                    entry.subject.subject.name,
+                  chapter:
+                    entry.chapter.name,
+                  percent:
+                    progress.completionPercent,
+                  state: progress.state,
+                  lastStudiedAt:
+                    progress.lastStudiedAt,
+                },
+              ];
+            },
+          );
+
+      const weakestSubject =
+        [...subjectProgress].sort(
+          (
+            left,
+            right,
+          ) =>
+            left.progress -
+            right.progress,
+        )[0] ?? null;
+
+      return {
+        subjects,
+        chapterEntries,
+        topicEntries,
+        overallProgress,
+        completedChapters,
+        inProgressChapters,
+        questionAttempts,
+        correctAnswers,
+        accuracy,
+        masteryScore,
+        masteredTopics,
+        assessedTopicCount:
+          assessedMasteries.length,
+        subjectProgress,
+        queue,
+        weakTopics,
+        recentActivity,
+        weakestSubject,
+      };
+    }, [workspace]);
+
+  if (loading) {
+    return (
+      <div className="live-dashboard-page state-page">
+        <LoadingState />
+      </div>
+    );
+  }
+
+  if (
+    !workspace ||
+    !dashboard
+  ) {
+    return (
+      <div className="live-dashboard-page state-page">
+        <ErrorState
+          message={
+            error ||
+            "No academic workspace is available."
+          }
+          onRetry={() => {
+            void loadWorkspace();
+          }}
+        />
+      </div>
+    );
+  }
+
+  const programme =
+    workspace
+      .syllabusVersion
+      .programme;
+
+  const firstName =
+    user?.firstName?.trim() ||
+    "Student";
+
+  const overallStyle = {
+    "--live-progress":
+      `${dashboard.overallProgress}%`,
+  } as CSSProperties;
+
   return (
-    <div className="dashboard-page">
-      <section className="dashboard-metrics">
-        <MetricCard
-          label="Study Streak"
-          value="27"
-          unit="days"
-          detail="Best: 27 days"
-          change="↑ 4 days this month"
-          icon={<Flame size={17} />}
-          tone="orange"
-          points="0,23 12,18 24,21 36,14 48,17 60,9 72,14 84,8 96,11 108,3 120,5"
-        />
+    <div className="live-dashboard-page">
+      <header className="live-dashboard-hero">
+        <div>
+          <span className="live-dashboard-eyebrow">
+            <i />
+            LIVE ACADEMIC INTELLIGENCE
+          </span>
 
-        <MetricCard
-          label="AI Score"
-          value="85%"
-          detail="Cognitive performance"
-          change="↑ 12% this week"
-          icon={<BarChart3 size={17} />}
+          <h1>
+            Welcome back,{" "}
+            <strong>{firstName}.</strong>
+          </h1>
+
+          <p>
+            Your dashboard now reads directly
+            from the academic catalogue,
+            chapter progress, topic mastery and
+            recorded question attempts.
+          </p>
+
+          <div className="live-dashboard-meta">
+            <span>
+              <GraduationCap size={15} />
+              {programme.name}
+            </span>
+
+            <span>
+              <BookOpenCheck size={15} />
+              {
+                workspace
+                  .syllabusVersion
+                  .name
+              }
+            </span>
+
+            <span>
+              <CheckCircle2 size={15} />
+              {workspace.status}
+            </span>
+          </div>
+        </div>
+
+        <div className="live-dashboard-hero-progress">
+          <div
+            className="live-dashboard-ring"
+            style={overallStyle}
+          >
+            <div>
+              <strong>
+                {
+                  dashboard
+                    .overallProgress
+                }%
+              </strong>
+              <span>syllabus</span>
+            </div>
+          </div>
+
+          <button
+            disabled={refreshing}
+            type="button"
+            onClick={() => {
+              void loadWorkspace(true);
+            }}
+          >
+            <RefreshCw
+              className={
+                refreshing
+                  ? "live-dashboard-spinner"
+                  : ""
+              }
+              size={15}
+            />
+            Refresh data
+          </button>
+        </div>
+      </header>
+
+      {error && (
+        <div
+          className="live-dashboard-inline-error"
+          role="alert"
+        >
+          <AlertTriangle size={16} />
+          {error}
+        </div>
+      )}
+
+      <section className="live-dashboard-metrics">
+        <Metric
+          label="SYLLABUS PROGRESS"
+          value={
+            `${dashboard.overallProgress}%`
+          }
+          detail="Average chapter completion"
+          icon={
+            <TrendingUp size={17} />
+          }
           tone="violet"
-          points="0,24 12,20 24,22 36,13 48,17 60,8 72,12 84,5 96,8 108,2 120,4"
+          progress={
+            dashboard.overallProgress
+          }
         />
 
-        <MetricCard
-          label="Study Time"
-          value="7h 32m"
-          detail="Today"
-          change="↑ 1h 20m vs yesterday"
-          icon={<Clock3 size={17} />}
+        <Metric
+          label="MASTERY SCORE"
+          value={
+            `${dashboard.masteryScore}%`
+          }
+          detail={
+            `${dashboard.assessedTopicCount} topics assessed`
+          }
+          icon={<Brain size={17} />}
           tone="blue"
-          points="0,25 15,25 15,20 30,20 30,22 45,22 45,11 60,11 60,17 75,17 75,7 90,7 90,14 105,14 105,3 120,3"
+          progress={
+            dashboard.masteryScore
+          }
         />
 
-        <MetricCard
-          label="Questions Solved"
-          value="142"
-          detail="Today"
-          change="↑ 28 vs yesterday"
-          icon={<CircleCheckBig size={17} />}
-          tone="pink"
-          points="0,25 12,24 24,22 36,24 48,16 60,23 72,9 84,20 96,4 108,14 120,8"
-        />
-
-        <MetricCard
-          label="Accuracy"
-          value="78%"
-          detail="Good"
-          change="↑ 8% vs last 7 days"
-          icon={<Target size={17} />}
+        <Metric
+          label="CHAPTERS COMPLETE"
+          value={
+            `${dashboard.completedChapters}/${dashboard.chapterEntries.length}`
+          }
+          detail={
+            `${dashboard.inProgressChapters} in progress`
+          }
+          icon={
+            <CheckCircle2 size={17} />
+          }
           tone="green"
-          points="0,25 12,22 24,23 36,17 48,20 60,9 72,14 84,4 96,11 108,6 120,8"
+          progress={
+            dashboard.chapterEntries
+              .length === 0
+              ? 0
+              : (
+                  dashboard
+                    .completedChapters /
+                  dashboard
+                    .chapterEntries
+                    .length
+                ) * 100
+          }
+        />
+
+        <Metric
+          label="QUESTIONS ATTEMPTED"
+          value={
+            `${dashboard.questionAttempts}`
+          }
+          detail={
+            `${dashboard.correctAnswers} correct answers`
+          }
+          icon={<Activity size={17} />}
+          tone="orange"
+        />
+
+        <Metric
+          label="ACCURACY"
+          value={
+            `${dashboard.accuracy}%`
+          }
+          detail={
+            dashboard.questionAttempts > 0
+              ? "Across recorded attempts"
+              : "No attempts recorded yet"
+          }
+          icon={<Target size={17} />}
+          tone="pink"
+          progress={
+            dashboard.accuracy
+          }
         />
       </section>
 
-      <section className="dashboard-hero-grid">
-        <div className="dashboard-primary-column">
-          <div className="mission-mentor-grid">
-            <Panel
-              title="Today's Mission"
-              className="mission-panel"
-              action={
-                <span className="panel-count">
-                  2/4 Completed
-                </span>
-              }
-            >
-              <div className="mission-content">
-                <div className="mission-list">
-                  {missions.map(
-                    (mission) => (
-                      <section
-                        key={mission.title}
-                        className={
-                          mission.completed
-                            ? "mission-item completed"
-                            : "mission-item"
-                        }
-                      >
-                        <span className="mission-state">
-                          {mission.completed ? (
-                            <Check size={13} />
-                          ) : (
-                            <Play size={12} />
-                          )}
-                        </span>
+      <section className="live-dashboard-layout">
+        <article className="live-dashboard-card queue-card">
+          <header>
+            <div>
+              <span>STUDY EXECUTION</span>
+              <h2>Current chapter queue</h2>
+            </div>
 
-                        <div>
-                          <strong>
-                            {mission.title}
-                          </strong>
+            <Link to="/subjects">
+              Open Subjects
+              <ArrowRight size={15} />
+            </Link>
+          </header>
 
-                          <small>
-                            {mission.detail}
-                          </small>
-                        </div>
-
-                        <ChevronRight
-                          size={15}
-                        />
-                      </section>
-                    ),
-                  )}
-                </div>
-
-                <ProgressRing value={50} />
-              </div>
-
-              <div className="mission-footer">
-                <span>
-                  <CircleCheckBig
-                    size={15}
-                  />
-                  Keep going! You're doing
-                  great.
-                </span>
-
-                <Link to="/planner">
-                  Continue Mission
-                  <ChevronRight size={15} />
-                </Link>
-              </div>
-            </Panel>
-
-            <Panel
-              title="AI Mentor"
-              eyebrow="Always here to help"
-              className="mentor-panel"
-              action={
-                <Sparkles size={18} />
-              }
-            >
-              <div className="mentor-conversation">
-                <div className="mentor-message assistant">
-                  <span>
-                    <Bot size={15} />
-                  </span>
-
-                  <p>
-                    Ram, I noticed your
-                    Chemistry accuracy is
-                    improving. Would you like
-                    to revise SN1 and SN2
-                    reactions today?
-                  </p>
-                </div>
-
-                <div className="mentor-message user">
-                  Yes, explain in Malayalam
-                  please.
-                </div>
-
-                <div className="mentor-message assistant compact">
-                  <span>
-                    <Bot size={15} />
-                  </span>
-
-                  <p>
-                    ശരി Ram! നമുക്ക്
-                    ഘട്ടംഘട്ടമായി പഠിക്കാം.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mentor-input">
-                <span>Ask anything...</span>
-
-                <Mic2 size={16} />
-
-                <Link to="/ai-mentor">
-                  <ArrowUpRight size={16} />
-                </Link>
-              </div>
-            </Panel>
-          </div>
-
-          <section className="dashboard-analysis-grid">
-            <Panel
-              title="Study Analytics"
-              action={
-                <button
-                  className="panel-filter"
-                  type="button"
-                >
-                  This Week
-                </button>
-              }
-            >
-              <div className="study-chart">
-                <div className="chart-y-axis">
-                  <span>12h</span>
-                  <span>9h</span>
-                  <span>6h</span>
-                  <span>3h</span>
-                  <span>0h</span>
-                </div>
-
-                <div className="chart-plot">
-                  <svg
-                    viewBox="0 0 440 180"
-                    preserveAspectRatio="none"
+          <div className="live-queue-list">
+            {dashboard.queue.map(
+              (item) => (
+                <section key={item.id}>
+                  <span
+                    className={
+                      item.state ===
+                      "COMPLETED"
+                        ? "queue-status completed"
+                        : item.state ===
+                            "IN_PROGRESS"
+                          ? "queue-status active"
+                          : "queue-status"
+                    }
                   >
-                    <defs>
-                      <linearGradient
-                        id="studyArea"
-                        x1="0"
-                        x2="0"
-                        y1="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="0%"
-                          stopColor="#6d5dfc"
-                          stopOpacity="0.55"
-                        />
+                    {item.state ===
+                    "COMPLETED" ? (
+                      <CheckCircle2
+                        size={15}
+                      />
+                    ) : item.state ===
+                      "IN_PROGRESS" ? (
+                      <TrendingUp
+                        size={15}
+                      />
+                    ) : (
+                      <CircleDashed
+                        size={15}
+                      />
+                    )}
+                  </span>
 
-                        <stop
-                          offset="100%"
-                          stopColor="#6d5dfc"
-                          stopOpacity="0"
-                        />
-                      </linearGradient>
-                    </defs>
-
-                    <path
-                      d="M0 150 L65 120 L130 130 L195 75 L260 100 L325 48 L390 72 L440 38 L440 180 L0 180 Z"
-                      fill="url(#studyArea)"
-                    />
-
-                    <polyline
-                      points="0,150 65,120 130,130 195,75 260,100 325,48 390,72 440,38"
-                      fill="none"
-                      stroke="#7d74ff"
-                      strokeWidth="4"
-                    />
-
-                    <polyline
-                      points="0,165 65,143 130,153 195,125 260,144 325,112 390,133 440,97"
-                      fill="none"
-                      stroke="#ec4899"
-                      strokeWidth="3"
-                    />
-                  </svg>
-
-                  <div className="chart-days">
-                    <span>Mon</span>
-                    <span>Tue</span>
-                    <span>Wed</span>
-                    <span>Thu</span>
-                    <span>Fri</span>
-                    <span>Sat</span>
-                    <span>Sun</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="chart-legend">
-                <span>
-                  <i className="legend-study" />
-                  Study Time
-                </span>
-
-                <span>
-                  <i className="legend-focus" />
-                  Focus Time
-                </span>
-              </div>
-            </Panel>
-
-            <Panel
-              title="Subject Wise Progress"
-              action={
-                <button
-                  className="panel-filter"
-                  type="button"
-                >
-                  This Month
-                </button>
-              }
-            >
-              <div className="subject-progress">
-                <div className="subject-donut">
                   <div>
-                    <strong>78%</strong>
-                    <span>Overall</span>
+                    <small>
+                      {item.subject}
+                    </small>
+                    <strong>
+                      {item.chapter}
+                    </strong>
+                    <p>
+                      {item.topics} topics
+                    </p>
                   </div>
-                </div>
 
-                <div className="subject-list">
+                  <div className="queue-progress">
+                    <span>
+                      <i
+                        style={{
+                          width:
+                            `${item.percent}%`,
+                        }}
+                      />
+                    </span>
+                    <strong>
+                      {item.percent}%
+                    </strong>
+                  </div>
+
+                  <ChevronRight
+                    size={16}
+                  />
+                </section>
+              ),
+            )}
+          </div>
+        </article>
+
+        <article className="live-dashboard-card subjects-card">
+          <header>
+            <div>
+              <span>SUBJECT ANALYTICS</span>
+              <h2>Subject-wise progress</h2>
+            </div>
+
+            <BarChart3 size={18} />
+          </header>
+
+          <div className="live-subject-list">
+            {dashboard.subjectProgress.map(
+              (subject) => (
+                <section
+                  key={subject.id}
+                  className={
+                    subjectTone(
+                      subject.code,
+                    )
+                  }
+                >
                   <span>
-                    <i className="physics" />
-                    Physics
-                    <strong>82%</strong>
+                    <SubjectIcon
+                      code={subject.code}
+                    />
                   </span>
 
-                  <span>
-                    <i className="chemistry" />
-                    Chemistry
-                    <strong>75%</strong>
-                  </span>
+                  <div>
+                    <strong>
+                      {subject.name}
+                    </strong>
 
-                  <span>
-                    <i className="biology" />
-                    Biology
-                    <strong>78%</strong>
-                  </span>
+                    <div>
+                      <i
+                        style={{
+                          width:
+                            `${subject.progress}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
 
-                  <span>
-                    <i className="other" />
-                    Others
-                    <strong>65%</strong>
-                  </span>
-                </div>
+                  <b>
+                    {subject.progress}%
+                  </b>
+                </section>
+              ),
+            )}
+          </div>
+        </article>
+
+        <article className="live-dashboard-card weak-card">
+          <header>
+            <div>
+              <span>MASTERY SIGNALS</span>
+              <h2>Topics to strengthen</h2>
+            </div>
+
+            <Zap size={18} />
+          </header>
+
+          <div className="live-weak-list">
+            {dashboard.weakTopics.length ===
+            0 ? (
+              <div className="live-card-empty">
+                <CheckCircle2 size={24} />
+                <strong>
+                  No weak topics detected
+                </strong>
+                <p>
+                  Continue assessing more
+                  topics.
+                </p>
               </div>
-            </Panel>
+            ) : (
+              dashboard.weakTopics.map(
+                (item) => (
+                  <section key={item.id}>
+                    <span>
+                      <Zap size={13} />
+                    </span>
 
-            <Panel
-              title="Weak Topics"
-              action={
-                <span className="ai-detected">
-                  AI Detected
-                </span>
-              }
-            >
-              <div className="weak-topic-list">
-                {weakTopics.map(
-                  (item) => (
-                    <section
-                      key={item.topic}
-                    >
-                      <span
-                        className={`weak-icon ${item.tone}`}
-                      >
-                        <Zap size={13} />
-                      </span>
-
+                    <div>
                       <strong>
                         {item.topic}
                       </strong>
-
-                      <small
-                        className={
-                          item.tone
-                        }
-                      >
-                        {item.value}
+                      <small>
+                        {item.subject}
                       </small>
-                    </section>
-                  ),
-                )}
-              </div>
+                    </div>
 
-              <Link
-                className="panel-full-link"
-                to="/analytics"
-              >
-                View All Weak Topics
-              </Link>
-            </Panel>
+                    <b>
+                      {item.assessed
+                        ? `${item.score}%`
+                        : "Not assessed"}
+                    </b>
+                  </section>
+                ),
+              )
+            )}
+          </div>
+        </article>
 
-            <Panel
-              title="Predicted Performance"
-              action={
-                <span className="prediction-tag">
-                  NEET 2027
-                </span>
-              }
-            >
-              <div className="prediction-score">
-                <strong>620–650</strong>
-                <span>
-                  Expected Score Range
-                </span>
-              </div>
-
-              <div className="prediction-boxes">
-                <section>
-                  <span>All India Rank</span>
-                  <strong>
-                    1,250–2,300
-                  </strong>
-                </section>
-
-                <section>
-                  <span>
-                    Confidence Level
-                  </span>
-                  <strong>High · 81%</strong>
-                </section>
-              </div>
-
-              <Link
-                className="panel-full-link"
-                to="/prediction"
-              >
-                View Full Prediction
-              </Link>
-            </Panel>
-          </section>
-        </div>
-
-        <aside className="dashboard-secondary-column">
-          <Panel
-            title="AIMERS Brain"
-            eyebrow="Your Cognitive Intelligence Map"
-            className="brain-panel"
-            action={
-              <span className="live-badge">
-                <i />
-                Live
-              </span>
-            }
-          >
-            <div className="brain-map">
-              <div className="brain-signals left">
-                <span>
-                  Memory Engine
-                  <strong>82%</strong>
-                </span>
-
-                <span>
-                  Knowledge Graph
-                  <strong>76%</strong>
-                </span>
-
-                <span>
-                  Reasoning Core
-                  <strong>88%</strong>
-                </span>
-
-                <span>
-                  Language Engine
-                  <strong>90%</strong>
-                </span>
-              </div>
-
-              <div className="brain-visual">
-                <div className="brain-orbit orbit-one" />
-                <div className="brain-orbit orbit-two" />
-                <div className="brain-orbit orbit-three" />
-
-                <Brain size={104} />
-
-                <i className="brain-node node-one" />
-                <i className="brain-node node-two" />
-                <i className="brain-node node-three" />
-                <i className="brain-node node-four" />
-              </div>
-
-              <div className="brain-signals right">
-                <span>
-                  Focus Engine
-                  <strong>84%</strong>
-                </span>
-
-                <span>
-                  Behavior AI
-                  <strong>73%</strong>
-                </span>
-
-                <span>
-                  Prediction AI
-                  <strong>81%</strong>
-                </span>
-
-                <span>
-                  Emotional AI
-                  <strong>70%</strong>
-                </span>
-              </div>
+        <article className="live-dashboard-card activity-card">
+          <header>
+            <div>
+              <span>RECENT ACTIVITY</span>
+              <h2>Latest chapter updates</h2>
             </div>
 
-            <footer className="brain-status">
-              <span>
-                <i />
-                All systems active
-              </span>
+            <Clock3 size={18} />
+          </header>
+
+          <div className="live-activity-list">
+            {dashboard.recentActivity.length ===
+            0 ? (
+              <div className="live-card-empty">
+                <Clock3 size={24} />
+                <strong>
+                  No activity recorded
+                </strong>
+                <p>
+                  Update progress from the
+                  Subjects workspace.
+                </p>
+              </div>
+            ) : (
+              dashboard.recentActivity.map(
+                (item) => (
+                  <section key={item.id}>
+                    <span>
+                      <BookOpenCheck
+                        size={14}
+                      />
+                    </span>
+
+                    <div>
+                      <strong>
+                        {item.subject}:{" "}
+                        {item.chapter}
+                      </strong>
+
+                      <small>
+                        {item.percent}% complete
+                        {" · "}
+                        {
+                          item.state.replace(
+                            "_",
+                            " ",
+                          )
+                        }
+                      </small>
+                    </div>
+
+                    <time>
+                      {formatDate(
+                        item.lastStudiedAt,
+                      )}
+                    </time>
+                  </section>
+                ),
+              )
+            )}
+          </div>
+        </article>
+
+        <article className="live-dashboard-card insight-card">
+          <header>
+            <div>
+              <span>ACADEMIC INSIGHT</span>
+              <h2>Recommended next move</h2>
+            </div>
+
+            <Sparkles size={18} />
+          </header>
+
+          <div className="live-insight-content">
+            <span>
+              <Brain size={28} />
+            </span>
+
+            <div>
+              <p>
+                Current priority
+              </p>
+
+              <strong>
+                {
+                  dashboard
+                    .weakestSubject
+                    ?.name ??
+                  programme.name
+                }
+              </strong>
 
               <small>
-                Synced just now
+                {dashboard.weakestSubject
+                  ? `${dashboard.weakestSubject.name} is at ${dashboard.weakestSubject.progress}% progress. Continue with ${dashboard.queue[0]?.chapter ?? "the next chapter"}.`
+                  : "Continue building syllabus coverage."}
               </small>
-            </footer>
-          </Panel>
-
-          <div className="insights-activity-grid">
-            <Panel
-              title="AI Insights"
-              eyebrow="Personalized for you"
-            >
-              <div className="insight-card-content">
-                <div>
-                  <p>
-                    You perform best between
-                  </p>
-
-                  <strong>
-                    6:00 AM – 9:00 AM
-                  </strong>
-
-                  <small>
-                    Focus is highest in the
-                    morning. Schedule important
-                    subjects first.
-                  </small>
-                </div>
-
-                <div className="time-dial">
-                  <span>6 AM</span>
-                  <Clock3 size={28} />
-                  <span>9 AM</span>
-                </div>
-              </div>
-            </Panel>
-
-            <Panel
-              title="Digital Activity Monitor"
-              eyebrow="With your consent"
-              action={
-                <span className="active-badge">
-                  <i />
-                  Active
-                </span>
-              }
-            >
-              <div className="activity-list">
-                <span>
-                  <Globe2 size={14} />
-                  Study Websites
-                  <strong>2h 15m</strong>
-                </span>
-
-                <span>
-                  <Video size={14} />
-                  YouTube (Edu)
-                  <strong>1h 05m</strong>
-                </span>
-
-                <span>
-                  <AppWindow size={14} />
-                  Notes Apps
-                  <strong>1h 30m</strong>
-                </span>
-
-                <span>
-                  <BookOpenCheck size={14} />
-                  Practice Platforms
-                  <strong>1h 20m</strong>
-                </span>
-
-                <span>
-                  <Activity size={14} />
-                  Other Apps
-                  <strong>45m</strong>
-                </span>
-              </div>
-
-              <Link
-                className="panel-full-link"
-                to="/digital-activity"
-              >
-                View Detailed Report
-              </Link>
-            </Panel>
+            </div>
           </div>
 
-          <div className="secondary-lower-grid">
-            <Panel
-              title="Memory Engine"
-              eyebrow="Retention Status"
-              className="memory-panel"
-            >
-              <div className="memory-score">
-                <strong>72%</strong>
-                <span>Retention Score</span>
-              </div>
+          <Link to="/ai-mentor">
+            Ask AIMERS about this
+            <ArrowRight size={15} />
+          </Link>
+        </article>
 
-              <svg
-                className="memory-line-chart"
-                viewBox="0 0 300 90"
-                preserveAspectRatio="none"
-              >
-                <polyline
-                  points="0,8 60,24 120,35 180,56 240,72 300,83"
-                  fill="none"
-                  stroke="#a56dff"
-                  strokeWidth="3"
-                />
+        <article className="live-dashboard-card prediction-card">
+          <header>
+            <div>
+              <span>PREDICTION ENGINE</span>
+              <h2>Performance forecast</h2>
+            </div>
 
-                <circle
-                  cx="0"
-                  cy="8"
-                  r="4"
-                  fill="#69d8ff"
-                />
+            <Target size={18} />
+          </header>
 
-                <circle
-                  cx="120"
-                  cy="35"
-                  r="4"
-                  fill="#69d8ff"
-                />
+          <div className="live-prediction-empty">
+            <Target size={30} />
 
-                <circle
-                  cx="180"
-                  cy="56"
-                  r="4"
-                  fill="#ec73ff"
-                />
+            <strong>
+              No valid prediction yet
+            </strong>
 
-                <circle
-                  cx="300"
-                  cy="83"
-                  r="4"
-                  fill="#6dd6ff"
-                />
-              </svg>
-
-              <div className="memory-axis">
-                <span>1D</span>
-                <span>3D</span>
-                <span>7D</span>
-                <span>15D</span>
-                <span>30D</span>
-              </div>
-            </Panel>
-
-            <Panel
-              title="AI Voice Assistant"
-              eyebrow="Tap to speak"
-              className="voice-panel"
-            >
-              <button
-                type="button"
-                aria-label="Start voice assistant"
-              >
-                <Radio size={20} />
-                <span>
-                  <Mic2 size={28} />
-                </span>
-              </button>
-            </Panel>
+            <p>
+              Mock-test history is required.
+              AIMERS will not invent a score
+              or rank.
+            </p>
           </div>
-        </aside>
+
+          <Link to="/prediction">
+            Open Prediction
+            <ArrowRight size={15} />
+          </Link>
+        </article>
       </section>
 
-      <section className="quick-actions-panel">
-        <header>
-          <h2>Quick Actions</h2>
-        </header>
+      <section className="live-dashboard-quick-links">
+        <Link to="/subjects">
+          <BookOpenCheck size={16} />
+          Subjects
+        </Link>
 
-        <div>
-          {quickActions.map((action) => {
-            const Icon = action.icon;
+        <Link to="/analytics">
+          <BarChart3 size={16} />
+          Analytics
+        </Link>
 
-            return (
-              <Link
-                key={action.label}
-                to={action.path}
-              >
-                <span>
-                  <Icon size={16} />
-                </span>
+        <Link to="/memory-engine">
+          <Brain size={16} />
+          Memory Engine
+        </Link>
 
-                <strong>
-                  {action.label}
-                </strong>
-              </Link>
-            );
-          })}
-        </div>
+        <Link to="/question-bank">
+          <Target size={16} />
+          Question Bank
+        </Link>
       </section>
     </div>
   );
