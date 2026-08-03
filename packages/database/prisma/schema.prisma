@@ -86,6 +86,43 @@ enum AssignmentStatus {
   ENDED
 }
 
+enum AcademicProgrammeType {
+  SCHOOL
+  HIGHER_SECONDARY
+  ENTRANCE_EXAM
+  UNIVERSITY
+  PROFESSIONAL
+  CUSTOM
+}
+
+enum AcademicCatalogStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AcademicEnrollmentStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum LearningProgressState {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+enum TopicMasteryLevel {
+  NOT_ASSESSED
+  BEGINNER
+  DEVELOPING
+  PROFICIENT
+  MASTERED
+}
+
 model User {
   id              String     @id @default(uuid()) @db.Uuid
   email           String     @unique @db.VarChar(320)
@@ -145,10 +182,11 @@ model Organization {
   updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt DateTime?          @map("deleted_at") @db.Timestamptz(6)
 
-  memberships       OrganizationMembership[]
-  studentProfiles   StudentProfile[]
-  staffProfiles     StaffProfile[]
-  mentorAssignments StudentMentorAssignment[]
+  memberships        OrganizationMembership[]
+  studentProfiles    StudentProfile[]
+  staffProfiles      StaffProfile[]
+  mentorAssignments  StudentMentorAssignment[]
+  academicProgrammes AcademicProgramme[]
 
   @@index([type, status])
   @@map("organizations")
@@ -253,8 +291,9 @@ model StudentProfile {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  guardians         GuardianStudentLink[]
-  mentorAssignments StudentMentorAssignment[]
+  guardians           GuardianStudentLink[]
+  mentorAssignments   StudentMentorAssignment[]
+  academicEnrollments StudentEnrollment[]
 
   @@unique([userId, organizationId])
   @@unique([organizationId, admissionNumber])
@@ -325,4 +364,244 @@ model StudentMentorAssignment {
   @@index([mentorUserId, status])
   @@index([organizationId, status])
   @@map("student_mentor_assignments")
+}
+
+model EducationBoard {
+  id        String                @id @default(uuid()) @db.Uuid
+  code      String                @unique @db.VarChar(40)
+  name      String                @db.VarChar(200)
+  country   String                @default("IN") @db.VarChar(2)
+  status    AcademicCatalogStatus @default(PUBLISHED)
+  createdAt DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  programmes AcademicProgramme[]
+
+  @@index([status])
+  @@map("education_boards")
+}
+
+model AcademicProgramme {
+  id                  String                @id @default(uuid()) @db.Uuid
+  boardId             String?               @map("board_id") @db.Uuid
+  ownerOrganizationId String?               @map("owner_organization_id") @db.Uuid
+  code                String                @unique @db.VarChar(80)
+  name                String                @db.VarChar(200)
+  description         String?               @db.Text
+  type                AcademicProgrammeType
+  status              AcademicCatalogStatus @default(DRAFT)
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  board EducationBoard? @relation(fields: [boardId], references: [id], onDelete: SetNull)
+
+  ownerOrganization Organization? @relation(fields: [ownerOrganizationId], references: [id], onDelete: SetNull)
+
+  syllabusVersions SyllabusVersion[]
+
+  @@index([boardId, status])
+  @@index([ownerOrganizationId, status])
+  @@index([type, status])
+  @@map("academic_programmes")
+}
+
+model SyllabusVersion {
+  id          String                @id @default(uuid()) @db.Uuid
+  programmeId String                @map("programme_id") @db.Uuid
+  versionCode String                @map("version_code") @db.VarChar(80)
+  name        String                @db.VarChar(200)
+  description String?               @db.Text
+  validFrom   DateTime?             @map("valid_from") @db.Date
+  validTo     DateTime?             @map("valid_to") @db.Date
+  isDefault   Boolean               @default(false) @map("is_default")
+  status      AcademicCatalogStatus @default(DRAFT)
+  publishedAt DateTime?             @map("published_at") @db.Timestamptz(6)
+  createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  programme AcademicProgramme @relation(fields: [programmeId], references: [id], onDelete: Cascade)
+
+  subjects    SyllabusSubject[]
+  enrollments StudentEnrollment[]
+
+  @@unique([programmeId, versionCode])
+  @@index([programmeId, status])
+  @@index([status, isDefault])
+  @@map("syllabus_versions")
+}
+
+model Subject {
+  id          String                @id @default(uuid()) @db.Uuid
+  code        String                @unique @db.VarChar(50)
+  name        String                @db.VarChar(150)
+  description String?               @db.Text
+  status      AcademicCatalogStatus @default(PUBLISHED)
+  createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  syllabi SyllabusSubject[]
+
+  @@index([status])
+  @@map("subjects")
+}
+
+model SyllabusSubject {
+  id                String   @id @default(uuid()) @db.Uuid
+  syllabusVersionId String   @map("syllabus_version_id") @db.Uuid
+  subjectId         String   @map("subject_id") @db.Uuid
+  sequenceNumber    Int      @default(1) @map("sequence_number")
+  isRequired        Boolean  @default(true) @map("is_required")
+  weightage         Int?
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  syllabusVersion SyllabusVersion @relation(fields: [syllabusVersionId], references: [id], onDelete: Cascade)
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+
+  units AcademicUnit[]
+
+  @@unique([syllabusVersionId, subjectId])
+  @@unique([syllabusVersionId, sequenceNumber])
+  @@index([subjectId])
+  @@map("syllabus_subjects")
+}
+
+model AcademicUnit {
+  id                String   @id @default(uuid()) @db.Uuid
+  syllabusSubjectId String   @map("syllabus_subject_id") @db.Uuid
+  code              String   @db.VarChar(80)
+  name              String   @db.VarChar(200)
+  description       String?  @db.Text
+  sequenceNumber    Int      @default(1) @map("sequence_number")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  syllabusSubject SyllabusSubject @relation(fields: [syllabusSubjectId], references: [id], onDelete: Cascade)
+
+  chapters Chapter[]
+
+  @@unique([syllabusSubjectId, code])
+  @@unique([syllabusSubjectId, sequenceNumber])
+  @@index([syllabusSubjectId])
+  @@map("academic_units")
+}
+
+model Chapter {
+  id               String   @id @default(uuid()) @db.Uuid
+  unitId           String   @map("unit_id") @db.Uuid
+  code             String   @db.VarChar(100)
+  name             String   @db.VarChar(250)
+  description      String?  @db.Text
+  sequenceNumber   Int      @default(1) @map("sequence_number")
+  estimatedMinutes Int?     @map("estimated_minutes")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  unit AcademicUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  topics   Topic[]
+  progress ChapterProgress[]
+
+  @@unique([unitId, code])
+  @@unique([unitId, sequenceNumber])
+  @@index([unitId])
+  @@map("chapters")
+}
+
+model Topic {
+  id               String   @id @default(uuid()) @db.Uuid
+  chapterId        String   @map("chapter_id") @db.Uuid
+  code             String   @db.VarChar(120)
+  name             String   @db.VarChar(250)
+  description      String?  @db.Text
+  sequenceNumber   Int      @default(1) @map("sequence_number")
+  estimatedMinutes Int?     @map("estimated_minutes")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  masteryRecords TopicMastery[]
+
+  @@unique([chapterId, code])
+  @@unique([chapterId, sequenceNumber])
+  @@index([chapterId])
+  @@map("topics")
+}
+
+model StudentEnrollment {
+  id                String                   @id @default(uuid()) @db.Uuid
+  studentProfileId  String                   @map("student_profile_id") @db.Uuid
+  syllabusVersionId String                   @map("syllabus_version_id") @db.Uuid
+  status            AcademicEnrollmentStatus @default(ACTIVE)
+  isPrimary         Boolean                  @default(false) @map("is_primary")
+  enrolledAt        DateTime                 @default(now()) @map("enrolled_at") @db.Timestamptz(6)
+  startedAt         DateTime?                @map("started_at") @db.Timestamptz(6)
+  completedAt       DateTime?                @map("completed_at") @db.Timestamptz(6)
+  createdAt         DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  syllabusVersion SyllabusVersion @relation(fields: [syllabusVersionId], references: [id], onDelete: Restrict)
+
+  chapterProgress ChapterProgress[]
+  topicMastery    TopicMastery[]
+
+  @@unique([studentProfileId, syllabusVersionId])
+  @@index([studentProfileId, status])
+  @@index([syllabusVersionId, status])
+  @@map("student_enrollments")
+}
+
+model ChapterProgress {
+  id                  String                @id @default(uuid()) @db.Uuid
+  studentEnrollmentId String                @map("student_enrollment_id") @db.Uuid
+  chapterId           String                @map("chapter_id") @db.Uuid
+  state               LearningProgressState @default(NOT_STARTED)
+  completionPercent   Int                   @default(0) @map("completion_percent")
+  revisionCount       Int                   @default(0) @map("revision_count")
+  questionAttempts    Int                   @default(0) @map("question_attempts")
+  correctAnswers      Int                   @default(0) @map("correct_answers")
+  startedAt           DateTime?             @map("started_at") @db.Timestamptz(6)
+  completedAt         DateTime?             @map("completed_at") @db.Timestamptz(6)
+  lastStudiedAt       DateTime?             @map("last_studied_at") @db.Timestamptz(6)
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@unique([studentEnrollmentId, chapterId])
+  @@index([studentEnrollmentId, state])
+  @@index([chapterId])
+  @@index([lastStudiedAt])
+  @@map("chapter_progress")
+}
+
+model TopicMastery {
+  id                  String            @id @default(uuid()) @db.Uuid
+  studentEnrollmentId String            @map("student_enrollment_id") @db.Uuid
+  topicId             String            @map("topic_id") @db.Uuid
+  level               TopicMasteryLevel @default(NOT_ASSESSED)
+  masteryScore        Int               @default(0) @map("mastery_score")
+  confidenceScore     Int               @default(0) @map("confidence_score")
+  attempts            Int               @default(0)
+  correctAnswers      Int               @default(0) @map("correct_answers")
+  lastAssessedAt      DateTime?         @map("last_assessed_at") @db.Timestamptz(6)
+  nextReviewAt        DateTime?         @map("next_review_at") @db.Timestamptz(6)
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([studentEnrollmentId, topicId])
+  @@index([studentEnrollmentId, level])
+  @@index([topicId])
+  @@index([nextReviewAt])
+  @@map("topic_mastery")
 }
