@@ -1,16 +1,32 @@
 import { Module } from "@nestjs/common";
 
-import { ConfigModule } from "@nestjs/config";
+import {
+  ConfigModule,
+} from "@nestjs/config";
 
-import { AppController } from "./app.controller";
+import {
+  AppController,
+} from "./app.controller";
 
-import { validateEnvironment } from "./config/environment";
+import {
+  AuthModule,
+} from "./auth/auth.module";
 
-import { HealthController } from "./health/health.controller";
+import {
+  validateEnvironment,
+} from "./config/environment";
 
-import { DatabaseModule } from "./infrastructure/database/database.module";
+import {
+  HealthController,
+} from "./health/health.controller";
 
-import { RedisModule } from "./infrastructure/redis/redis.module";
+import {
+  DatabaseModule,
+} from "./infrastructure/database/database.module";
+
+import {
+  RedisModule,
+} from "./infrastructure/redis/redis.module";
 
 @Module({
   imports: [
@@ -22,8 +38,8 @@ import { RedisModule } from "./infrastructure/redis/redis.module";
     }),
 
     DatabaseModule,
-
     RedisModule,
+    AuthModule,
   ],
 
   controllers: [

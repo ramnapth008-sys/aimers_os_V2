@@ -5,8 +5,17 @@ import {
   ServiceUnavailableException,
 } from "@nestjs/common";
 
-import { DatabaseService } from "../infrastructure/database/database.service";
-import { RedisService } from "../infrastructure/redis/redis.service";
+import {
+  Public,
+} from "../auth/decorators/public.decorator";
+
+import {
+  DatabaseService,
+} from "../infrastructure/database/database.service";
+
+import {
+  RedisService,
+} from "../infrastructure/redis/redis.service";
 
 interface DependencyResult {
   status: "up" | "down";
@@ -14,6 +23,7 @@ interface DependencyResult {
   error?: string;
 }
 
+@Public()
 @Controller("health")
 export class HealthController {
   constructor(
@@ -30,11 +40,14 @@ export class HealthController {
   getLiveness() {
     return {
       status: "ok",
-      service: "aimers-api",
+      service:
+        "aimers-api",
       timestamp:
         new Date().toISOString(),
       uptimeSeconds:
-        Math.floor(process.uptime()),
+        Math.floor(
+          process.uptime(),
+        ),
     };
   }
 
@@ -48,15 +61,18 @@ export class HealthController {
     const [
       database,
       redis,
-    ] = await Promise.all([
-      this.runCheck(() =>
-        this.database.ping(),
-      ),
+    ] =
+      await Promise.all([
+        this.runCheck(
+          () =>
+            this.database.ping(),
+        ),
 
-      this.runCheck(() =>
-        this.redis.ping(),
-      ),
-    ]);
+        this.runCheck(
+          () =>
+            this.redis.ping(),
+        ),
+      ]);
 
     const healthy =
       database.status === "up" &&
@@ -68,13 +84,16 @@ export class HealthController {
           ? "ok"
           : "error",
 
-      service: "aimers-api",
+      service:
+        "aimers-api",
 
       timestamp:
         new Date().toISOString(),
 
       uptimeSeconds:
-        Math.floor(process.uptime()),
+        Math.floor(
+          process.uptime(),
+        ),
 
       checks: {
         database,
@@ -92,7 +111,8 @@ export class HealthController {
   }
 
   private async runCheck(
-    check: () => Promise<boolean>,
+    check:
+      () => Promise<boolean>,
   ): Promise<DependencyResult> {
     const startedAt =
       performance.now();
@@ -115,7 +135,8 @@ export class HealthController {
       };
     } catch (error) {
       return {
-        status: "down",
+        status:
+          "down",
 
         latencyMs:
           Math.round(

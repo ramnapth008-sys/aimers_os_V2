@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+const booleanString = z
+  .enum(["true", "false"])
+  .default("false")
+  .transform((value) => value === "true");
+
 export const environmentSchema = z.object({
   NODE_ENV: z
     .enum([
@@ -33,6 +38,34 @@ export const environmentSchema = z.object({
   CORS_ORIGINS: z
     .string()
     .min(1),
+
+  ACCESS_TOKEN_SECRET: z
+    .string()
+    .min(
+      64,
+      "ACCESS_TOKEN_SECRET must contain at least 64 characters.",
+    ),
+
+  ACCESS_TOKEN_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(60)
+    .max(86400)
+    .default(900),
+
+  REFRESH_TOKEN_TTL_DAYS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(365)
+    .default(30),
+
+  REFRESH_COOKIE_NAME: z
+    .string()
+    .min(1)
+    .default("aimers_refresh_token"),
+
+  COOKIE_SECURE: booleanString,
 });
 
 export type Environment =

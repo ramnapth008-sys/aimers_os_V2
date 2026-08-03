@@ -1,24 +1,40 @@
 import "reflect-metadata";
 
-import { NestFactory } from "@nestjs/core";
+import {
+  ValidationPipe,
+} from "@nestjs/common";
 
-import { ConfigService } from "@nestjs/config";
+import {
+  ConfigService,
+} from "@nestjs/config";
 
-import { AppModule } from "./app.module";
+import {
+  NestFactory,
+} from "@nestjs/core";
 
-async function bootstrap(): Promise<void> {
+import cookieParser from "cookie-parser";
+
+import {
+  AppModule,
+} from "./app.module";
+
+async function bootstrap():
+  Promise<void> {
   const app =
     await NestFactory.create(
       AppModule,
     );
 
   const configService =
-    app.get(ConfigService);
+    app.get(
+      ConfigService,
+    );
 
   const port =
-    configService.getOrThrow<number>(
-      "PORT",
-    );
+    configService
+      .getOrThrow<number>(
+        "PORT",
+      );
 
   const corsOrigins =
     configService
@@ -26,8 +42,9 @@ async function bootstrap(): Promise<void> {
         "CORS_ORIGINS",
       )
       .split(",")
-      .map((origin) =>
-        origin.trim(),
+      .map(
+        (origin) =>
+          origin.trim(),
       )
       .filter(Boolean);
 
@@ -35,10 +52,41 @@ async function bootstrap(): Promise<void> {
     "api/v1",
   );
 
+  app.use(
+    cookieParser(),
+  );
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+
+      forbidNonWhitelisted:
+        true,
+
+      validationError: {
+        target: false,
+        value: false,
+      },
+    }),
+  );
+
   app.enableCors({
-    origin: corsOrigins,
-    credentials: true,
+    origin:
+      corsOrigins,
+
+    credentials:
+      true,
   });
+
+  const express =
+    app
+      .getHttpAdapter()
+      .getInstance();
+
+  express.disable(
+    "x-powered-by",
+  );
 
   app.enableShutdownHooks();
 
@@ -52,11 +100,13 @@ async function bootstrap(): Promise<void> {
   );
 }
 
-bootstrap().catch((error: unknown) => {
-  console.error(
-    "AIMERS API failed to start:",
-    error,
-  );
+bootstrap().catch(
+  (error: unknown) => {
+    console.error(
+      "AIMERS API failed to start:",
+      error,
+    );
 
-  process.exitCode = 1;
-});
+    process.exitCode = 1;
+  },
+);
