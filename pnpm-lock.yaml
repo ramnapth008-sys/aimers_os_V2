@@ -24,7 +24,39 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
-  apps/admin: {}
+  apps/admin:
+    dependencies:
+      '@aimers/design-tokens':
+        specifier: workspace:*
+        version: link:../../packages/design-tokens
+      lucide-react:
+        specifier: ^1.28.0
+        version: 1.28.0(react@19.2.8)
+      react:
+        specifier: ^19.2.8
+        version: 19.2.8
+      react-dom:
+        specifier: ^19.2.8
+        version: 19.2.8(react@19.2.8)
+      react-router-dom:
+        specifier: ^7.18.2
+        version: 7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.18
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: ^19.2.4
+        version: 19.2.4(@types/react@19.2.18)
+      '@vitejs/plugin-react':
+        specifier: ^6.0.5
+        version: 6.0.5(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.5))
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.2.0
+        version: 8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.5)
 
   apps/api:
     devDependencies:
