@@ -1,0 +1,5 @@
+[project]
+name = "aimers-ai-voice"
+version = "0.1.0"
+description = "AIMERS OS ai-voice service"
+requires-python = ">=3.11"

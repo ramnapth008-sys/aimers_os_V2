@@ -1,0 +1,13 @@
+{
+  "name": "@aimers/marketing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AIMERS OS Public Website",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  }
+}

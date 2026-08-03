@@ -1,0 +1,53 @@
+:root {
+  --aimers-background: #050714;
+  --aimers-background-secondary: #080b18;
+  --aimers-surface: #0b1020;
+  --aimers-surface-elevated: #10162a;
+
+  --aimers-primary: #7c3aed;
+  --aimers-primary-bright: #9d4edd;
+  --aimers-secondary: #06b6d4;
+  --aimers-accent: #ec4899;
+
+  --aimers-success: #22c55e;
+  --aimers-information: #3b82f6;
+  --aimers-warning: #f59e0b;
+  --aimers-danger: #ef4444;
+
+  --aimers-text-primary: #f8f9ff;
+  --aimers-text-secondary: #a4acc4;
+  --aimers-text-muted: #68708a;
+
+  --aimers-border: rgba(152, 162, 255, 0.16);
+  --aimers-glass: rgba(12, 18, 37, 0.78);
+
+  --aimers-gradient-primary:
+    linear-gradient(
+      135deg,
+      #6d28d9,
+      #9333ea,
+      #db2777
+    );
+
+  --aimers-gradient-blue:
+    linear-gradient(
+      135deg,
+      #2563eb,
+      #06b6d4
+    );
+
+  --aimers-gradient-success:
+    linear-gradient(
+      135deg,
+      #16a34a,
+      #22c55e,
+      #14b8a6
+    );
+
+  --aimers-radius-small: 10px;
+  --aimers-radius-medium: 16px;
+  --aimers-radius-large: 24px;
+
+  --aimers-shadow-neon:
+    0 0 30px rgba(124, 58, 237, 0.25);
+}

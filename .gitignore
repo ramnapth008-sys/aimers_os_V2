@@ -1,0 +1,62 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Builds
+dist
+build
+out
+.next
+.turbo
+.vite
+coverage
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs
+
+# macOS
+.DS_Store
+
+# Editors
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Python
+__pycache__
+*.pyc
+.venv
+venv
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Test output
+playwright-report
+test-results
+
+# Local storage
+storage/private/*
+storage/temp/*
+storage/uploads/*
+storage/exports/*
+storage/imports/*
+
+# Secrets and certificates
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Local authentication
+aimers-cookies.txt

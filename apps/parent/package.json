@@ -1,0 +1,13 @@
+{
+  "name": "@aimers/parent",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AIMERS OS Parent Portal",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  }
+}

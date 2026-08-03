@@ -1,0 +1,13 @@
+{
+  "name": "@aimers/staff",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AIMERS OS Mentor and Staff Portal",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  }
+}

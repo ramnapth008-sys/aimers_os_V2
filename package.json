@@ -1,0 +1,18 @@
+{
+  "name": "aimers-os-v2",
+  "version": "2.0.0",
+  "private": true,
+  "description": "AIMERS OS subscription-based AI learning operating system",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "typecheck": "turbo typecheck",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "format": "prettier --write .",
+    "clean": "turbo clean"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
