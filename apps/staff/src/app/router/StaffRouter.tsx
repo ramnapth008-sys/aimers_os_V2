@@ -1,3 +1,5 @@
+import { RequireAuth } from "@aimers/auth";
+
 import {
   BrowserRouter,
   Navigate,
@@ -135,7 +137,15 @@ export function StaffRouter() {
           element={<StaffLoginPage />}
         />
 
-        <Route element={<StaffShell />}>
+        <Route
+          element={
+            <RequireAuth
+              roles={["MENTOR", "TEACHER", "STAFF"]}
+              loginUrl="/login"
+            />
+          }
+        >
+          <Route element={<StaffShell />}>
           <Route
             index
             element={
@@ -178,6 +188,7 @@ export function StaffRouter() {
               />
             }
           />
+        </Route>
         </Route>
       </Routes>
     </BrowserRouter>

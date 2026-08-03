@@ -11,7 +11,8 @@
     "clean": "rm -rf dist",
     "predev": "pnpm --filter @aimers/database build",
     "prebuild": "pnpm --filter @aimers/database build",
-    "pretypecheck": "pnpm --filter @aimers/database build"
+    "pretypecheck": "pnpm --filter @aimers/database build",
+    "seed:dev-users": "dotenv -e .env -- tsx scripts/seed-dev-users.ts"
   },
   "dependencies": {
     "@aimers/database": "workspace:*",
@@ -33,6 +34,7 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/node": "^26.1.2",
+    "dotenv-cli": "^11.0.0",
     "tsx": "^4.23.5",
     "typescript": "^7.0.2"
   }

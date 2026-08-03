@@ -1,3 +1,5 @@
+import { RequireAuth } from "@aimers/auth";
+
 import {
   BrowserRouter,
   Navigate,
@@ -164,7 +166,15 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<AppShell />}>
+        <Route
+          element={
+            <RequireAuth
+              roles={["STUDENT"]}
+              loginUrl="http://localhost:5174/login"
+            />
+          }
+        >
+          <Route element={<AppShell />}>
           <Route
             index
             element={
@@ -205,6 +215,7 @@ export function AppRouter() {
               />
             }
           />
+        </Route>
         </Route>
       </Routes>
     </BrowserRouter>

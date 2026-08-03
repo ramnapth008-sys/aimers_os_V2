@@ -69,3 +69,5 @@ aimers-cookies.txt
 .env.production.local
 apps/*/.env
 !**/.env.example
+# Local development portal credentials
+apps/api/.dev-auth-credentials.json

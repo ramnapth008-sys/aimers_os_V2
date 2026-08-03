@@ -1,4 +1,8 @@
 import {
+  useAuth,
+} from "@aimers/auth";
+
+import {
   ArrowRight,
   Brain,
   Check,
@@ -8,15 +12,154 @@ import {
 } from "lucide-react";
 
 import {
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
   Link,
   useLocation,
 } from "react-router-dom";
 
+const STUDENT_APP_URL =
+  import.meta.env.VITE_STUDENT_APP_URL ??
+  "http://localhost:5173/dashboard";
+
+function resolveDestination(
+  search: string,
+): string {
+  const returnTo =
+    new URLSearchParams(search)
+      .get("returnTo");
+
+  if (!returnTo) {
+    return STUDENT_APP_URL;
+  }
+
+  try {
+    const destination =
+      new URL(returnTo);
+
+    const studentOrigin =
+      new URL(
+        STUDENT_APP_URL,
+      ).origin;
+
+    return destination.origin ===
+      studentOrigin
+      ? destination.toString()
+      : STUDENT_APP_URL;
+  } catch {
+    return STUDENT_APP_URL;
+  }
+}
+
 export function AuthPage() {
   const location = useLocation();
 
+  const {
+    login,
+    register: createAccount,
+    status,
+  } = useAuth();
+
   const register =
-    location.pathname === "/register";
+    location.pathname ===
+    "/register";
+
+  const destination =
+    useMemo(
+      () =>
+        resolveDestination(
+          location.search,
+        ),
+      [location.search],
+    );
+
+  const [fullName, setFullName] =
+    useState("");
+
+  const [email, setEmail] =
+    useState("");
+
+  const [password, setPassword] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  useEffect(() => {
+    if (
+      status === "authenticated" &&
+      !loading
+    ) {
+      window.location.replace(
+        destination,
+      );
+    }
+  }, [
+    status,
+    loading,
+    destination,
+  ]);
+
+  async function handleSubmit(
+    event:
+      FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      if (register) {
+        const parts =
+          fullName
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
+
+        const firstName =
+          parts.shift() ?? "";
+
+        const lastName =
+          parts.join(" ");
+
+        await createAccount({
+          email,
+          password,
+          firstName,
+          ...(lastName
+            ? {
+                lastName,
+              }
+            : {}),
+        });
+      } else {
+        await login({
+          email,
+          password,
+        });
+      }
+
+      window.location.assign(
+        destination,
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Unable to continue.",
+      );
+
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="marketing-auth-page">
@@ -96,11 +239,7 @@ export function AuthPage() {
               : "Continue where you stopped and open your Command Center."}
           </p>
 
-          <form
-            onSubmit={(event) =>
-              event.preventDefault()
-            }
-          >
+          <form onSubmit={handleSubmit}>
             {register && (
               <label>
                 <span>Full name</span>
@@ -109,8 +248,17 @@ export function AuthPage() {
                   <User size={16} />
 
                   <input
+                    required
+                    minLength={2}
+                    autoComplete="name"
                     type="text"
+                    value={fullName}
                     placeholder="Your name"
+                    onChange={(event) =>
+                      setFullName(
+                        event.target.value,
+                      )
+                    }
                   />
                 </div>
               </label>
@@ -123,8 +271,16 @@ export function AuthPage() {
                 <Mail size={16} />
 
                 <input
+                  required
+                  autoComplete="email"
                   type="email"
+                  value={email}
                   placeholder="student@example.com"
+                  onChange={(event) =>
+                    setEmail(
+                      event.target.value,
+                    )
+                  }
                 />
               </div>
             </label>
@@ -136,18 +292,30 @@ export function AuthPage() {
                 <LockKeyhole size={16} />
 
                 <input
+                  required
+                  minLength={register ? 12 : 1}
+                  autoComplete={
+                    register
+                      ? "new-password"
+                      : "current-password"
+                  }
                   type="password"
+                  value={password}
                   placeholder="Enter password"
+                  onChange={(event) =>
+                    setPassword(
+                      event.target.value,
+                    )
+                  }
                 />
               </div>
             </label>
 
             {!register && (
               <div className="auth-form-options">
-                <label>
-                  <input type="checkbox" />
-                  Remember me
-                </label>
+                <span>
+                  Secure refresh session
+                </span>
 
                 <Link to="/forgot-password">
                   Forgot password?
@@ -155,13 +323,25 @@ export function AuthPage() {
               </div>
             )}
 
+            {error && (
+              <div
+                className="marketing-auth-error"
+                role="alert"
+              >
+                {error}
+              </div>
+            )}
+
             <button
+              disabled={loading}
               className="marketing-primary-button"
               type="submit"
             >
-              {register
-                ? "Create free account"
-                : "Sign in"}
+              {loading
+                ? "Please wait..."
+                : register
+                  ? "Create free account"
+                  : "Sign in"}
 
               <ArrowRight size={15} />
             </button>

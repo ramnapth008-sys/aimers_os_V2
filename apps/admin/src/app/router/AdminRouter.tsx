@@ -1,3 +1,5 @@
+import { RequireAuth } from "@aimers/auth";
+
 import {
   BrowserRouter,
   Navigate,
@@ -6,6 +8,8 @@ import {
 } from "react-router-dom";
 
 import { AdminShell } from "../shell/AdminShell";
+
+import { AdminLoginPage } from "../../pages/auth/AdminLoginPage";
 
 import { AdminOverviewPage } from "../../pages/overview/AdminOverviewPage";
 import { AdminModulePage } from "../../pages/shared/AdminModulePage";
@@ -234,7 +238,20 @@ export function AdminRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<AdminShell />}>
+        <Route
+          path="/login"
+          element={<AdminLoginPage />}
+        />
+
+        <Route
+          element={
+            <RequireAuth
+              roles={["ADMIN", "SUPER_ADMIN"]}
+              loginUrl="/login"
+            />
+          }
+        >
+          <Route element={<AdminShell />}>
           <Route
             index
             element={
@@ -275,6 +292,7 @@ export function AdminRouter() {
               />
             }
           />
+        </Route>
         </Route>
       </Routes>
     </BrowserRouter>

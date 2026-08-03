@@ -1,4 +1,8 @@
 import {
+  useAuth,
+} from "@aimers/auth";
+
+import {
   ArrowRight,
   Brain,
   LockKeyhole,
@@ -12,25 +16,24 @@ import {
   useState,
 } from "react";
 
-import { useNavigate } from "react-router-dom";
-
-const SESSION_KEY =
-  "aimers_parent_session";
-
-const DEMO_EMAIL =
-  "parent@aimers.test";
-
-const DEMO_PASSWORD =
-  "Parent@123";
+import {
+  useNavigate,
+} from "react-router-dom";
 
 export function ParentLoginPage() {
   const navigate = useNavigate();
 
+  const {
+    login,
+    logout,
+    status,
+  } = useAuth();
+
   const [email, setEmail] =
-    useState(DEMO_EMAIL);
+    useState("");
 
   const [password, setPassword] =
-    useState(DEMO_PASSWORD);
+    useState("");
 
   const [error, setError] =
     useState("");
@@ -40,59 +43,58 @@ export function ParentLoginPage() {
 
   useEffect(() => {
     if (
-      localStorage.getItem(SESSION_KEY)
+      status === "authenticated" &&
+      !loading
     ) {
+      void logout();
+    }
+  }, [status, loading, logout]);
+
+  async function handleSubmit(
+    event:
+      FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const session =
+        await login({
+          email,
+          password,
+        });
+
+      if (
+        !session.user.roles.includes(
+          "PARENT",
+        )
+      ) {
+        await logout();
+
+        setError(
+          "This account is not authorised for the parent portal.",
+        );
+
+        setLoading(false);
+        return;
+      }
+
       navigate(
         "/dashboard",
         {
           replace: true,
         },
       );
-    }
-  }, [navigate]);
-
-  function handleSubmit(
-    event: FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
-    setError("");
-
-    const normalizedEmail =
-      email.trim().toLowerCase();
-
-    if (
-      normalizedEmail !== DEMO_EMAIL ||
-      password !== DEMO_PASSWORD
-    ) {
+    } catch (caught) {
       setError(
-        "Incorrect demo email or password.",
+        caught instanceof Error
+          ? caught.message
+          : "Unable to sign in.",
       );
 
-      return;
+      setLoading(false);
     }
-
-    setLoading(true);
-
-    const session = {
-      email: normalizedEmail,
-      role: "parent",
-      createdAt: Date.now(),
-      expiresAt:
-        Date.now() +
-        8 * 60 * 60 * 1000,
-    };
-
-    localStorage.setItem(
-      SESSION_KEY,
-      JSON.stringify(session),
-    );
-
-    navigate(
-      "/dashboard",
-      {
-        replace: true,
-      },
-    );
   }
 
   return (
@@ -138,9 +140,8 @@ export function ParentLoginPage() {
               </strong>
 
               <small>
-                Student-sensitive
-                information remains
-                protected.
+                Student-sensitive information
+                remains protected.
               </small>
             </div>
           </section>
@@ -159,20 +160,6 @@ export function ParentLoginPage() {
             Use your verified parent or
             guardian account.
           </p>
-
-          <div className="parent-demo-credentials">
-            <strong>
-              Development credentials
-            </strong>
-
-            <span>
-              Email: {DEMO_EMAIL}
-            </span>
-
-            <span>
-              Password: {DEMO_PASSWORD}
-            </span>
-          </div>
 
           <label>
             <span>Email address</span>
@@ -230,15 +217,15 @@ export function ParentLoginPage() {
             type="submit"
           >
             {loading
-              ? "Opening dashboard..."
+              ? "Signing in..."
               : "Sign in securely"}
 
             <ArrowRight size={15} />
           </button>
 
           <small>
-            Demo authentication is active
-            during frontend development.
+            Access is verified by the AIMERS
+            API and restricted by role.
           </small>
         </form>
       </section>

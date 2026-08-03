@@ -26,6 +26,9 @@ importers:
 
   apps/admin:
     dependencies:
+      '@aimers/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@aimers/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
@@ -112,6 +115,9 @@ importers:
       '@types/node':
         specifier: ^26.1.2
         version: 26.1.2
+      dotenv-cli:
+        specifier: ^11.0.0
+        version: 11.0.0
       tsx:
         specifier: ^4.23.5
         version: 4.23.5
@@ -125,6 +131,9 @@ importers:
 
   apps/institution:
     dependencies:
+      '@aimers/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@aimers/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
@@ -159,6 +168,9 @@ importers:
 
   apps/marketing:
     dependencies:
+      '@aimers/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@aimers/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
@@ -195,6 +207,9 @@ importers:
 
   apps/parent:
     dependencies:
+      '@aimers/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@aimers/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
@@ -231,6 +246,9 @@ importers:
 
   apps/staff:
     dependencies:
+      '@aimers/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@aimers/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
@@ -265,6 +283,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@aimers/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@aimers/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
@@ -303,7 +324,21 @@ importers:
 
   packages/analytics: {}
 
-  packages/auth: {}
+  packages/auth:
+    dependencies:
+      react:
+        specifier: ^19.2.8
+        version: 19.2.8
+      react-router-dom:
+        specifier: ^7.18.2
+        version: 7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.18
+        version: 19.2.18
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
 
   packages/billing: {}
 

@@ -5,7 +5,6 @@ import {
 import {
   ArrowRight,
   Brain,
-  Building2,
   LockKeyhole,
   Mail,
   ShieldCheck,
@@ -21,7 +20,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 
-export function InstitutionLoginPage() {
+export function AdminLoginPage() {
   const navigate = useNavigate();
 
   const {
@@ -66,15 +65,19 @@ export function InstitutionLoginPage() {
           password,
         });
 
-      if (
-        !session.user.roles.includes(
-          "INSTITUTION_ADMIN",
-        )
-      ) {
+      const allowed =
+        session.user.roles.includes(
+          "ADMIN",
+        ) ||
+        session.user.roles.includes(
+          "SUPER_ADMIN",
+        );
+
+      if (!allowed) {
         await logout();
 
         setError(
-          "This account is not authorised for the institution portal.",
+          "This account is not authorised for company administration.",
         );
 
         setLoading(false);
@@ -82,7 +85,7 @@ export function InstitutionLoginPage() {
       }
 
       navigate(
-        "/dashboard",
+        "/overview",
         {
           replace: true,
         },
@@ -99,9 +102,9 @@ export function InstitutionLoginPage() {
   }
 
   return (
-    <div className="institution-login-page">
-      <section className="institution-login-visual">
-        <div className="institution-login-brand">
+    <main className="admin-login-page">
+      <section className="admin-login-visual">
+        <div className="admin-login-brand">
           <span>
             <Brain size={27} />
           </span>
@@ -112,28 +115,25 @@ export function InstitutionLoginPage() {
             </strong>
 
             <small>
-              Institution Intelligence
+              Company Command Centre
             </small>
           </div>
         </div>
 
         <div>
           <span>
-            INSTITUTION LEARNING OPERATING
-            SYSTEM
+            RESTRICTED COMPANY ACCESS
           </span>
 
           <h1>
-            Improve outcomes across every
-            batch and classroom.
+            Operate AIMERS with complete
+            accountability.
           </h1>
 
           <p>
-            Connect students, teachers,
-            assessments, content and
-            interventions through one
-            institution intelligence
-            platform.
+            Review platform operations,
+            customers, security, AI systems
+            and company-level intelligence.
           </p>
 
           <section>
@@ -141,34 +141,33 @@ export function InstitutionLoginPage() {
 
             <div>
               <strong>
-                Role-based institution
-                access
+                Administrative role checks
               </strong>
 
               <small>
-                Sensitive student and staff
-                views are securely controlled.
+                Access is enforced by the API,
+                not by the browser interface.
               </small>
             </div>
           </section>
         </div>
       </section>
 
-      <section className="institution-login-form">
+      <section className="admin-login-form">
         <form onSubmit={handleSubmit}>
           <span>
-            AIMERS INSTITUTION PORTAL
+            AIMERS ADMINISTRATION
           </span>
 
-          <h2>Institution sign in</h2>
+          <h2>Administrator sign in</h2>
 
           <p>
-            Use your authorised institution
-            administrator account.
+            Use an authorised AIMERS company
+            account.
           </p>
 
           <label>
-            <span>Institution email</span>
+            <span>Email address</span>
 
             <div>
               <Mail size={16} />
@@ -178,7 +177,7 @@ export function InstitutionLoginPage() {
                 autoComplete="email"
                 type="email"
                 value={email}
-                placeholder="admin@institution.edu"
+                placeholder="admin@aimers.ai"
                 onChange={(event) =>
                   setEmail(
                     event.target.value,
@@ -211,7 +210,7 @@ export function InstitutionLoginPage() {
 
           {error && (
             <div
-              className="institution-login-error"
+              className="admin-login-error"
               role="alert"
             >
               {error}
@@ -222,21 +221,14 @@ export function InstitutionLoginPage() {
             disabled={loading}
             type="submit"
           >
-            <Building2 size={15} />
-
             {loading
-              ? "Signing in..."
-              : "Open institution workspace"}
+              ? "Verifying access..."
+              : "Open command centre"}
 
             <ArrowRight size={15} />
           </button>
-
-          <small>
-            Access is verified by the AIMERS
-            API and restricted by role.
-          </small>
         </form>
       </section>
-    </div>
+    </main>
   );
 }

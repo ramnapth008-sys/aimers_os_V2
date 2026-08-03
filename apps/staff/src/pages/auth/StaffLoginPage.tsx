@@ -1,4 +1,9 @@
 import {
+  useAuth,
+  type UserRole,
+} from "@aimers/auth";
+
+import {
   ArrowRight,
   Brain,
   LockKeyhole,
@@ -6,9 +11,105 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import { Link } from "react-router-dom";
+import {
+  type FormEvent,
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  Link,
+  useNavigate,
+} from "react-router-dom";
+
+const ALLOWED_ROLES:
+  readonly UserRole[] = [
+    "MENTOR",
+    "TEACHER",
+    "STAFF",
+  ];
 
 export function StaffLoginPage() {
+  const navigate = useNavigate();
+
+  const {
+    login,
+    logout,
+    status,
+  } = useAuth();
+
+  const [email, setEmail] =
+    useState("");
+
+  const [password, setPassword] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  useEffect(() => {
+    if (
+      status === "authenticated" &&
+      !loading
+    ) {
+      void logout();
+    }
+  }, [status, loading, logout]);
+
+  async function handleSubmit(
+    event:
+      FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const session =
+        await login({
+          email,
+          password,
+        });
+
+      const allowed =
+        ALLOWED_ROLES.some(
+          (role) =>
+            session.user.roles.includes(
+              role,
+            ),
+        );
+
+      if (!allowed) {
+        await logout();
+
+        setError(
+          "This account is not authorised for the staff portal.",
+        );
+
+        setLoading(false);
+        return;
+      }
+
+      navigate(
+        "/dashboard",
+        {
+          replace: true,
+        },
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Unable to sign in.",
+      );
+
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="staff-login-page">
       <section className="staff-login-brand-panel">
@@ -63,11 +164,7 @@ export function StaffLoginPage() {
       </section>
 
       <section className="staff-login-form-panel">
-        <form
-          onSubmit={(event) =>
-            event.preventDefault()
-          }
-        >
+        <form onSubmit={handleSubmit}>
           <span>
             AIMERS MENTOR PORTAL
           </span>
@@ -86,8 +183,16 @@ export function StaffLoginPage() {
               <Mail size={16} />
 
               <input
+                required
+                autoComplete="email"
                 type="email"
+                value={email}
                 placeholder="mentor@aimers.ai"
+                onChange={(event) =>
+                  setEmail(
+                    event.target.value,
+                  )
+                }
               />
             </div>
           </label>
@@ -99,20 +204,43 @@ export function StaffLoginPage() {
               <LockKeyhole size={16} />
 
               <input
+                required
+                autoComplete="current-password"
                 type="password"
+                value={password}
                 placeholder="Enter password"
+                onChange={(event) =>
+                  setPassword(
+                    event.target.value,
+                  )
+                }
               />
             </div>
           </label>
 
-          <button type="submit">
-            Sign in securely
+          {error && (
+            <div
+              className="staff-login-error"
+              role="alert"
+            >
+              {error}
+            </div>
+          )}
+
+          <button
+            disabled={loading}
+            type="submit"
+          >
+            {loading
+              ? "Signing in..."
+              : "Sign in securely"}
+
             <ArrowRight size={15} />
           </button>
 
           <small>
-            This portal is restricted to
-            authorised AIMERS staff.
+            Access is verified by the AIMERS
+            API and restricted by role.
           </small>
         </form>
       </section>
