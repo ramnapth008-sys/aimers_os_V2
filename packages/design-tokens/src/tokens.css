@@ -1,39 +1,62 @@
 :root {
-  --aimers-background: #050714;
-  --aimers-background-secondary: #080b18;
-  --aimers-surface: #0b1020;
-  --aimers-surface-elevated: #10162a;
+  color-scheme: dark;
 
-  --aimers-primary: #7c3aed;
-  --aimers-primary-bright: #9d4edd;
-  --aimers-secondary: #06b6d4;
+  --aimers-bg-primary: #030510;
+  --aimers-bg-secondary: #060916;
+  --aimers-bg-tertiary: #090d1c;
+
+  --aimers-surface-1: rgba(8, 12, 28, 0.9);
+  --aimers-surface-2: rgba(11, 16, 35, 0.92);
+  --aimers-surface-3: rgba(16, 22, 46, 0.88);
+  --aimers-surface-soft: rgba(255, 255, 255, 0.025);
+
+  --aimers-primary: #8b5cf6;
+  --aimers-primary-bright: #a855f7;
+  --aimers-primary-deep: #5b21b6;
+
+  --aimers-secondary: #2563eb;
+  --aimers-secondary-bright: #22d3ee;
+
   --aimers-accent: #ec4899;
+  --aimers-accent-bright: #f472b6;
 
   --aimers-success: #22c55e;
+  --aimers-success-bright: #5ee6a0;
+
   --aimers-information: #3b82f6;
   --aimers-warning: #f59e0b;
-  --aimers-danger: #ef4444;
+  --aimers-danger: #ef476f;
 
   --aimers-text-primary: #f8f9ff;
-  --aimers-text-secondary: #a4acc4;
-  --aimers-text-muted: #68708a;
+  --aimers-text-secondary: #aeb5cd;
+  --aimers-text-muted: #6f7895;
+  --aimers-text-faint: #4c5570;
 
-  --aimers-border: rgba(152, 162, 255, 0.16);
-  --aimers-glass: rgba(12, 18, 37, 0.78);
+  --aimers-border-soft: rgba(145, 157, 255, 0.11);
+  --aimers-border: rgba(145, 157, 255, 0.18);
+  --aimers-border-strong: rgba(157, 121, 255, 0.34);
 
   --aimers-gradient-primary:
     linear-gradient(
       135deg,
-      #6d28d9,
-      #9333ea,
-      #db2777
+      #5b21b6 0%,
+      #8b5cf6 45%,
+      #d946ef 100%
     );
 
-  --aimers-gradient-blue:
+  --aimers-gradient-electric:
     linear-gradient(
       135deg,
-      #2563eb,
-      #06b6d4
+      #2563eb 0%,
+      #7c3aed 52%,
+      #ec4899 100%
+    );
+
+  --aimers-gradient-cyan:
+    linear-gradient(
+      135deg,
+      #0ea5e9,
+      #22d3ee
     );
 
   --aimers-gradient-success:
@@ -44,10 +67,43 @@
       #14b8a6
     );
 
-  --aimers-radius-small: 10px;
-  --aimers-radius-medium: 16px;
-  --aimers-radius-large: 24px;
+  --aimers-gradient-warning:
+    linear-gradient(
+      135deg,
+      #d97706,
+      #f59e0b
+    );
 
-  --aimers-shadow-neon:
-    0 0 30px rgba(124, 58, 237, 0.25);
+  --aimers-gradient-danger:
+    linear-gradient(
+      135deg,
+      #e11d48,
+      #fb7185
+    );
+
+  --aimers-radius-xs: 8px;
+  --aimers-radius-sm: 12px;
+  --aimers-radius-md: 16px;
+  --aimers-radius-lg: 22px;
+  --aimers-radius-xl: 28px;
+  --aimers-radius-pill: 999px;
+
+  --aimers-shadow-panel:
+    0 20px 60px rgba(0, 0, 0, 0.28);
+
+  --aimers-shadow-primary:
+    0 0 34px rgba(139, 92, 246, 0.23);
+
+  --aimers-shadow-blue:
+    0 0 34px rgba(37, 99, 235, 0.2);
+
+  --aimers-shadow-pink:
+    0 0 34px rgba(236, 72, 153, 0.18);
+
+  --aimers-sidebar-width: 230px;
+  --aimers-topbar-height: 74px;
+
+  --aimers-transition-fast: 150ms ease;
+  --aimers-transition: 240ms ease;
+  --aimers-transition-slow: 420ms ease;
 }
