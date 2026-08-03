@@ -18,6 +18,10 @@ import {
 import {
   SubjectsPage,
 } from "../../pages/subjects";
+import {
+  PlannerPage,
+} from "../../pages/planner";
+
 
 import { ModulePage } from "../../pages/shared/ModulePage";
 
@@ -42,13 +46,6 @@ const modules = [
     title: "Digital Activity",
     description:
       "Analyse app, browser, lecture and productive usage patterns.",
-  },
-  {
-    path: "planner",
-    eyebrow: "LEARNING EXECUTION",
-    title: "Planner",
-    description:
-      "Organise tasks, study sessions, lectures and revision schedules.",
   },
   {
     path: "analytics",
@@ -206,6 +203,11 @@ export function AppRouter() {
           <Route
             path="subjects"
             element={<SubjectsPage />}
+          />
+
+          <Route
+            path="planner"
+            element={<PlannerPage />}
           />
 
           {modules.map((module) => (
