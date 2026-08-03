@@ -1,4 +1,6 @@
-import { Module } from "@nestjs/common";
+import {
+  Module,
+} from "@nestjs/common";
 
 import {
   ConfigModule,
@@ -28,6 +30,14 @@ import {
   RedisModule,
 } from "./infrastructure/redis/redis.module";
 
+import {
+  OnboardingModule,
+} from "./onboarding/onboarding.module";
+
+import {
+  ProfileModule,
+} from "./profile/profile.module";
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -40,6 +50,8 @@ import {
     DatabaseModule,
     RedisModule,
     AuthModule,
+    ProfileModule,
+    OnboardingModule,
   ],
 
   controllers: [
