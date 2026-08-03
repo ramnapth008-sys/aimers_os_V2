@@ -11,6 +11,10 @@ import {
 } from "./app.controller";
 
 import {
+  AcademicModule,
+} from "./academic/academic.module";
+
+import {
   AuthModule,
 } from "./auth/auth.module";
 
@@ -50,6 +54,7 @@ import {
     DatabaseModule,
     RedisModule,
     AuthModule,
+    AcademicModule,
     ProfileModule,
     OnboardingModule,
   ],
