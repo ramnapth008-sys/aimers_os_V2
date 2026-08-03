@@ -10,6 +10,11 @@ import {
 import { AppShell } from "../shell/AppShell";
 
 import { DashboardPage } from "../../pages/dashboard/DashboardPage";
+
+import {
+  StudentOnboardingGate,
+  StudentOnboardingPage,
+} from "../../pages/onboarding";
 import { ModulePage } from "../../pages/shared/ModulePage";
 
 const modules = [
@@ -174,7 +179,18 @@ export function AppRouter() {
             />
           }
         >
-          <Route element={<AppShell />}>
+          <Route
+            path="onboarding"
+            element={
+              <StudentOnboardingPage />
+            }
+          />
+
+          <Route
+            element={
+              <StudentOnboardingGate />
+            }
+          >
           <Route
             index
             element={

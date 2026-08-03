@@ -1,0 +1,489 @@
+.student-onboarding-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.08fr)
+    minmax(460px, 0.92fr);
+  color: #f7f8ff;
+  background:
+    radial-gradient(
+      circle at 12% 12%,
+      rgba(118, 83, 255, 0.25),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 82% 88%,
+      rgba(28, 127, 255, 0.17),
+      transparent 35%
+    ),
+    #070914;
+}
+
+.student-onboarding-visual,
+.student-onboarding-form-panel {
+  min-height: 100vh;
+  padding:
+    clamp(30px, 5vw, 76px);
+}
+
+.student-onboarding-visual {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-right:
+    1px solid
+    rgba(255, 255, 255, 0.07);
+}
+
+.onboarding-brand {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.onboarding-brand > span {
+  width: 49px;
+  height: 49px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background:
+    linear-gradient(
+      135deg,
+      #7b5cff,
+      #2787ff
+    );
+  box-shadow:
+    0 18px 58px
+    rgba(84, 72, 255, 0.34);
+}
+
+.onboarding-brand strong,
+.onboarding-brand small {
+  display: block;
+}
+
+.onboarding-brand i {
+  color: #8f9aff;
+  font-style: normal;
+}
+
+.onboarding-brand small {
+  margin-top: 3px;
+  color: #929ab4;
+}
+
+.onboarding-visual-content {
+  max-width: 760px;
+}
+
+.onboarding-eyebrow,
+.student-onboarding-form header > span {
+  color: #929dff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.17em;
+}
+
+.onboarding-visual-content h1 {
+  max-width: 760px;
+  margin: 20px 0;
+  font-size:
+    clamp(2.7rem, 5.5vw, 5.8rem);
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+}
+
+.onboarding-visual-content > p {
+  max-width: 680px;
+  color: #a6aec8;
+  font-size: 1.03rem;
+  line-height: 1.75;
+}
+
+.onboarding-benefit-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.onboarding-benefit-list article {
+  max-width: 560px;
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 16px 18px;
+  border:
+    1px solid
+    rgba(139, 123, 255, 0.19);
+  border-radius: 16px;
+  background:
+    rgba(15, 19, 40, 0.69);
+  backdrop-filter: blur(18px);
+}
+
+.onboarding-benefit-list article > svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: #9d8bff;
+}
+
+.onboarding-benefit-list strong,
+.onboarding-benefit-list span {
+  display: block;
+}
+
+.onboarding-benefit-list span {
+  margin-top: 4px;
+  color: #9199b3;
+  line-height: 1.5;
+}
+
+.student-onboarding-visual footer {
+  display: flex;
+  gap: 7px;
+  color: #7f879f;
+  font-size: 0.82rem;
+}
+
+.student-onboarding-visual footer strong {
+  color: #cdd2e6;
+}
+
+.student-onboarding-form-panel {
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+}
+
+.student-onboarding-form {
+  width: min(620px, 100%);
+  display: grid;
+  gap: 24px;
+  padding:
+    clamp(25px, 4vw, 40px);
+  border:
+    1px solid
+    rgba(144, 123, 255, 0.2);
+  border-radius: 25px;
+  background:
+    rgba(13, 16, 34, 0.84);
+  box-shadow:
+    0 30px 100px
+    rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(25px);
+}
+
+.student-onboarding-form header h2 {
+  margin: 10px 0 8px;
+  font-size:
+    clamp(1.7rem, 3vw, 2.35rem);
+}
+
+.student-onboarding-form header p {
+  margin: 0;
+  color: #979fb9;
+  line-height: 1.6;
+}
+
+.student-onboarding-form fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.student-onboarding-form legend {
+  margin-bottom: 12px;
+  color: #d9ddef;
+  font-size: 0.87rem;
+  font-weight: 700;
+}
+
+.exam-target-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.exam-target-card {
+  position: relative;
+  min-height: 86px;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 14px;
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.09);
+  border-radius: 15px;
+  cursor: pointer;
+  color: #eff1ff;
+  text-align: left;
+  background:
+    rgba(255, 255, 255, 0.028);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.exam-target-card:hover {
+  transform: translateY(-2px);
+  border-color:
+    rgba(140, 119, 255, 0.38);
+}
+
+.exam-target-card.is-selected {
+  border-color:
+    rgba(130, 104, 255, 0.72);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(116, 82, 255, 0.18),
+      rgba(34, 126, 255, 0.1)
+    );
+}
+
+.exam-target-card > span {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #a99aff;
+  background:
+    rgba(126, 97, 255, 0.13);
+}
+
+.exam-target-card strong,
+.exam-target-card small {
+  display: block;
+}
+
+.exam-target-card small {
+  margin-top: 5px;
+  color: #858da8;
+  line-height: 1.35;
+}
+
+.exam-target-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #75ecbc;
+}
+
+.onboarding-fields {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.onboarding-fields label {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  color: #d7dbed;
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.onboarding-fields label > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.onboarding-fields label small {
+  color: #777f99;
+  font-weight: 500;
+}
+
+.onboarding-fields label > div {
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 13px;
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.1);
+  border-radius: 13px;
+  background:
+    rgba(255, 255, 255, 0.03);
+}
+
+.onboarding-fields input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: white;
+  color-scheme: dark;
+  background: transparent;
+}
+
+.onboarding-submit-button {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  color: white;
+  font-weight: 800;
+  background:
+    linear-gradient(
+      135deg,
+      #7659ff,
+      #287fff
+    );
+  box-shadow:
+    0 16px 44px
+    rgba(74, 84, 255, 0.27);
+}
+
+.onboarding-submit-button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.onboarding-error {
+  padding: 12px 14px;
+  border:
+    1px solid
+    rgba(255, 87, 126, 0.3);
+  border-radius: 12px;
+  color: #ff9caf;
+  background:
+    rgba(255, 54, 103, 0.08);
+}
+
+.onboarding-consent-note {
+  color: #737b95;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.onboarding-profile-loader {
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #a8afc6;
+}
+
+.onboarding-state-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #f7f8ff;
+  background:
+    radial-gradient(
+      circle at 20% 10%,
+      rgba(116, 76, 255, 0.18),
+      transparent 35%
+    ),
+    #070914;
+}
+
+.onboarding-state-card {
+  width: min(430px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 13px;
+  padding: 30px;
+  border:
+    1px solid
+    rgba(144, 125, 255, 0.23);
+  border-radius: 21px;
+  text-align: center;
+  background:
+    rgba(15, 18, 37, 0.84);
+  box-shadow:
+    0 24px 80px
+    rgba(0, 0, 0, 0.36);
+}
+
+.onboarding-state-card h1,
+.onboarding-state-card p {
+  margin: 0;
+}
+
+.onboarding-state-card p {
+  color: #9ba3bc;
+}
+
+.onboarding-state-card button {
+  min-height: 43px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 0 17px;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  color: white;
+  background:
+    linear-gradient(
+      135deg,
+      #765cff,
+      #377dff
+    );
+}
+
+.onboarding-spinner {
+  animation:
+    onboarding-spin
+    900ms linear infinite;
+}
+
+@keyframes onboarding-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 980px) {
+  .student-onboarding-page {
+    grid-template-columns: 1fr;
+  }
+
+  .student-onboarding-visual {
+    min-height: auto;
+    gap: 70px;
+    border-right: 0;
+    border-bottom:
+      1px solid
+      rgba(255, 255, 255, 0.07);
+  }
+
+  .student-onboarding-form-panel {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 620px) {
+  .student-onboarding-visual,
+  .student-onboarding-form-panel {
+    padding: 22px;
+  }
+
+  .exam-target-grid,
+  .onboarding-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .student-onboarding-form {
+    padding: 22px;
+  }
+}
