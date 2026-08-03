@@ -123,6 +123,43 @@ enum TopicMasteryLevel {
   MASTERED
 }
 
+enum StudyPlanStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum StudyTaskType {
+  STUDY
+  REVISION
+  PRACTICE
+  LECTURE
+  MOCK_TEST
+  OTHER
+}
+
+enum StudyTaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum StudyTaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum StudySessionStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
 model User {
   id              String     @id @default(uuid()) @db.Uuid
   email           String     @unique @db.VarChar(320)
@@ -294,6 +331,9 @@ model StudentProfile {
   guardians           GuardianStudentLink[]
   mentorAssignments   StudentMentorAssignment[]
   academicEnrollments StudentEnrollment[]
+  studyPlans          StudyPlan[]
+  studyTasks          StudyTask[]
+  studySessions       StudySession[]
 
   @@unique([userId, organizationId])
   @@unique([organizationId, admissionNumber])
@@ -439,7 +479,8 @@ model Subject {
   createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  syllabi SyllabusSubject[]
+  syllabi    SyllabusSubject[]
+  studyTasks StudyTask[]
 
   @@index([status])
   @@map("subjects")
@@ -500,8 +541,10 @@ model Chapter {
 
   unit AcademicUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
 
-  topics   Topic[]
-  progress ChapterProgress[]
+  topics        Topic[]
+  progress      ChapterProgress[]
+  studyTasks    StudyTask[]
+  studySessions StudySession[]
 
   @@unique([unitId, code])
   @@unique([unitId, sequenceNumber])
@@ -523,6 +566,8 @@ model Topic {
   chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
   masteryRecords TopicMastery[]
+  studyTasks     StudyTask[]
+  studySessions  StudySession[]
 
   @@unique([chapterId, code])
   @@unique([chapterId, sequenceNumber])
@@ -604,4 +649,100 @@ model TopicMastery {
   @@index([topicId])
   @@index([nextReviewAt])
   @@map("topic_mastery")
+}
+
+model StudyPlan {
+  id               String          @id @default(uuid()) @db.Uuid
+  studentProfileId String          @map("student_profile_id") @db.Uuid
+  name             String          @db.VarChar(200)
+  description      String?         @db.Text
+  status           StudyPlanStatus @default(ACTIVE)
+  startDate        DateTime        @map("start_date") @db.Date
+  endDate          DateTime?       @map("end_date") @db.Date
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  tasks StudyTask[]
+
+  @@index([studentProfileId, status])
+  @@index([startDate, endDate])
+  @@map("study_plans")
+}
+
+model StudyTask {
+  id                String            @id @default(uuid()) @db.Uuid
+  studentProfileId  String            @map("student_profile_id") @db.Uuid
+  studyPlanId       String?           @map("study_plan_id") @db.Uuid
+  subjectId         String?           @map("subject_id") @db.Uuid
+  chapterId         String?           @map("chapter_id") @db.Uuid
+  topicId           String?           @map("topic_id") @db.Uuid
+  title             String            @db.VarChar(250)
+  description       String?           @db.Text
+  type              StudyTaskType     @default(STUDY)
+  status            StudyTaskStatus   @default(TODO)
+  priority          StudyTaskPriority @default(MEDIUM)
+  scheduledFor      DateTime?         @map("scheduled_for") @db.Timestamptz(6)
+  dueAt             DateTime?         @map("due_at") @db.Timestamptz(6)
+  estimatedMinutes  Int               @default(30) @map("estimated_minutes")
+  actualMinutes     Int               @default(0) @map("actual_minutes")
+  completionPercent Int               @default(0) @map("completion_percent")
+  completedAt       DateTime?         @map("completed_at") @db.Timestamptz(6)
+  sortOrder         Int               @default(0) @map("sort_order")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  studyPlan StudyPlan? @relation(fields: [studyPlanId], references: [id], onDelete: SetNull)
+
+  subject Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  chapter Chapter? @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+
+  topic Topic? @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  sessions StudySession[]
+
+  @@index([studentProfileId, status, scheduledFor])
+  @@index([studentProfileId, dueAt])
+  @@index([studyPlanId, sortOrder])
+  @@index([subjectId])
+  @@index([chapterId])
+  @@index([topicId])
+  @@map("study_tasks")
+}
+
+model StudySession {
+  id               String             @id @default(uuid()) @db.Uuid
+  studentProfileId String             @map("student_profile_id") @db.Uuid
+  studyTaskId      String?            @map("study_task_id") @db.Uuid
+  chapterId        String?            @map("chapter_id") @db.Uuid
+  topicId          String?            @map("topic_id") @db.Uuid
+  status           StudySessionStatus @default(PLANNED)
+  plannedStartAt   DateTime?          @map("planned_start_at") @db.Timestamptz(6)
+  startedAt        DateTime?          @map("started_at") @db.Timestamptz(6)
+  endedAt          DateTime?          @map("ended_at") @db.Timestamptz(6)
+  plannedMinutes   Int                @default(30) @map("planned_minutes")
+  durationMinutes  Int                @default(0) @map("duration_minutes")
+  focusMinutes     Int                @default(0) @map("focus_minutes")
+  notes            String?            @db.Text
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  studyTask StudyTask? @relation(fields: [studyTaskId], references: [id], onDelete: SetNull)
+
+  chapter Chapter? @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+
+  topic Topic? @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  @@index([studentProfileId, status, plannedStartAt])
+  @@index([studentProfileId, startedAt])
+  @@index([studyTaskId])
+  @@index([chapterId])
+  @@index([topicId])
+  @@map("study_sessions")
 }
