@@ -1,1322 +1,756 @@
-import {
-  useAuth,
-} from "@aimers/auth";
 
+import { useAuth } from "@aimers/auth";
 import {
-  Activity,
-  AlertTriangle,
-  ArrowRight,
-  BarChart3,
-  BookOpenCheck,
-  Brain,
-  CheckCircle2,
-  ChevronRight,
-  CircleDashed,
-  Clock3,
-  FlaskConical,
-  GraduationCap,
-  Leaf,
-  LoaderCircle,
-  RefreshCw,
-  Sparkles,
-  Target,
-  TrendingUp,
-  Zap,
+  Activity, AppWindow, ArrowRight, ArrowUpRight, BarChart3, BookOpenCheck,
+  Bot, Brain, Check, ChevronRight, CircleCheckBig, Clock3, Flame, Globe2,
+  Headphones, Library, LoaderCircle, Mic2, Play, Radio, RefreshCw,
+  Sparkles, Target, TrendingUp, Video, Zap,
 } from "lucide-react";
-
 import {
-  type CSSProperties,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
+  type CSSProperties, type ReactNode, useCallback, useEffect, useMemo, useState,
 } from "react";
-
-import {
-  Link,
-} from "react-router-dom";
-
-import {
-  getAcademicWorkspace,
-} from "../subjects/subjects.service";
-
+import { Link } from "react-router-dom";
+import { getAcademicWorkspace } from "../subjects/subjects.service";
 import type {
-  AcademicChapter,
-  AcademicSyllabusSubject,
-  AcademicWorkspace,
-  ChapterProgress,
-  TopicMastery,
+  AcademicChapter, AcademicSyllabusSubject, AcademicWorkspace,
+  ChapterProgress, TopicMastery,
 } from "../subjects/subjects.types";
-
 import "./dashboard.css";
 
-type MetricTone =
-  | "violet"
-  | "blue"
-  | "green"
-  | "orange"
-  | "pink";
-
-interface MetricProps {
-  label: string;
-  value: string;
-  detail: string;
-  icon: ReactNode;
-  tone: MetricTone;
-  progress?: number;
-}
+type Tone = "orange" | "blue" | "violet" | "pink" | "green";
+type SignalTone = "danger" | "warning" | "success";
 
 interface ChapterEntry {
   subject: AcademicSyllabusSubject;
   chapter: AcademicChapter;
 }
 
-function clampPercent(
-  value: number,
-): number {
-  return Math.max(
-    0,
-    Math.min(
-      100,
-      Math.round(value),
-    ),
+function clamp(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function assessed(value: TopicMastery | undefined): value is TopicMastery {
+  return Boolean(
+    value &&
+    (value.attempts > 0 || value.lastAssessedAt || value.level !== "NOT_ASSESSED"),
   );
 }
 
-function chapterPriority(
-  progress: ChapterProgress | undefined,
-): number {
-  if (
-    progress?.state === "IN_PROGRESS"
-  ) {
-    return 0;
-  }
-
-  if (
-    !progress ||
-    progress.state === "NOT_STARTED"
-  ) {
-    return 1;
-  }
-
-  if (
-    progress.state === "SKIPPED"
-  ) {
-    return 2;
-  }
-
+function chapterPriority(progress: ChapterProgress | undefined): number {
+  if (progress?.state === "IN_PROGRESS") return 0;
+  if (!progress || progress.state === "NOT_STARTED") return 1;
+  if (progress.state === "SKIPPED") return 2;
   return 3;
 }
 
-function isAssessed(
-  mastery: TopicMastery | undefined,
-): mastery is TopicMastery {
-  return Boolean(
-    mastery &&
-    (
-      mastery.attempts > 0 ||
-      mastery.lastAssessedAt ||
-      mastery.level !== "NOT_ASSESSED"
-    ),
-  );
+function signalTone(score: number, isAssessed: boolean): SignalTone {
+  if (!isAssessed) return "warning";
+  if (score < 40) return "danger";
+  if (score < 60) return "warning";
+  return "success";
 }
 
-function subjectTone(
-  code: string,
-): string {
-  const normalized =
-    code.toUpperCase();
-
-  if (normalized.includes("PHYS")) {
-    return "physics";
-  }
-
-  if (normalized.includes("CHEM")) {
-    return "chemistry";
-  }
-
-  if (
-    normalized.includes("BIO") ||
-    normalized.includes("BOT") ||
-    normalized.includes("ZOO")
-  ) {
-    return "biology";
-  }
-
-  return "other";
+function makePoints(values: readonly number[]): string {
+  if (values.length < 2) return "0,112 420,112";
+  return values
+    .map((value, index) => {
+      const x = (index / (values.length - 1)) * 420;
+      const y = 112 - clamp(value) * 0.92;
+      return `${x},${y}`;
+    })
+    .join(" ");
 }
 
-function SubjectIcon({
-  code,
+function MetricCard({
+  label, value, unit, detail, change, icon, tone, progress,
 }: {
-  code: string;
+  label: string;
+  value: string;
+  unit?: string;
+  detail: string;
+  change: string;
+  icon: ReactNode;
+  tone: Tone;
+  progress?: number;
 }) {
-  const tone = subjectTone(code);
-
-  if (tone === "physics") {
-    return <Zap size={18} />;
-  }
-
-  if (tone === "chemistry") {
-    return <FlaskConical size={18} />;
-  }
-
-  if (tone === "biology") {
-    return <Leaf size={18} />;
-  }
-
-  return <BookOpenCheck size={18} />;
-}
-
-function formatDate(
-  value: string | null,
-): string {
-  if (!value) {
-    return "Not studied yet";
-  }
-
-  return new Intl.DateTimeFormat(
-    "en-IN",
-    {
-      day: "numeric",
-      month: "short",
-      hour: "numeric",
-      minute: "2-digit",
-    },
-  ).format(new Date(value));
-}
-
-function Metric({
-  label,
-  value,
-  detail,
-  icon,
-  tone,
-  progress,
-}: MetricProps) {
   return (
-    <article
-      className={`live-metric live-metric-${tone}`}
-    >
+    <article className={`ref-metric ref-${tone}`}>
       <header>
         <span>{icon}</span>
         <small>{label}</small>
+        <Link to="/subjects" aria-label={`Open ${label}`}>
+          <ArrowUpRight size={12} />
+        </Link>
       </header>
 
-      <strong>{value}</strong>
+      <div className="ref-metric-value">
+        <strong>{value}</strong>
+        {unit && <span>{unit}</span>}
+      </div>
+
       <p>{detail}</p>
 
-      {typeof progress === "number" && (
-        <div className="live-metric-track">
-          <i
-            style={{
-              width:
-                `${clampPercent(progress)}%`,
-            }}
-          />
+      {typeof progress === "number" ? (
+        <div className="ref-metric-track">
+          <i style={{ width: `${clamp(progress)}%` }} />
         </div>
+      ) : (
+        <div className="ref-metric-divider" />
       )}
+
+      <small>{change}</small>
     </article>
   );
 }
 
-function LoadingState() {
+function Panel({
+  title, eyebrow, action, children, className = "",
+}: {
+  title: string;
+  eyebrow?: string;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <section className="live-dashboard-state">
-      <LoaderCircle
-        className="live-dashboard-spinner"
-        size={30}
-      />
-
-      <h1>
-        Loading your learning system
-      </h1>
-
-      <p>
-        Connecting syllabus progress,
-        mastery and practice data…
-      </p>
-    </section>
+    <article className={`ref-panel ${className}`}>
+      <header className="ref-panel-heading">
+        <div>
+          {eyebrow && <span>{eyebrow}</span>}
+          <h2>{title}</h2>
+        </div>
+        {action}
+      </header>
+      {children}
+    </article>
   );
 }
 
-function ErrorState({
-  message,
-  onRetry,
+function ProgressRing({ value }: { value: number }) {
+  const normalized = clamp(value);
+  const style = { "--ref-ring": `${normalized * 3.6}deg` } as CSSProperties;
+
+  return (
+    <div className="ref-progress-ring" style={style}>
+      <div>
+        <strong>{normalized}%</strong>
+        <span>Completed</span>
+      </div>
+    </div>
+  );
+}
+
+function DashboardState({
+  error, retry,
 }: {
-  message: string;
-  onRetry: () => void;
+  error?: string;
+  retry?: () => void;
 }) {
   return (
-    <section className="live-dashboard-state error">
-      <AlertTriangle size={30} />
-
-      <h1>
-        Dashboard data is unavailable
-      </h1>
-
-      <p>{message}</p>
-
-      <button
-        type="button"
-        onClick={onRetry}
-      >
-        <RefreshCw size={16} />
-        Try again
-      </button>
+    <section className={`ref-state ${error ? "error" : ""}`}>
+      {error ? <Zap size={29} /> : <LoaderCircle className="ref-spin" size={29} />}
+      <h1>{error ? "Dashboard data is unavailable" : "Loading your command centre"}</h1>
+      <p>{error || "Connecting academic progress, mastery and practice data…"}</p>
+      {retry && (
+        <button type="button" onClick={retry}>
+          <RefreshCw size={16} />
+          Try again
+        </button>
+      )}
     </section>
   );
 }
 
 export function DashboardPage() {
-  const {
-    apiFetch,
-    user,
-  } = useAuth();
+  const { apiFetch, user } = useAuth();
+  const [workspace, setWorkspace] = useState<AcademicWorkspace | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
 
-  const [
-    workspace,
-    setWorkspace,
-  ] = useState<AcademicWorkspace | null>(
-    null,
-  );
+  const load = useCallback(async (refresh = false) => {
+    refresh ? setRefreshing(true) : setLoading(true);
+    setError("");
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
-
-  const [
-    refreshing,
-    setRefreshing,
-  ] = useState(false);
-
-  const [
-    error,
-    setError,
-  ] = useState("");
-
-  const loadWorkspace =
-    useCallback(
-      async (
-        refresh = false,
-      ) => {
-        if (refresh) {
-          setRefreshing(true);
-        } else {
-          setLoading(true);
-        }
-
-        setError("");
-
-        try {
-          const result =
-            await getAcademicWorkspace(
-              apiFetch,
-            );
-
-          setWorkspace(result);
-        } catch (caught) {
-          setError(
-            caught instanceof Error
-              ? caught.message
-              : "Unable to load academic data.",
-          );
-        } finally {
-          setLoading(false);
-          setRefreshing(false);
-        }
-      },
-      [apiFetch],
-    );
+    try {
+      setWorkspace(await getAcademicWorkspace(apiFetch));
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Unable to load academic dashboard data.",
+      );
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [apiFetch]);
 
   useEffect(() => {
-    void loadWorkspace();
-  }, [loadWorkspace]);
+    void load();
+  }, [load]);
 
-  const dashboard =
-    useMemo(() => {
-      if (!workspace) {
-        return null;
-      }
+  const data = useMemo(() => {
+    if (!workspace) return null;
 
-      const subjects =
-        workspace
-          .syllabusVersion
-          .subjects;
+    const subjects = workspace.syllabusVersion.subjects;
+    const chapters: ChapterEntry[] = subjects.flatMap((subject) =>
+      subject.units.flatMap((unit) =>
+        unit.chapters.map((chapter) => ({ subject, chapter })),
+      ),
+    );
 
-      const chapterEntries:
-        ChapterEntry[] =
-        subjects.flatMap(
-          (subject) =>
-            subject.units.flatMap(
-              (unit) =>
-                unit.chapters.map(
-                  (chapter) => ({
-                    subject,
-                    chapter,
-                  }),
-                ),
-            ),
+    const topics = chapters.flatMap(({ subject, chapter }) =>
+      chapter.topics.map((topic) => ({ subject, chapter, topic })),
+    );
+
+    const progressByChapter = new Map(
+      workspace.chapterProgress.map((progress) => [progress.chapterId, progress]),
+    );
+
+    const masteryByTopic = new Map(
+      workspace.topicMastery.map((mastery) => [mastery.topicId, mastery]),
+    );
+
+    const overall = chapters.length === 0
+      ? 0
+      : clamp(
+          chapters.reduce(
+            (sum, item) =>
+              sum + (progressByChapter.get(item.chapter.id)?.completionPercent ?? 0),
+            0,
+          ) / chapters.length,
         );
 
-      const topicEntries =
-        chapterEntries.flatMap(
-          ({
-            subject,
-            chapter,
-          }) =>
-            chapter.topics.map(
-              (topic) => ({
-                subject,
-                chapter,
-                topic,
-              }),
-            ),
+    const completed = chapters.filter(
+      (item) => progressByChapter.get(item.chapter.id)?.state === "COMPLETED",
+    ).length;
+
+    const active = chapters.filter(
+      (item) => progressByChapter.get(item.chapter.id)?.state === "IN_PROGRESS",
+    ).length;
+
+    const attempts = workspace.chapterProgress.reduce(
+      (sum, progress) => sum + progress.questionAttempts,
+      0,
+    );
+
+    const correct = workspace.chapterProgress.reduce(
+      (sum, progress) => sum + progress.correctAnswers,
+      0,
+    );
+
+    const accuracy = attempts === 0 ? 0 : clamp((correct / attempts) * 100);
+    const assessedTopics = workspace.topicMastery.filter((item) => assessed(item));
+    const mastery = assessedTopics.length === 0
+      ? 0
+      : clamp(
+          assessedTopics.reduce((sum, item) => sum + item.masteryScore, 0) /
+            assessedTopics.length,
         );
 
-      const progressByChapter =
-        new Map(
-          workspace.chapterProgress.map(
-            (progress) => [
-              progress.chapterId,
-              progress,
-            ],
-          ),
-        );
+    const mastered = workspace.topicMastery.filter(
+      (item) => item.level === "MASTERED",
+    ).length;
 
-      const masteryByTopic =
-        new Map(
-          workspace.topicMastery.map(
-            (mastery) => [
-              mastery.topicId,
-              mastery,
-            ],
-          ),
-        );
-
-      const overallProgress =
-        chapterEntries.length === 0
-          ? 0
-          : clampPercent(
-              chapterEntries.reduce(
-                (
-                  total,
-                  {
-                    chapter,
-                  },
-                ) =>
-                  total +
-                  (
-                    progressByChapter.get(
-                      chapter.id,
-                    )?.completionPercent ??
-                    0
-                  ),
-                0,
-              ) /
-              chapterEntries.length,
-            );
-
-      const completedChapters =
-        chapterEntries.filter(
-          ({
-            chapter,
-          }) =>
-            progressByChapter.get(
-              chapter.id,
-            )?.state === "COMPLETED",
-        ).length;
-
-      const inProgressChapters =
-        chapterEntries.filter(
-          ({
-            chapter,
-          }) =>
-            progressByChapter.get(
-              chapter.id,
-            )?.state === "IN_PROGRESS",
-        ).length;
-
-      const questionAttempts =
-        workspace.chapterProgress.reduce(
-          (
-            total,
-            progress,
-          ) =>
-            total +
-            progress.questionAttempts,
-          0,
-        );
-
-      const correctAnswers =
-        workspace.chapterProgress.reduce(
-          (
-            total,
-            progress,
-          ) =>
-            total +
-            progress.correctAnswers,
-          0,
-        );
-
-      const accuracy =
-        questionAttempts === 0
-          ? 0
-          : clampPercent(
-              (
-                correctAnswers /
-                questionAttempts
-              ) * 100,
-            );
-
-      const assessedMasteries =
-        workspace.topicMastery.filter(
-          (mastery) =>
-            isAssessed(mastery),
-        );
-
-      const masteryScore =
-        assessedMasteries.length === 0
-          ? 0
-          : clampPercent(
-              assessedMasteries.reduce(
-                (
-                  total,
-                  mastery,
-                ) =>
-                  total +
-                  mastery.masteryScore,
-                0,
-              ) /
-              assessedMasteries.length,
-            );
-
-      const masteredTopics =
-        workspace.topicMastery.filter(
-          (mastery) =>
-            mastery.level === "MASTERED",
-        ).length;
-
-      const subjectProgress =
-        subjects.map((subject) => {
-          const chapters =
-            subject.units.flatMap(
-              (unit) =>
-                unit.chapters,
-            );
-
-          const progress =
-            chapters.length === 0
-              ? 0
-              : clampPercent(
-                  chapters.reduce(
-                    (
-                      total,
-                      chapter,
-                    ) =>
-                      total +
-                      (
-                        progressByChapter.get(
-                          chapter.id,
-                        )
-                          ?.completionPercent ??
-                        0
-                      ),
-                    0,
-                  ) /
-                  chapters.length,
-                );
-
-          return {
-            id: subject.id,
-            code:
-              subject.subject.code,
-            name:
-              subject.subject.name,
-            progress,
-          };
-        });
-
-      const queue =
-        [...chapterEntries]
-          .sort(
-            (
-              left,
-              right,
-            ) => {
-              const leftProgress =
-                progressByChapter.get(
-                  left.chapter.id,
-                );
-
-              const rightProgress =
-                progressByChapter.get(
-                  right.chapter.id,
-                );
-
-              const priority =
-                chapterPriority(
-                  leftProgress,
-                ) -
-                chapterPriority(
-                  rightProgress,
-                );
-
-              if (priority !== 0) {
-                return priority;
-              }
-
-              return (
-                (
-                  rightProgress
-                    ?.completionPercent ??
-                  0
-                ) -
-                (
-                  leftProgress
-                    ?.completionPercent ??
-                  0
-                )
-              );
-            },
-          )
-          .slice(0, 5)
-          .map(
-            ({
-              subject,
-              chapter,
-            }) => {
-              const progress =
-                progressByChapter.get(
-                  chapter.id,
-                );
-
-              return {
-                id: chapter.id,
-                subject:
-                  subject.subject.name,
-                chapter: chapter.name,
-                topics:
-                  chapter.topics.length,
-                percent:
-                  progress
-                    ?.completionPercent ??
-                  0,
-                state:
-                  progress?.state ??
-                  "NOT_STARTED",
-              };
-            },
+    const subjectProgress = subjects.map((subject) => {
+      const subjectChapters = subject.units.flatMap((unit) => unit.chapters);
+      const value = subjectChapters.length === 0
+        ? 0
+        : clamp(
+            subjectChapters.reduce(
+              (sum, chapter) =>
+                sum + (progressByChapter.get(chapter.id)?.completionPercent ?? 0),
+              0,
+            ) / subjectChapters.length,
           );
-
-      const weakTopics =
-        topicEntries
-          .map(
-            ({
-              subject,
-              topic,
-            }) => {
-              const mastery =
-                masteryByTopic.get(
-                  topic.id,
-                );
-
-              const assessed =
-                isAssessed(mastery);
-
-              return {
-                id: topic.id,
-                subject:
-                  subject.subject.name,
-                topic: topic.name,
-                assessed,
-                score:
-                  mastery
-                    ?.masteryScore ?? 0,
-              };
-            },
-          )
-          .filter(
-            (item) =>
-              !item.assessed ||
-              item.score < 60,
-          )
-          .sort(
-            (
-              left,
-              right,
-            ) => {
-              if (
-                left.assessed !==
-                right.assessed
-              ) {
-                return left.assessed
-                  ? -1
-                  : 1;
-              }
-
-              return (
-                left.score -
-                right.score
-              );
-            },
-          )
-          .slice(0, 5);
-
-      const chapterLookup =
-        new Map(
-          chapterEntries.map(
-            (entry) => [
-              entry.chapter.id,
-              entry,
-            ],
-          ),
-        );
-
-      const recentActivity =
-        [...workspace.chapterProgress]
-          .filter(
-            (progress) =>
-              Boolean(
-                progress.lastStudiedAt,
-              ),
-          )
-          .sort(
-            (
-              left,
-              right,
-            ) =>
-              new Date(
-                right.lastStudiedAt ??
-                0,
-              ).getTime() -
-              new Date(
-                left.lastStudiedAt ??
-                0,
-              ).getTime(),
-          )
-          .slice(0, 5)
-          .flatMap(
-            (progress) => {
-              const entry =
-                chapterLookup.get(
-                  progress.chapterId,
-                );
-
-              if (!entry) {
-                return [];
-              }
-
-              return [
-                {
-                  id: progress.id,
-                  subject:
-                    entry.subject.subject.name,
-                  chapter:
-                    entry.chapter.name,
-                  percent:
-                    progress.completionPercent,
-                  state: progress.state,
-                  lastStudiedAt:
-                    progress.lastStudiedAt,
-                },
-              ];
-            },
-          );
-
-      const weakestSubject =
-        [...subjectProgress].sort(
-          (
-            left,
-            right,
-          ) =>
-            left.progress -
-            right.progress,
-        )[0] ?? null;
 
       return {
-        subjects,
-        chapterEntries,
-        topicEntries,
-        overallProgress,
-        completedChapters,
-        inProgressChapters,
-        questionAttempts,
-        correctAnswers,
-        accuracy,
-        masteryScore,
-        masteredTopics,
-        assessedTopicCount:
-          assessedMasteries.length,
-        subjectProgress,
-        queue,
-        weakTopics,
-        recentActivity,
-        weakestSubject,
+        id: subject.id,
+        name: subject.subject.name,
+        code: subject.subject.code,
+        value,
       };
-    }, [workspace]);
+    });
+
+    const missions = [...chapters]
+      .sort((left, right) => {
+        const leftProgress = progressByChapter.get(left.chapter.id);
+        const rightProgress = progressByChapter.get(right.chapter.id);
+        const priority = chapterPriority(leftProgress) - chapterPriority(rightProgress);
+
+        if (priority !== 0) return priority;
+
+        return (
+          (rightProgress?.completionPercent ?? 0) -
+          (leftProgress?.completionPercent ?? 0)
+        );
+      })
+      .slice(0, 4)
+      .map(({ subject, chapter }) => {
+        const progress = progressByChapter.get(chapter.id);
+        return {
+          id: chapter.id,
+          title: `${subject.subject.name}: ${chapter.name}`,
+          detail: `${chapter.topics.length} topics · ${progress?.completionPercent ?? 0}% complete`,
+          completed: progress?.state === "COMPLETED",
+        };
+      });
+
+    const weakTopics = topics
+      .map(({ subject, topic }) => {
+        const record = masteryByTopic.get(topic.id);
+        const isAssessed = assessed(record);
+        const score = record?.masteryScore ?? 0;
+
+        return {
+          id: topic.id,
+          topic: topic.name,
+          subject: subject.subject.name,
+          assessed: isAssessed,
+          score,
+          tone: signalTone(score, isAssessed),
+        };
+      })
+      .filter((item) => !item.assessed || item.score < 60)
+      .sort((left, right) => {
+        if (left.assessed !== right.assessed) return left.assessed ? -1 : 1;
+        return left.score - right.score;
+      })
+      .slice(0, 4);
+
+    const coverageSeries = chapters
+      .slice(0, 7)
+      .map((item) => progressByChapter.get(item.chapter.id)?.completionPercent ?? 0);
+
+    const weakestSubject = [...subjectProgress].sort(
+      (left, right) => left.value - right.value,
+    )[0] ?? null;
+
+    return {
+      subjects,
+      chapters,
+      topics,
+      overall,
+      completed,
+      active,
+      attempts,
+      correct,
+      accuracy,
+      mastery,
+      mastered,
+      assessedCount: assessedTopics.length,
+      subjectProgress,
+      missions,
+      weakTopics,
+      coverageSeries,
+      coveragePoints: makePoints(coverageSeries),
+      weakestSubject,
+      currentMission: missions.find((item) => !item.completed) ?? missions[0] ?? null,
+    };
+  }, [workspace]);
 
   if (loading) {
     return (
-      <div className="live-dashboard-page state-page">
-        <LoadingState />
+      <div className="ref-dashboard state-page">
+        <DashboardState />
       </div>
     );
   }
 
-  if (
-    !workspace ||
-    !dashboard
-  ) {
+  if (!workspace || !data) {
     return (
-      <div className="live-dashboard-page state-page">
-        <ErrorState
-          message={
-            error ||
-            "No academic workspace is available."
-          }
-          onRetry={() => {
-            void loadWorkspace();
-          }}
+      <div className="ref-dashboard state-page">
+        <DashboardState
+          error={error || "No academic workspace is available."}
+          retry={() => void load()}
         />
       </div>
     );
   }
 
-  const programme =
-    workspace
-      .syllabusVersion
-      .programme;
-
-  const firstName =
-    user?.firstName?.trim() ||
-    "Student";
-
-  const overallStyle = {
-    "--live-progress":
-      `${dashboard.overallProgress}%`,
+  const firstName = user?.firstName?.trim() || "Student";
+  const programme = workspace.syllabusVersion.programme;
+  const missionCompleted = data.missions.filter((item) => item.completed).length;
+  const subjectRing = {
+    "--ref-subject-ring": `${data.overall * 3.6}deg`,
   } as CSSProperties;
 
   return (
-    <div className="live-dashboard-page">
-      <header className="live-dashboard-hero">
-        <div>
-          <span className="live-dashboard-eyebrow">
-            <i />
-            LIVE ACADEMIC INTELLIGENCE
-          </span>
-
-          <h1>
-            Welcome back,{" "}
-            <strong>{firstName}.</strong>
-          </h1>
-
-          <p>
-            Your dashboard now reads directly
-            from the academic catalogue,
-            chapter progress, topic mastery and
-            recorded question attempts.
-          </p>
-
-          <div className="live-dashboard-meta">
-            <span>
-              <GraduationCap size={15} />
-              {programme.name}
-            </span>
-
-            <span>
-              <BookOpenCheck size={15} />
-              {
-                workspace
-                  .syllabusVersion
-                  .name
-              }
-            </span>
-
-            <span>
-              <CheckCircle2 size={15} />
-              {workspace.status}
-            </span>
-          </div>
-        </div>
-
-        <div className="live-dashboard-hero-progress">
-          <div
-            className="live-dashboard-ring"
-            style={overallStyle}
-          >
-            <div>
-              <strong>
-                {
-                  dashboard
-                    .overallProgress
-                }%
-              </strong>
-              <span>syllabus</span>
-            </div>
-          </div>
-
-          <button
-            disabled={refreshing}
-            type="button"
-            onClick={() => {
-              void loadWorkspace(true);
-            }}
-          >
-            <RefreshCw
-              className={
-                refreshing
-                  ? "live-dashboard-spinner"
-                  : ""
-              }
-              size={15}
-            />
-            Refresh data
-          </button>
-        </div>
-      </header>
-
+    <div className="ref-dashboard">
       {error && (
-        <div
-          className="live-dashboard-inline-error"
-          role="alert"
-        >
-          <AlertTriangle size={16} />
+        <div className="ref-inline-error" role="alert">
+          <Zap size={15} />
           {error}
         </div>
       )}
 
-      <section className="live-dashboard-metrics">
-        <Metric
-          label="SYLLABUS PROGRESS"
-          value={
-            `${dashboard.overallProgress}%`
-          }
-          detail="Average chapter completion"
-          icon={
-            <TrendingUp size={17} />
-          }
-          tone="violet"
-          progress={
-            dashboard.overallProgress
-          }
-        />
-
-        <Metric
-          label="MASTERY SCORE"
-          value={
-            `${dashboard.masteryScore}%`
-          }
-          detail={
-            `${dashboard.assessedTopicCount} topics assessed`
-          }
-          icon={<Brain size={17} />}
-          tone="blue"
-          progress={
-            dashboard.masteryScore
-          }
-        />
-
-        <Metric
-          label="CHAPTERS COMPLETE"
-          value={
-            `${dashboard.completedChapters}/${dashboard.chapterEntries.length}`
-          }
-          detail={
-            `${dashboard.inProgressChapters} in progress`
-          }
-          icon={
-            <CheckCircle2 size={17} />
-          }
-          tone="green"
-          progress={
-            dashboard.chapterEntries
-              .length === 0
-              ? 0
-              : (
-                  dashboard
-                    .completedChapters /
-                  dashboard
-                    .chapterEntries
-                    .length
-                ) * 100
-          }
-        />
-
-        <Metric
-          label="QUESTIONS ATTEMPTED"
-          value={
-            `${dashboard.questionAttempts}`
-          }
-          detail={
-            `${dashboard.correctAnswers} correct answers`
-          }
-          icon={<Activity size={17} />}
+      <section className="ref-metrics">
+        <MetricCard
+          label="Study Streak"
+          value="—"
+          unit="days"
+          detail="Daily log not connected"
+          change="Awaiting planner sessions"
+          icon={<Flame size={17} />}
           tone="orange"
         />
-
-        <Metric
-          label="ACCURACY"
-          value={
-            `${dashboard.accuracy}%`
-          }
-          detail={
-            dashboard.questionAttempts > 0
-              ? "Across recorded attempts"
-              : "No attempts recorded yet"
-          }
-          icon={<Target size={17} />}
+        <MetricCard
+          label="AI Score"
+          value={`${data.mastery}%`}
+          detail="Current topic mastery"
+          change={`${data.assessedCount} topics assessed`}
+          icon={<BarChart3 size={17} />}
+          tone="violet"
+          progress={data.mastery}
+        />
+        <MetricCard
+          label="Study Time"
+          value="—"
+          detail="Session tracking not connected"
+          change="Awaiting focus sessions"
+          icon={<Clock3 size={17} />}
+          tone="blue"
+        />
+        <MetricCard
+          label="Questions Solved"
+          value={`${data.attempts}`}
+          detail={`${data.correct} correct answers`}
+          change="Recorded chapter practice"
+          icon={<CircleCheckBig size={17} />}
           tone="pink"
-          progress={
-            dashboard.accuracy
-          }
+        />
+        <MetricCard
+          label="Accuracy"
+          value={`${data.accuracy}%`}
+          detail={data.attempts > 0 ? "Across recorded attempts" : "No attempts yet"}
+          change="Calculated from real answers"
+          icon={<Target size={17} />}
+          tone="green"
+          progress={data.accuracy}
         />
       </section>
 
-      <section className="live-dashboard-layout">
-        <article className="live-dashboard-card queue-card">
-          <header>
-            <div>
-              <span>STUDY EXECUTION</span>
-              <h2>Current chapter queue</h2>
-            </div>
-
-            <Link to="/subjects">
-              Open Subjects
-              <ArrowRight size={15} />
-            </Link>
-          </header>
-
-          <div className="live-queue-list">
-            {dashboard.queue.map(
-              (item) => (
-                <section key={item.id}>
-                  <span
-                    className={
-                      item.state ===
-                      "COMPLETED"
-                        ? "queue-status completed"
-                        : item.state ===
-                            "IN_PROGRESS"
-                          ? "queue-status active"
-                          : "queue-status"
-                    }
-                  >
-                    {item.state ===
-                    "COMPLETED" ? (
-                      <CheckCircle2
-                        size={15}
-                      />
-                    ) : item.state ===
-                      "IN_PROGRESS" ? (
-                      <TrendingUp
-                        size={15}
-                      />
-                    ) : (
-                      <CircleDashed
-                        size={15}
-                      />
-                    )}
-                  </span>
-
-                  <div>
-                    <small>
-                      {item.subject}
-                    </small>
-                    <strong>
-                      {item.chapter}
-                    </strong>
-                    <p>
-                      {item.topics} topics
-                    </p>
-                  </div>
-
-                  <div className="queue-progress">
-                    <span>
-                      <i
-                        style={{
-                          width:
-                            `${item.percent}%`,
-                        }}
-                      />
-                    </span>
-                    <strong>
-                      {item.percent}%
-                    </strong>
-                  </div>
-
-                  <ChevronRight
-                    size={16}
-                  />
-                </section>
-              ),
-            )}
-          </div>
-        </article>
-
-        <article className="live-dashboard-card subjects-card">
-          <header>
-            <div>
-              <span>SUBJECT ANALYTICS</span>
-              <h2>Subject-wise progress</h2>
-            </div>
-
-            <BarChart3 size={18} />
-          </header>
-
-          <div className="live-subject-list">
-            {dashboard.subjectProgress.map(
-              (subject) => (
-                <section
-                  key={subject.id}
-                  className={
-                    subjectTone(
-                      subject.code,
-                    )
-                  }
-                >
-                  <span>
-                    <SubjectIcon
-                      code={subject.code}
-                    />
-                  </span>
-
-                  <div>
-                    <strong>
-                      {subject.name}
-                    </strong>
-
-                    <div>
-                      <i
-                        style={{
-                          width:
-                            `${subject.progress}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <b>
-                    {subject.progress}%
-                  </b>
-                </section>
-              ),
-            )}
-          </div>
-        </article>
-
-        <article className="live-dashboard-card weak-card">
-          <header>
-            <div>
-              <span>MASTERY SIGNALS</span>
-              <h2>Topics to strengthen</h2>
-            </div>
-
-            <Zap size={18} />
-          </header>
-
-          <div className="live-weak-list">
-            {dashboard.weakTopics.length ===
-            0 ? (
-              <div className="live-card-empty">
-                <CheckCircle2 size={24} />
-                <strong>
-                  No weak topics detected
-                </strong>
-                <p>
-                  Continue assessing more
-                  topics.
-                </p>
+      <section className="ref-main">
+        <div className="ref-primary">
+          <section className="ref-top-grid">
+            <Panel
+              title="Today's Mission"
+              eyebrow="Live chapter queue"
+              className="ref-mission-panel"
+              action={
+                <span className="ref-tag">
+                  {missionCompleted}/{data.missions.length} completed
+                </span>
+              }
+            >
+              <div className="ref-mission-content">
+                <div className="ref-mission-list">
+                  {data.missions.map((mission) => (
+                    <section key={mission.id} className={mission.completed ? "done" : ""}>
+                      <span>
+                        {mission.completed ? <Check size={13} /> : <Play size={12} />}
+                      </span>
+                      <div>
+                        <strong>{mission.title}</strong>
+                        <small>{mission.detail}</small>
+                      </div>
+                      <ChevronRight size={15} />
+                    </section>
+                  ))}
+                </div>
+                <ProgressRing value={data.overall} />
               </div>
-            ) : (
-              dashboard.weakTopics.map(
-                (item) => (
-                  <section key={item.id}>
-                    <span>
-                      <Zap size={13} />
+
+              <footer className="ref-mission-footer">
+                <span>
+                  <CircleCheckBig size={15} />
+                  Synced with Subjects
+                </span>
+                <Link to="/subjects">
+                  Continue Mission
+                  <ArrowRight size={14} />
+                </Link>
+              </footer>
+            </Panel>
+
+            <Panel
+              title="AI Mentor"
+              eyebrow="Live recommendation"
+              className="ref-mentor-panel"
+              action={<Sparkles size={18} />}
+            >
+              <div className="ref-chat">
+                <div className="assistant">
+                  <span><Bot size={15} /></span>
+                  <p>
+                    {data.weakTopics[0] ? (
+                      <>
+                        {firstName}, focus on <strong>{data.weakTopics[0].topic}</strong>{" "}
+                        in {data.weakTopics[0].subject}.
+                      </>
+                    ) : (
+                      <>{firstName}, no weak topic is currently detected.</>
+                    )}
+                  </p>
+                </div>
+
+                <div className="user">
+                  Build today&apos;s best study sequence.
+                </div>
+
+                <div className="assistant compact">
+                  <span><TrendingUp size={15} /></span>
+                  <p>
+                    {data.currentMission ? (
+                      <>Begin with <strong>{data.currentMission.title}</strong>.</>
+                    ) : (
+                      "Your current queue is complete."
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div className="ref-mentor-input">
+                <span>Ask AIMERS anything…</span>
+                <Mic2 size={16} />
+                <Link to="/ai-mentor">
+                  <ArrowUpRight size={16} />
+                </Link>
+              </div>
+            </Panel>
+          </section>
+
+          <section className="ref-analysis-grid">
+            <Panel
+              title="Study Analytics"
+              eyebrow="Real chapter coverage"
+              action={<span className="ref-tag">Coverage</span>}
+            >
+              <div className="ref-chart">
+                <div>
+                  <span>100%</span><span>75%</span><span>50%</span>
+                  <span>25%</span><span>0%</span>
+                </div>
+                <section>
+                  <svg viewBox="0 0 420 120" preserveAspectRatio="none">
+                    <polyline
+                      points={data.coveragePoints}
+                      fill="none"
+                      stroke="#7d74ff"
+                      strokeWidth="4"
+                    />
+                  </svg>
+                  <div>
+                    {data.coverageSeries.map((_value, index) => (
+                      <span key={index}>C{index + 1}</span>
+                    ))}
+                  </div>
+                </section>
+              </div>
+              <footer className="ref-chart-legend">
+                <span><i />Chapter completion</span>
+              </footer>
+            </Panel>
+
+            <Panel title="Subject Wise Progress" eyebrow="Live syllabus data">
+              <div className="ref-subject-progress">
+                <div className="ref-subject-ring" style={subjectRing}>
+                  <div>
+                    <strong>{data.overall}%</strong>
+                    <span>Overall</span>
+                  </div>
+                </div>
+
+                <div className="ref-subject-list">
+                  {data.subjectProgress.map((subject) => (
+                    <span key={subject.id}>
+                      <i
+                        className={
+                          subject.code.toLowerCase().includes("phys")
+                            ? "physics"
+                            : subject.code.toLowerCase().includes("chem")
+                              ? "chemistry"
+                              : "biology"
+                        }
+                      />
+                      {subject.name}
+                      <strong>{subject.value}%</strong>
                     </span>
+                  ))}
+                </div>
+              </div>
+            </Panel>
 
+            <Panel
+              title="Weak Topics"
+              eyebrow="Mastery signals"
+              action={<span className="ref-tag">Live</span>}
+            >
+              <div className="ref-weak-list">
+                {data.weakTopics.map((item) => (
+                  <section key={item.id}>
+                    <span className={item.tone}><Zap size={13} /></span>
                     <div>
-                      <strong>
-                        {item.topic}
-                      </strong>
-                      <small>
-                        {item.subject}
-                      </small>
+                      <strong>{item.topic}</strong>
+                      <small>{item.subject}</small>
                     </div>
-
-                    <b>
-                      {item.assessed
-                        ? `${item.score}%`
-                        : "Not assessed"}
+                    <b className={item.tone}>
+                      {item.assessed ? `${item.score}%` : "Not assessed"}
                     </b>
                   </section>
-                ),
-              )
-            )}
-          </div>
-        </article>
-
-        <article className="live-dashboard-card activity-card">
-          <header>
-            <div>
-              <span>RECENT ACTIVITY</span>
-              <h2>Latest chapter updates</h2>
-            </div>
-
-            <Clock3 size={18} />
-          </header>
-
-          <div className="live-activity-list">
-            {dashboard.recentActivity.length ===
-            0 ? (
-              <div className="live-card-empty">
-                <Clock3 size={24} />
-                <strong>
-                  No activity recorded
-                </strong>
-                <p>
-                  Update progress from the
-                  Subjects workspace.
-                </p>
+                ))}
               </div>
-            ) : (
-              dashboard.recentActivity.map(
-                (item) => (
-                  <section key={item.id}>
-                    <span>
-                      <BookOpenCheck
-                        size={14}
-                      />
-                    </span>
 
-                    <div>
-                      <strong>
-                        {item.subject}:{" "}
-                        {item.chapter}
-                      </strong>
+              <Link className="ref-panel-link" to="/subjects">
+                Review all weak topics
+              </Link>
+            </Panel>
 
-                      <small>
-                        {item.percent}% complete
-                        {" · "}
-                        {
-                          item.state.replace(
-                            "_",
-                            " ",
-                          )
-                        }
-                      </small>
-                    </div>
+            <Panel
+              title="Predicted Performance"
+              eyebrow="Mock-test engine"
+              action={<span className="ref-tag">Awaiting tests</span>}
+            >
+              <div className="ref-prediction">
+                <Target size={28} />
+                <strong>No valid forecast yet</strong>
+                <p>Real mock-test history is required before showing a score or rank.</p>
+              </div>
 
-                    <time>
-                      {formatDate(
-                        item.lastStudiedAt,
-                      )}
-                    </time>
-                  </section>
-                ),
-              )
-            )}
-          </div>
-        </article>
+              <Link className="ref-panel-link" to="/prediction">
+                Open prediction module
+              </Link>
+            </Panel>
+          </section>
 
-        <article className="live-dashboard-card insight-card">
-          <header>
+          <section className="ref-quick-actions">
+            <header><h2>Quick Actions</h2></header>
             <div>
-              <span>ACADEMIC INSIGHT</span>
-              <h2>Recommended next move</h2>
+              <Link to="/mock-tests"><Target size={16} />Mock Test</Link>
+              <Link to="/flashcards"><BookOpenCheck size={16} />Flashcards</Link>
+              <Link to="/ai-mentor"><Bot size={16} />AI Doubt Solver</Link>
+              <Link to="/notes"><Mic2 size={16} />Voice Notes</Link>
+              <Link to="/memory-engine"><Brain size={16} />Memory Review</Link>
+              <Link to="/question-bank"><Library size={16} />Question Bank</Link>
+              <Link to="/planner"><Clock3 size={16} />Study Planner</Link>
+              <Link to="/focus-room"><Headphones size={16} />Focus Music</Link>
+            </div>
+          </section>
+        </div>
+
+        <aside className="ref-secondary">
+          <Panel
+            title="AIMERS Brain"
+            eyebrow="Your cognitive intelligence map"
+            className="ref-brain-panel"
+            action={<span className="ref-live"><i />Live</span>}
+          >
+            <div className="ref-brain-map">
+              <div className="ref-brain-signals left">
+                <span>Syllabus Engine<strong>{data.overall}%</strong></span>
+                <span>Mastery Engine<strong>{data.mastery}%</strong></span>
+                <span>Accuracy Core<strong>{data.accuracy}%</strong></span>
+                <span>Knowledge Map<strong>{data.assessedCount}</strong></span>
+              </div>
+
+              <div className="ref-brain-visual">
+                <div className="orbit one" />
+                <div className="orbit two" />
+                <div className="orbit three" />
+                <Brain size={126} />
+                <i className="node one" />
+                <i className="node two" />
+                <i className="node three" />
+                <i className="node four" />
+              </div>
+
+              <div className="ref-brain-signals right">
+                <span>Subjects<strong>{data.subjects.length}</strong></span>
+                <span>Chapters<strong>{data.chapters.length}</strong></span>
+                <span>Questions<strong>{data.attempts}</strong></span>
+                <span>Mastered Topics<strong>{data.mastered}</strong></span>
+              </div>
             </div>
 
-            <Sparkles size={18} />
-          </header>
+            <footer className="ref-brain-status">
+              <span><i />Academic systems connected</span>
+              <small>{programme.name}</small>
+            </footer>
+          </Panel>
 
-          <div className="live-insight-content">
-            <span>
-              <Brain size={28} />
-            </span>
+          <section className="ref-insight-grid">
+            <Panel title="AI Insights" eyebrow="Personalized for you">
+              <div className="ref-insight">
+                <div>
+                  <p>Current priority</p>
+                  <strong>{data.weakestSubject?.name ?? programme.name}</strong>
+                  <small>
+                    {data.weakestSubject
+                      ? `${data.weakestSubject.name} is currently at ${data.weakestSubject.value}% progress.`
+                      : "Continue building syllabus coverage."}
+                  </small>
+                </div>
+                <div className="ref-focus-dial">
+                  <span>NOW</span><Target size={27} /><span>NEXT</span>
+                </div>
+              </div>
+            </Panel>
 
-            <div>
-              <p>
-                Current priority
-              </p>
+            <Panel
+              title="Digital Activity Monitor"
+              eyebrow="With your consent"
+              action={<span className="ref-offline">Not connected</span>}
+            >
+              <div className="ref-activity-list">
+                <span><Globe2 size={14} />Study Websites<strong>—</strong></span>
+                <span><Video size={14} />YouTube Education<strong>—</strong></span>
+                <span><AppWindow size={14} />Notes Applications<strong>—</strong></span>
+                <span><BookOpenCheck size={14} />Practice Platforms<strong>—</strong></span>
+                <span><Activity size={14} />Other Applications<strong>—</strong></span>
+              </div>
 
-              <strong>
-                {
-                  dashboard
-                    .weakestSubject
-                    ?.name ??
-                  programme.name
-                }
-              </strong>
+              <Link className="ref-panel-link" to="/digital-activity">
+                Configure activity tracking
+              </Link>
+            </Panel>
+          </section>
 
-              <small>
-                {dashboard.weakestSubject
-                  ? `${dashboard.weakestSubject.name} is at ${dashboard.weakestSubject.progress}% progress. Continue with ${dashboard.queue[0]?.chapter ?? "the next chapter"}.`
-                  : "Continue building syllabus coverage."}
-              </small>
-            </div>
-          </div>
+          <section className="ref-secondary-lower">
+            <Panel title="Memory Engine" eyebrow="Real mastery status" className="ref-memory">
+              <div className="ref-memory-score">
+                <strong>{data.mastery}%</strong><span>Mastery Score</span>
+              </div>
+              <div className="ref-memory-track">
+                <span style={{ width: `${data.mastery}%` }} />
+              </div>
+              <footer>
+                <span>{data.mastered} mastered</span>
+                <span>{data.assessedCount} assessed</span>
+              </footer>
+            </Panel>
 
-          <Link to="/ai-mentor">
-            Ask AIMERS about this
-            <ArrowRight size={15} />
-          </Link>
-        </article>
-
-        <article className="live-dashboard-card prediction-card">
-          <header>
-            <div>
-              <span>PREDICTION ENGINE</span>
-              <h2>Performance forecast</h2>
-            </div>
-
-            <Target size={18} />
-          </header>
-
-          <div className="live-prediction-empty">
-            <Target size={30} />
-
-            <strong>
-              No valid prediction yet
-            </strong>
-
-            <p>
-              Mock-test history is required.
-              AIMERS will not invent a score
-              or rank.
-            </p>
-          </div>
-
-          <Link to="/prediction">
-            Open Prediction
-            <ArrowRight size={15} />
-          </Link>
-        </article>
+            <Panel
+              title="AI Voice Assistant"
+              eyebrow="Open voice workspace"
+              className="ref-voice"
+            >
+              <Link to="/ai-mentor" aria-label="Open AI voice assistant">
+                <Radio size={20} />
+                <span><Mic2 size={29} /></span>
+              </Link>
+            </Panel>
+          </section>
+        </aside>
       </section>
 
-      <section className="live-dashboard-quick-links">
-        <Link to="/subjects">
-          <BookOpenCheck size={16} />
-          Subjects
-        </Link>
-
-        <Link to="/analytics">
-          <BarChart3 size={16} />
-          Analytics
-        </Link>
-
-        <Link to="/memory-engine">
-          <Brain size={16} />
-          Memory Engine
-        </Link>
-
-        <Link to="/question-bank">
-          <Target size={16} />
-          Question Bank
-        </Link>
-      </section>
+      <footer className="ref-footer">
+        <span><i />Live academic data connected</span>
+        <button disabled={refreshing} type="button" onClick={() => void load(true)}>
+          <RefreshCw className={refreshing ? "ref-spin" : ""} size={14} />
+          Refresh
+        </button>
+      </footer>
     </div>
   );
 }
