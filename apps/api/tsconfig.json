@@ -1,24 +1,29 @@
 {
   "extends": "../../tsconfig.base.json",
-
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Bundler",
+
     "rootDir": "./src",
     "outDir": "./dist",
-    "noEmit": false,
 
-    "lib": [
-      "ES2022"
-    ],
+    "noEmit": false,
+    "sourceMap": true,
+    "declaration": false,
+
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    "strict": true,
 
     "types": [
       "node"
     ]
   },
-
   "include": [
     "src/**/*.ts"
   ],
-
   "exclude": [
     "node_modules",
     "dist",
