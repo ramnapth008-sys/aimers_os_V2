@@ -39,6 +39,10 @@ import {
 } from "./onboarding/onboarding.module";
 
 import {
+  PlannerModule,
+} from "./planner/planner.module";
+
+import {
   ProfileModule,
 } from "./profile/profile.module";
 
@@ -55,6 +59,7 @@ import {
     RedisModule,
     AuthModule,
     AcademicModule,
+    PlannerModule,
     ProfileModule,
     OnboardingModule,
   ],
