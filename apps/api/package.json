@@ -8,5 +8,10 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "tsx": "^4.23.5",
+    "typescript": "^7.0.2"
   }
 }

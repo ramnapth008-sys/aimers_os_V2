@@ -1,8 +1,28 @@
 {
   "extends": "../../tsconfig.base.json",
+
   "compilerOptions": {
-    "outDir": "dist",
-    "noEmit": false
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "noEmit": false,
+
+    "lib": [
+      "ES2022"
+    ],
+
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src"]
+
+  "include": [
+    "src/**/*.ts"
+  ],
+
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts"
+  ]
 }
