@@ -117,6 +117,213 @@ function countWords(
     : 0;
 }
 
+interface NoteEditorSnapshot {
+  title: string;
+  content: string;
+  folderId: string | null;
+  subjectId: string | null;
+  chapterId: string | null;
+  topicId: string | null;
+  tagIds: string[];
+  isPinned: boolean;
+}
+
+interface LocalNoteDraft
+  extends NoteEditorSnapshot {
+  noteId: string;
+  savedAt: string;
+}
+
+type NoteSaveNotice =
+  | "idle"
+  | "saved"
+  | "recovered"
+  | "error";
+
+const noteDraftPrefix =
+  "aimers:notes:draft:";
+
+function emptyNoteSnapshot(): NoteEditorSnapshot {
+  return {
+    title: "",
+    content: "",
+    folderId: null,
+    subjectId: null,
+    chapterId: null,
+    topicId: null,
+    tagIds: [],
+    isPinned: false,
+  };
+}
+
+function noteSnapshot(
+  note: NoteRecord,
+): NoteEditorSnapshot {
+  return {
+    title: note.title,
+    content: note.content,
+    folderId: note.folderId,
+    subjectId: note.subjectId,
+    chapterId: note.chapterId,
+    topicId: note.topicId,
+    tagIds: note.tags
+      .map(
+        (
+          tag,
+        ) => tag.id,
+      )
+      .sort(),
+    isPinned: note.isPinned,
+  };
+}
+
+function sameTagIds(
+  left: string[],
+  right: string[],
+): boolean {
+  return [...left]
+    .sort()
+    .join("|") ===
+    [...right]
+      .sort()
+      .join("|");
+}
+
+function sameSnapshot(
+  left: NoteEditorSnapshot,
+  right: NoteEditorSnapshot,
+): boolean {
+  return (
+    left.title === right.title &&
+    left.content === right.content &&
+    left.folderId === right.folderId &&
+    left.subjectId === right.subjectId &&
+    left.chapterId === right.chapterId &&
+    left.topicId === right.topicId &&
+    sameTagIds(
+      left.tagIds,
+      right.tagIds,
+    ) &&
+    left.isPinned === right.isPinned
+  );
+}
+
+function noteDraftKey(
+  noteId: string,
+): string {
+  return `${noteDraftPrefix}${noteId}`;
+}
+
+function clearLocalNoteDraft(
+  noteId: string,
+) {
+  try {
+    window.localStorage.removeItem(
+      noteDraftKey(noteId),
+    );
+  } catch {
+    // Local draft storage is optional.
+  }
+}
+
+function readLocalNoteDraft(
+  note: NoteRecord,
+): LocalNoteDraft | null {
+  try {
+    const raw =
+      window.localStorage.getItem(
+        noteDraftKey(note.id),
+      );
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed =
+      JSON.parse(raw) as
+        Partial<LocalNoteDraft>;
+
+    if (
+      parsed.noteId !== note.id ||
+      typeof parsed.savedAt !==
+        "string" ||
+      typeof parsed.title !==
+        "string" ||
+      typeof parsed.content !==
+        "string" ||
+      !Array.isArray(
+        parsed.tagIds,
+      ) ||
+      typeof parsed.isPinned !==
+        "boolean"
+    ) {
+      clearLocalNoteDraft(
+        note.id,
+      );
+      return null;
+    }
+
+    const draft: LocalNoteDraft = {
+      noteId: note.id,
+      savedAt: parsed.savedAt,
+      title: parsed.title,
+      content: parsed.content,
+      folderId:
+        parsed.folderId ?? null,
+      subjectId:
+        parsed.subjectId ?? null,
+      chapterId:
+        parsed.chapterId ?? null,
+      topicId:
+        parsed.topicId ?? null,
+      tagIds: parsed.tagIds
+        .filter(
+          (
+            value,
+          ): value is string =>
+            typeof value ===
+            "string",
+        )
+        .sort(),
+      isPinned:
+        parsed.isPinned,
+    };
+
+    const draftTime =
+      new Date(
+        draft.savedAt,
+      ).getTime();
+
+    const serverTime =
+      new Date(
+        note.updatedAt,
+      ).getTime();
+
+    if (
+      !Number.isFinite(
+        draftTime,
+      ) ||
+      draftTime <= serverTime ||
+      sameSnapshot(
+        draft,
+        noteSnapshot(note),
+      )
+    ) {
+      clearLocalNoteDraft(
+        note.id,
+      );
+      return null;
+    }
+
+    return draft;
+  } catch {
+    clearLocalNoteDraft(
+      note.id,
+    );
+    return null;
+  }
+}
+
 const statusTabs: Array<{
   value: NoteStatus;
   label: string;
@@ -144,6 +351,9 @@ export function NotesPage() {
     useRef<HTMLTextAreaElement | null>(
       null,
     );
+
+  const saveInFlightRef =
+    useRef(false);
 
   const [
     workspace,
@@ -296,6 +506,22 @@ export function NotesPage() {
     useState(false);
 
   const [
+    saveNotice,
+    setSaveNotice,
+  ] =
+    useState<NoteSaveNotice>(
+      "idle",
+    );
+
+  const [
+    lastSavedAt,
+    setLastSavedAt,
+  ] =
+    useState<string | null>(
+      null,
+    );
+
+  const [
     creating,
     setCreating,
   ] =
@@ -419,36 +645,21 @@ export function NotesPage() {
           note,
         );
 
-        const next = {
-          title:
-            note?.title ?? "",
-          content:
-            note?.content ?? "",
-          folderId:
-            note?.folderId ??
-            null,
-          subjectId:
-            note?.subjectId ??
-            null,
-          chapterId:
-            note?.chapterId ??
-            null,
-          topicId:
-            note?.topicId ??
-            null,
-          tagIds:
-            note?.tags
-              .map(
-                (
-                  tag,
-                ) => tag.id,
+        const serverSnapshot =
+          note
+            ? noteSnapshot(note)
+            : emptyNoteSnapshot();
+
+        const localDraft =
+          note
+            ? readLocalNoteDraft(
+                note,
               )
-              .sort() ??
-            [],
-          isPinned:
-            note?.isPinned ??
-            false,
-        };
+            : null;
+
+        const next =
+          localDraft ??
+          serverSnapshot;
 
         setTitle(
           next.title,
@@ -475,7 +686,16 @@ export function NotesPage() {
           next.isPinned,
         );
         setSavedSnapshot(
-          next,
+          serverSnapshot,
+        );
+        setLastSavedAt(
+          note?.updatedAt ??
+          null,
+        );
+        setSaveNotice(
+          localDraft
+            ? "recovered"
+            : "idle",
         );
         setEditorMode(
           "write",
@@ -626,8 +846,158 @@ export function NotesPage() {
       title,
       content,
       folderId,
+      subjectId,
+      chapterId,
+      topicId,
+      selectedTagIds,
       isPinned,
     ],
+  );
+
+  useEffect(
+    () => {
+      if (
+        !selectedNote ||
+        !dirty
+      ) {
+        if (selectedNote) {
+          clearLocalNoteDraft(
+            selectedNote.id,
+          );
+        }
+        return;
+      }
+
+      const timer =
+        window.setTimeout(
+          () => {
+            const draft:
+              LocalNoteDraft = {
+              noteId:
+                selectedNote.id,
+              savedAt:
+                new Date()
+                  .toISOString(),
+              title,
+              content,
+              folderId,
+              subjectId,
+              chapterId,
+              topicId,
+              tagIds:
+                [...selectedTagIds]
+                  .sort(),
+              isPinned,
+            };
+
+            try {
+              window.localStorage
+                .setItem(
+                  noteDraftKey(
+                    selectedNote.id,
+                  ),
+                  JSON.stringify(
+                    draft,
+                  ),
+                );
+            } catch {
+              // Server autosave still works without local storage.
+            }
+          },
+          350,
+        );
+
+      return () => {
+        window.clearTimeout(
+          timer,
+        );
+      };
+    },
+    [
+      chapterId,
+      content,
+      dirty,
+      folderId,
+      isPinned,
+      selectedNote,
+      selectedTagIds,
+      subjectId,
+      title,
+      topicId,
+    ],
+  );
+
+  useEffect(
+    () => {
+      if (
+        !selectedNote ||
+        !dirty ||
+        saving ||
+        selectedNote.status ===
+          "TRASHED"
+      ) {
+        return;
+      }
+
+      const timer =
+        window.setTimeout(
+          () => {
+            void handleSave(
+              "auto",
+            );
+          },
+          4000,
+        );
+
+      return () => {
+        window.clearTimeout(
+          timer,
+        );
+      };
+    },
+    [
+      chapterId,
+      content,
+      dirty,
+      folderId,
+      isPinned,
+      saving,
+      selectedNote,
+      selectedTagIds,
+      subjectId,
+      title,
+      topicId,
+    ],
+  );
+
+  useEffect(
+    () => {
+      if (!dirty) {
+        return;
+      }
+
+      const handler =
+        (
+          event:
+            BeforeUnloadEvent,
+        ) => {
+          event.preventDefault();
+          event.returnValue = "";
+        };
+
+      window.addEventListener(
+        "beforeunload",
+        handler,
+      );
+
+      return () => {
+        window.removeEventListener(
+          "beforeunload",
+          handler,
+        );
+      };
+    },
+    [dirty],
   );
 
   const foldersByParent =
@@ -899,14 +1269,37 @@ export function NotesPage() {
       }
     };
 
-  async function handleSave() {
+  async function handleSave(
+    mode:
+      "manual" | "auto" =
+      "manual",
+  ) {
     if (
       !selectedNote ||
-      !dirty
+      !dirty ||
+      saveInFlightRef.current
     ) {
       return;
     }
 
+    const noteId =
+      selectedNote.id;
+
+    const captured = {
+      title,
+      content,
+      folderId,
+      subjectId,
+      chapterId,
+      topicId,
+      tagIds:
+        [...selectedTagIds]
+          .sort(),
+      isPinned,
+    } satisfies NoteEditorSnapshot;
+
+    saveInFlightRef.current =
+      true;
     setSaving(true);
     setError("");
 
@@ -914,37 +1307,163 @@ export function NotesPage() {
       const note =
         await updateNote(
           apiFetch,
-          selectedNote.id,
+          noteId,
           {
             title:
-              title.trim() ||
+              captured.title
+                .trim() ||
               "Untitled note",
-            content,
-            folderId,
-            subjectId,
-            chapterId,
-            topicId,
+            content:
+              captured.content,
+            folderId:
+              captured.folderId,
+            subjectId:
+              captured.subjectId,
+            chapterId:
+              captured.chapterId,
+            topicId:
+              captured.topicId,
             tagIds:
-              selectedTagIds,
-            isPinned,
+              captured.tagIds,
+            isPinned:
+              captured.isPinned,
             contentFormat:
               "MARKDOWN",
           },
         );
 
-      applyNote(note);
+      const serverSnapshot =
+        noteSnapshot(note);
+
+      clearLocalNoteDraft(
+        noteId,
+      );
+
+      setSelectedNote(
+        note,
+      );
+
+      setTitle(
+        (
+          current,
+        ) =>
+          current ===
+          captured.title
+            ? serverSnapshot
+                .title
+            : current,
+      );
+
+      setContent(
+        (
+          current,
+        ) =>
+          current ===
+          captured.content
+            ? serverSnapshot
+                .content
+            : current,
+      );
+
+      setFolderId(
+        (
+          current,
+        ) =>
+          current ===
+          captured.folderId
+            ? serverSnapshot
+                .folderId
+            : current,
+      );
+
+      setSubjectId(
+        (
+          current,
+        ) =>
+          current ===
+          captured.subjectId
+            ? serverSnapshot
+                .subjectId
+            : current,
+      );
+
+      setChapterId(
+        (
+          current,
+        ) =>
+          current ===
+          captured.chapterId
+            ? serverSnapshot
+                .chapterId
+            : current,
+      );
+
+      setTopicId(
+        (
+          current,
+        ) =>
+          current ===
+          captured.topicId
+            ? serverSnapshot
+                .topicId
+            : current,
+      );
+
+      setSelectedTagIds(
+        (
+          current,
+        ) =>
+          sameTagIds(
+            current,
+            captured.tagIds,
+          )
+            ? serverSnapshot
+                .tagIds
+            : current,
+      );
+
+      setIsPinned(
+        (
+          current,
+        ) =>
+          current ===
+          captured.isPinned
+            ? serverSnapshot
+                .isPinned
+            : current,
+      );
+
+      setSavedSnapshot(
+        serverSnapshot,
+      );
+      setLastSavedAt(
+        note.updatedAt,
+      );
+      setSaveNotice(
+        "saved",
+      );
+
       await loadWorkspace(
         true,
       );
     } catch (
       requestError
     ) {
+      setSaveNotice(
+        "error",
+      );
       setError(
-        messageFrom(
-          requestError,
-        ),
+        mode === "auto"
+          ? `Autosave failed. Your local draft is safe. ${messageFrom(
+              requestError,
+            )}`
+          : messageFrom(
+              requestError,
+            ),
       );
     } finally {
+      saveInFlightRef.current =
+        false;
       setSaving(false);
     }
   }
@@ -1066,6 +1585,9 @@ export function NotesPage() {
           nextStatus,
         );
 
+        clearLocalNoteDraft(
+          selectedNote.id,
+        );
         applyNote(null);
         await loadWorkspace(
           true,
@@ -1110,6 +1632,9 @@ export function NotesPage() {
           selectedNote.id,
         );
 
+        clearLocalNoteDraft(
+          selectedNote.id,
+        );
         applyNote(null);
         await loadWorkspace(
           true,
@@ -1998,12 +2523,31 @@ export function NotesPage() {
                       .status}
                   </span>
 
-                  <small>
-                    {dirty
-                      ? "Unsaved changes"
-                      : `Saved ${formatDate(
-                          selectedNote.updatedAt,
-                        )}`}
+                  <small
+                    className={`notes-save-status ${
+                      saving
+                        ? "saving"
+                        : saveNotice
+                    }`}
+                  >
+                    {saving
+                      ? "Saving…"
+                      : saveNotice ===
+                          "error"
+                        ? "Autosave failed — local draft kept"
+                        : saveNotice ===
+                              "recovered" &&
+                            dirty
+                          ? "Local draft recovered — autosave pending"
+                          : dirty
+                            ? "Autosave pending"
+                            : lastSavedAt
+                              ? `Saved ${formatDate(
+                                  lastSavedAt,
+                                )}`
+                              : `Saved ${formatDate(
+                                  selectedNote.updatedAt,
+                                )}`}
                   </small>
                 </div>
 
@@ -3083,12 +3627,40 @@ export function NotesPage() {
                 </span>
 
                 <span>
-                  ⌘/Ctrl + S to save
+                  ⌘/Ctrl + S for an
+                  immediate save
+                </span>
+
+                <span
+                  className={`notes-autosave-indicator ${
+                    saving
+                      ? "saving"
+                      : saveNotice
+                  }`}
+                >
+                  {saving && (
+                    <LoaderCircle
+                      className="notes-spin"
+                      size={11}
+                    />
+                  )}
+
+                  {saving
+                    ? "Saving to AIMERS…"
+                    : dirty
+                      ? "Autosaves after 4 seconds of inactivity"
+                      : saveNotice ===
+                          "recovered"
+                        ? "Recovered local draft"
+                        : saveNotice ===
+                            "error"
+                          ? "Local recovery copy retained"
+                          : "All changes saved"}
                 </span>
 
                 <span>
                   Revision history is
-                  captured when saved
+                  captured on server save
                 </span>
               </footer>
             </>

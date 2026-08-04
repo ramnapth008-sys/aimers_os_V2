@@ -1419,3 +1419,52 @@
   }
 }
 
+
+
+.notes-save-status {
+  transition: color 160ms ease;
+}
+
+.notes-save-status.saving {
+  color: #c5adff;
+}
+
+.notes-save-status.saved {
+  color: #91d8b6;
+}
+
+.notes-save-status.recovered {
+  color: #d5b7ff;
+}
+
+.notes-save-status.error {
+  color: #ff9caf;
+}
+
+.notes-autosave-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  color: #84798f;
+}
+
+.notes-autosave-indicator.saving,
+.notes-autosave-indicator.recovered {
+  color: #bda2ff;
+}
+
+.notes-autosave-indicator.saved {
+  color: #7fbd9e;
+}
+
+.notes-autosave-indicator.error {
+  color: #e88fa2;
+}
+
+@media (max-width: 760px) {
+  .notes-autosave-indicator {
+    width: 100%;
+    margin-left: 0;
+  }
+}
