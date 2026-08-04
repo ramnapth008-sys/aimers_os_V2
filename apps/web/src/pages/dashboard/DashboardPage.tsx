@@ -75,6 +75,99 @@ function formatStudyMinutes(
     : `${hours}h`;
 }
 
+function formatChartMinutes(
+  minutes: number,
+): string {
+  if (minutes < 60) {
+    return `${Math.round(minutes)}m`;
+  }
+
+  const hours =
+    minutes / 60;
+
+  return Number.isInteger(hours)
+    ? `${hours}h`
+    : `${hours.toFixed(1)}h`;
+}
+
+function studyDayLabel(
+  dateKey: string,
+): string {
+  return new Intl.DateTimeFormat(
+    "en-IN",
+    {
+      weekday: "short",
+      timeZone: "UTC",
+    },
+  ).format(
+    new Date(
+      `${dateKey}T00:00:00Z`,
+    ),
+  );
+}
+
+function makeMinutePoints(
+  values: readonly number[],
+  maximum: number,
+): string {
+  const safeMaximum =
+    Math.max(
+      1,
+      maximum,
+    );
+
+  if (values.length === 0) {
+    return "0,112 420,112";
+  }
+
+  if (values.length === 1) {
+    const y =
+      112 -
+      (
+        Math.max(
+          0,
+          values[0],
+        ) /
+        safeMaximum
+      ) *
+      96;
+
+    return `0,${y} 420,${y}`;
+  }
+
+  return values
+    .map(
+      (
+        value,
+        index,
+      ) => {
+        const x =
+          (
+            index /
+            (
+              values.length -
+              1
+            )
+          ) *
+          420;
+
+        const y =
+          112 -
+          (
+            Math.max(
+              0,
+              value,
+            ) /
+            safeMaximum
+          ) *
+          96;
+
+        return `${x},${y}`;
+      },
+    )
+    .join(" ");
+}
+
 function dateKeyInTimeZone(
   value: string | null,
   timeZone: string,
@@ -591,9 +684,53 @@ export function DashboardPage() {
           "ACTIVE",
       ) ?? null;
 
-    const coverageSeries = chapters
-      .slice(0, 7)
-      .map((item) => progressByChapter.get(item.chapter.id)?.completionPercent ?? 0);
+    const studyDays =
+      planner.activity.dailyMinutes.map(
+        (
+          day,
+          index,
+          days,
+        ) => ({
+          ...day,
+
+          label:
+            index ===
+            days.length - 1
+              ? "Today"
+              : studyDayLabel(
+                  day.dateKey,
+                ),
+        }),
+      );
+
+    const studySeries =
+      studyDays.map(
+        (day) =>
+          day.durationMinutes,
+      );
+
+    const focusSeries =
+      studyDays.map(
+        (day) =>
+          day.focusMinutes,
+      );
+
+    const studyChartMaximum =
+      Math.max(
+        30,
+        ...studySeries,
+        ...focusSeries,
+      );
+
+    const studyChartLabels = [
+      studyChartMaximum,
+      studyChartMaximum * 0.75,
+      studyChartMaximum * 0.5,
+      studyChartMaximum * 0.25,
+      0,
+    ].map(
+      formatChartMinutes,
+    );
 
     const weakestSubject = [...subjectProgress].sort(
       (left, right) => left.value - right.value,
@@ -617,8 +754,21 @@ export function DashboardPage() {
       missionProgress,
       missionSource,
       weakTopics,
-      coverageSeries,
-      coveragePoints: makePoints(coverageSeries),
+      studyDays,
+      studySeries,
+      focusSeries,
+      studyChartMaximum,
+      studyChartLabels,
+      studyPoints:
+        makeMinutePoints(
+          studySeries,
+          studyChartMaximum,
+        ),
+      focusPoints:
+        makeMinutePoints(
+          focusSeries,
+          studyChartMaximum,
+        ),
       weakestSubject,
       currentMission: missions.find((item) => !item.completed) ?? missions[0] ?? null,
       studyStreakDays:
@@ -652,7 +802,18 @@ export function DashboardPage() {
     );
   }
 
-  const firstName = user?.firstName?.trim() || "Student";
+  const preferredName =
+    user?.displayName?.trim() ||
+    user?.firstName?.trim() ||
+    user?.email
+      ?.split("@")[0]
+      ?.trim() ||
+    "Student";
+
+  const firstName =
+    preferredName
+      .split(/\s+/)[0] ||
+    "Student";
   const programme = workspace.syllabusVersion.programme;
   const missionCompleted = data.missions.filter((item) => item.completed).length;
   const subjectRing = {
@@ -845,33 +1006,94 @@ export function DashboardPage() {
           <section className="ref-analysis-grid">
             <Panel
               title="Study Analytics"
-              eyebrow="Real chapter coverage"
-              action={<span className="ref-tag">Coverage</span>}
+              eyebrow="Last 7 days · completed sessions"
+              action={
+                <span className="ref-tag">
+                  {formatStudyMinutes(data.weeklyStudyMinutes)} week
+                </span>
+              }
             >
-              <div className="ref-chart">
+              <div className="ref-chart ref-session-chart">
                 <div>
-                  <span>100%</span><span>75%</span><span>50%</span>
-                  <span>25%</span><span>0%</span>
+                  {data.studyChartLabels.map(
+                    (label) => (
+                      <span key={label}>
+                        {label}
+                      </span>
+                    ),
+                  )}
                 </div>
+
                 <section>
-                  <svg viewBox="0 0 420 120" preserveAspectRatio="none">
+                  <svg
+                    viewBox="0 0 420 120"
+                    preserveAspectRatio="none"
+                    role="img"
+                    aria-label="Seven-day study and focus time"
+                  >
                     <polyline
-                      points={data.coveragePoints}
+                      className="study-line"
+                      points={data.studyPoints}
                       fill="none"
-                      stroke="#7d74ff"
                       strokeWidth="4"
+                      vectorEffect="non-scaling-stroke"
+                    />
+
+                    <polyline
+                      className="focus-line"
+                      points={data.focusPoints}
+                      fill="none"
+                      strokeWidth="3"
+                      vectorEffect="non-scaling-stroke"
                     />
                   </svg>
+
                   <div>
-                    {data.coverageSeries.map((_value, index) => (
-                      <span key={index}>C{index + 1}</span>
-                    ))}
+                    {data.studyDays.map(
+                      (day) => (
+                        <span key={day.dateKey}>
+                          {day.label}
+                        </span>
+                      ),
+                    )}
                   </div>
                 </section>
               </div>
+
               <footer className="ref-chart-legend">
-                <span><i />Chapter completion</span>
+                <span>
+                  <i className="study" />
+                  Study Time
+                </span>
+
+                <span>
+                  <i className="focus" />
+                  Focus Time
+                </span>
               </footer>
+
+              <div className="ref-chart-summary">
+                <span>
+                  Today
+                  <strong>
+                    {formatStudyMinutes(data.todayStudyMinutes)}
+                  </strong>
+                </span>
+
+                <span>
+                  This week
+                  <strong>
+                    {formatStudyMinutes(data.weeklyStudyMinutes)}
+                  </strong>
+                </span>
+
+                <span>
+                  Sessions
+                  <strong>
+                    {data.completedSessionCount}
+                  </strong>
+                </span>
+              </div>
             </Panel>
 
             <Panel title="Subject Wise Progress" eyebrow="Live syllabus data">

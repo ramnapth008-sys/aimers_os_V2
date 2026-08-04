@@ -2509,3 +2509,74 @@
     justify-content: center;
   }
 }
+
+/* AIMERS REAL SESSION ANALYTICS */
+
+.ref-session-chart
+  .study-line {
+  stroke: #716cff;
+  filter:
+    drop-shadow(
+      0 0 5px
+      rgba(113, 108, 255, 0.65)
+    );
+}
+
+.ref-session-chart
+  .focus-line {
+  stroke: #ec5b91;
+  filter:
+    drop-shadow(
+      0 0 5px
+      rgba(236, 91, 145, 0.55)
+    );
+}
+
+.ref-chart-legend
+  i.study {
+  background: #716cff;
+  box-shadow:
+    0 0 8px
+    rgba(113, 108, 255, 0.7);
+}
+
+.ref-chart-legend
+  i.focus {
+  background: #ec5b91;
+  box-shadow:
+    0 0 8px
+    rgba(236, 91, 145, 0.65);
+}
+
+.ref-chart-summary {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.ref-chart-summary span {
+  display: grid;
+  min-height: 31px;
+  place-items: center;
+  border: 1px solid
+    rgba(255, 255, 255, 0.04);
+  border-radius: 7px;
+  color: var(--aimers-text-muted);
+  background:
+    rgba(255, 255, 255, 0.018);
+  font-size: 6px;
+}
+
+.ref-chart-summary strong {
+  color: #cfd4e5;
+  font-size: 8px;
+  font-weight: 600;
+}
+
+@media (max-width: 520px) {
+  .ref-chart-summary {
+    grid-template-columns: 1fr;
+  }
+}
