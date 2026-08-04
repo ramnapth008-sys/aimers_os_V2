@@ -451,6 +451,10 @@ model StudentProfile {
   flashcards               Flashcard[]
   flashcardReviewSessions  FlashcardReviewSession[]
 
+  noteFolders NoteFolder[]
+  notes       Note[]
+  noteTags    NoteTag[]
+
   @@unique([userId, organizationId])
   @@unique([organizationId, admissionNumber])
   @@index([organizationId, status])
@@ -603,6 +607,8 @@ model Subject {
   flashcardDecks   FlashcardDeck[]
   flashcards       Flashcard[]
 
+  notes Note[]
+
   @@index([status])
   @@map("subjects")
 }
@@ -670,6 +676,8 @@ model Chapter {
   flashcardDecks FlashcardDeck[]
   flashcards     Flashcard[]
 
+  notes Note[]
+
   @@unique([unitId, code])
   @@unique([unitId, sequenceNumber])
   @@index([unitId])
@@ -697,6 +705,8 @@ model Topic {
   questions          Question[]
   flashcardDecks     FlashcardDeck[]
   flashcards         Flashcard[]
+
+  notes Note[]
 
   @@unique([chapterId, code])
   @@unique([chapterId, sequenceNumber])
@@ -1419,4 +1429,146 @@ model FlashcardReviewSessionItem {
   @@index([flashcardId])
   @@index([reviewSessionId, reviewedAt])
   @@map("flashcard_review_session_items")
+}
+
+enum NoteStatus {
+  ACTIVE
+  ARCHIVED
+  TRASHED
+}
+
+enum NoteContentFormat {
+  PLAIN_TEXT
+  MARKDOWN
+}
+
+enum NoteSourceType {
+  MANUAL
+  AI_GENERATED
+  VOICE_TRANSCRIPT
+  IMPORTED
+}
+
+model NoteFolder {
+  id               String   @id @default(uuid()) @db.Uuid
+  studentProfileId String   @map("student_profile_id") @db.Uuid
+  parentFolderId   String?  @map("parent_folder_id") @db.Uuid
+  name             String   @db.VarChar(120)
+  description      String?  @db.Text
+  color            String?  @db.VarChar(32)
+  icon             String?  @db.VarChar(64)
+  sequenceNumber   Int      @default(0) @map("sequence_number")
+  isExpanded       Boolean  @default(true) @map("is_expanded")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  parentFolder   NoteFolder?    @relation("NoteFolderHierarchy", fields: [parentFolderId], references: [id], onDelete: Cascade)
+  childFolders   NoteFolder[]   @relation("NoteFolderHierarchy")
+  notes          Note[]
+
+  @@index([studentProfileId, sequenceNumber])
+  @@index([parentFolderId])
+  @@map("note_folders")
+}
+
+model Note {
+  id               String            @id @default(uuid()) @db.Uuid
+  studentProfileId String            @map("student_profile_id") @db.Uuid
+  folderId         String?           @map("folder_id") @db.Uuid
+  subjectId        String?           @map("subject_id") @db.Uuid
+  chapterId        String?           @map("chapter_id") @db.Uuid
+  topicId          String?           @map("topic_id") @db.Uuid
+  title            String            @db.VarChar(240)
+  content          String            @default("") @db.Text
+  excerpt          String?           @db.Text
+  contentFormat    NoteContentFormat @default(MARKDOWN) @map("content_format")
+  sourceType       NoteSourceType    @default(MANUAL) @map("source_type")
+  status           NoteStatus        @default(ACTIVE)
+  isPinned         Boolean           @default(false) @map("is_pinned")
+  wordCount        Int               @default(0) @map("word_count")
+  characterCount   Int               @default(0) @map("character_count")
+  lastOpenedAt     DateTime?         @map("last_opened_at") @db.Timestamptz(6)
+  archivedAt       DateTime?         @map("archived_at") @db.Timestamptz(6)
+  trashedAt        DateTime?         @map("trashed_at") @db.Timestamptz(6)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  folder         NoteFolder?    @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  subject        Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  chapter        Chapter?       @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+  topic          Topic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  tagAssignments NoteTagAssignment[]
+  revisions      NoteRevision[]
+  outgoingLinks  NoteLink[]          @relation("NoteOutgoingLinks")
+  incomingLinks  NoteLink[]          @relation("NoteIncomingLinks")
+
+  @@index([studentProfileId, status, isPinned, updatedAt])
+  @@index([folderId, status, updatedAt])
+  @@index([subjectId])
+  @@index([chapterId])
+  @@index([topicId])
+  @@map("notes")
+}
+
+model NoteTag {
+  id               String   @id @default(uuid()) @db.Uuid
+  studentProfileId String   @map("student_profile_id") @db.Uuid
+  name             String   @db.VarChar(80)
+  color            String?  @db.VarChar(32)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile      @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  assignments    NoteTagAssignment[]
+
+  @@unique([studentProfileId, name])
+  @@index([studentProfileId])
+  @@map("note_tags")
+}
+
+model NoteTagAssignment {
+  noteId    String   @map("note_id") @db.Uuid
+  noteTagId String   @map("note_tag_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  note Note    @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag  NoteTag @relation(fields: [noteTagId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, noteTagId])
+  @@index([noteTagId])
+  @@map("note_tag_assignments")
+}
+
+model NoteRevision {
+  id             String            @id @default(uuid()) @db.Uuid
+  noteId         String            @map("note_id") @db.Uuid
+  title          String            @db.VarChar(240)
+  content        String            @db.Text
+  contentFormat  NoteContentFormat @map("content_format")
+  wordCount      Int               @default(0) @map("word_count")
+  characterCount Int               @default(0) @map("character_count")
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId, createdAt])
+  @@map("note_revisions")
+}
+
+model NoteLink {
+  id           String   @id @default(uuid()) @db.Uuid
+  sourceNoteId String   @map("source_note_id") @db.Uuid
+  targetNoteId String   @map("target_note_id") @db.Uuid
+  label        String?  @db.VarChar(120)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  sourceNote Note @relation("NoteOutgoingLinks", fields: [sourceNoteId], references: [id], onDelete: Cascade)
+  targetNote Note @relation("NoteIncomingLinks", fields: [targetNoteId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceNoteId, targetNoteId])
+  @@index([targetNoteId])
+  @@map("note_links")
 }
