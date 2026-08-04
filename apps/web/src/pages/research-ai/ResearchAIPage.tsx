@@ -217,15 +217,54 @@ function ProjectEmpty({
 }) {
   return (
     <section className="research-empty-card">
-      <div>
+      <div className="research-empty-icon">
         <Brain size={38} />
       </div>
-      <span>RESEARCH WORKSPACE</span>
+
+      <span>RESEARCH AI WORKSPACE</span>
+
       <h2>Build your first evidence map.</h2>
+
       <p>
-        Create a project, collect sources, organise ideas,
-        store research conversations and connect conclusions.
+        Start with a focused question, collect trustworthy
+        sources and connect the ideas that support your conclusion.
       </p>
+
+      <div className="research-empty-steps">
+        <article>
+          <span>
+            <Library size={17} />
+          </span>
+
+          <div>
+            <strong>Create a project</strong>
+            <small>Define the question and scope.</small>
+          </div>
+        </article>
+
+        <article>
+          <span>
+            <Globe2 size={17} />
+          </span>
+
+          <div>
+            <strong>Collect evidence</strong>
+            <small>Save sources, excerpts and citations.</small>
+          </div>
+        </article>
+
+        <article>
+          <span>
+            <Network size={17} />
+          </span>
+
+          <div>
+            <strong>Connect ideas</strong>
+            <small>Build threads and a knowledge map.</small>
+          </div>
+        </article>
+      </div>
+
       <button
         type="button"
         onClick={onCreate}
@@ -965,41 +1004,67 @@ export function ResearchAIPage() {
   return (
     <main className="research-page">
       <section className="research-hero">
-        <div>
-          <span>
+        <div className="research-hero-copy">
+          <span className="research-eyebrow">
             <Sparkles size={14} />
-            EVIDENCE-BASED KNOWLEDGE WORKSPACE
+            RESEARCH AI · EVIDENCE WORKSPACE
           </span>
-          <h1>Research AI</h1>
+
+          <h1>
+            Research with evidence.
+            <strong>
+              {" "}Connect every idea.
+            </strong>
+          </h1>
+
           <p>
             Build structured projects, collect sources,
-            preserve research conversations and map how evidence connects.
+            preserve research conversations and map how
+            evidence supports each conclusion.
           </p>
+
+          <div className="research-hero-actions">
+            <button
+              className="research-primary-button"
+              type="button"
+              onClick={() => setProjectFormOpen(true)}
+            >
+              <Plus size={17} />
+              New project
+            </button>
+
+            <button
+              className="research-secondary-button"
+              type="button"
+              disabled={refreshing}
+              onClick={() => void refreshAll()}
+            >
+              <RefreshCw
+                className={refreshing ? "research-spin" : ""}
+                size={16}
+              />
+              Refresh
+            </button>
+          </div>
         </div>
 
-        <div className="research-hero-actions">
-          <button
-            className="research-secondary-button"
-            type="button"
-            disabled={refreshing}
-            onClick={() => void refreshAll()}
-          >
-            <RefreshCw
-              className={refreshing ? "research-spin" : ""}
-              size={16}
-            />
-            Refresh
-          </button>
+        <section className="research-hero-status">
+          <span>
+            <Network size={28} />
+          </span>
 
-          <button
-            className="research-primary-button"
-            type="button"
-            onClick={() => setProjectFormOpen(true)}
-          >
-            <Plus size={17} />
-            New project
-          </button>
-        </div>
+          <small>KNOWLEDGE NODES</small>
+
+          <strong>
+            {workspace?.summary.totalNodes ?? 0}
+          </strong>
+
+          <p>
+            {workspace?.summary.totalSources ?? 0} sources
+            {" · "}
+            {workspace?.summary.totalThreads ?? 0} threads
+          </p>
+        </section>
       </section>
 
       {error && (
@@ -1037,14 +1102,21 @@ export function ResearchAIPage() {
         </article>
         <article>
           <Network size={18} />
-          <span>KNOWLEDGE NODES</span>
+          <span>NODES</span>
           <strong>{workspace?.summary.totalNodes ?? 0}</strong>
           <small>Connected concepts</small>
         </article>
       </section>
 
-      <section className="research-shell">
-        <aside className="research-project-rail">
+      <section
+        className={
+          workspace?.projects.length
+            ? "research-shell"
+            : "research-shell empty"
+        }
+      >
+        {workspace?.projects.length ? (
+          <aside className="research-project-rail">
           <header>
             <div>
               <span>YOUR PROJECTS</span>
@@ -1108,7 +1180,8 @@ export function ResearchAIPage() {
               </button>
             ))}
           </div>
-        </aside>
+          </aside>
+        ) : null}
 
         <section className="research-workspace-panel">
           {!workspace?.projects.length ? (
@@ -1128,8 +1201,11 @@ export function ResearchAIPage() {
                   <span>
                     {project.subject?.name ?? "Independent research"}
                   </span>
-                  <input
+                  <textarea
+                    className="research-project-title-input"
+                    rows={2}
                     value={project.title}
+                    aria-label="Research project title"
                     onChange={(event: ValueChangeEvent) =>
                       setProject({
                         ...project,
