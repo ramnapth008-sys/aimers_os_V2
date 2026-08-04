@@ -42,6 +42,11 @@ import {
   QuestionBankPage,
 } from "../../pages/question-bank";
 
+import {
+  FlashcardReviewPage,
+  FlashcardsPage,
+} from "../../pages/flashcards";
+
 
 
 
@@ -77,13 +82,6 @@ const modules = [
     title: "Memory Engine",
     description:
       "Optimise recall using review queues and forgetting-curve analysis.",
-  },
-  {
-    path: "flashcards",
-    eyebrow: "ACTIVE RECALL",
-    title: "Flashcards",
-    description:
-      "Create decks and review concepts through spaced repetition.",
   },
   {
     path: "notes",
@@ -230,6 +228,16 @@ export function AppRouter() {
           <Route
             path="question-bank"
             element={<QuestionBankPage />}
+          />
+
+          <Route
+            path="flashcards"
+            element={<FlashcardsPage />}
+          />
+
+          <Route
+            path="flashcards/review/:sessionId"
+            element={<FlashcardReviewPage />}
           />
 
           {modules.map((module) => (
