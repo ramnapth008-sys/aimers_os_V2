@@ -789,6 +789,31 @@ export class QuestionBankService {
         },
       );
 
+    const parsedLimit =
+      Number(query.limit);
+
+    const parsedOffset =
+      Number(query.offset);
+
+    const limit =
+      Number.isFinite(parsedLimit)
+        ? Math.max(
+            1,
+            Math.min(
+              100,
+              Math.trunc(parsedLimit),
+            ),
+          )
+        : 30;
+
+    const offset =
+      Number.isFinite(parsedOffset)
+        ? Math.max(
+            0,
+            Math.trunc(parsedOffset),
+          )
+        : 0;
+
     const [
       questions,
       total,
@@ -806,8 +831,8 @@ export class QuestionBankService {
             },
           ],
 
-          skip: query.offset,
-          take: query.limit,
+          skip: offset,
+          take: limit,
 
           include:
             questionInclude,
@@ -841,14 +866,11 @@ export class QuestionBankService {
 
       pagination: {
         total,
-        limit:
-          query.limit,
-
-        offset:
-          query.offset,
+        limit,
+        offset,
 
         hasMore:
-          query.offset +
+          offset +
             questions.length <
           total,
       },
