@@ -325,6 +325,8 @@ export interface CreateResearchMessageInput {
 
 export interface GenerateResearchAssistantReplyInput {
   content: string;
+  researchSourceId?: string | null;
+  researchSourceExcerptId?: string | null;
 }
 
 export interface CreateResearchCitationInput {

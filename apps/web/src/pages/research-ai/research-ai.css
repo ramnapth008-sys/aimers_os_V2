@@ -2638,3 +2638,128 @@
     justify-content: flex-end;
   }
 }
+
+/* AIMERS RESEARCH AI — EVIDENCE TO WORKSPACE ACTIONS V1 */
+.research-evidence-action-notice {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid
+    rgba(65, 214, 158, 0.2);
+  border-radius: 12px;
+  margin-bottom: 13px;
+  padding: 0 13px;
+  color: #9fe2c4;
+  background:
+    rgba(31, 139, 99, 0.085);
+  font-size: 9px;
+}
+
+.research-evidence-action-notice > svg {
+  flex: 0 0 auto;
+  color: #55d59f;
+}
+
+.research-evidence-action-notice > span {
+  flex: 1 1 auto;
+  line-height: 1.5;
+}
+
+.research-evidence-action-notice > button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  color: #85aa9a;
+  background:
+    transparent;
+}
+
+.research-evidence-action-notice > button:hover {
+  color: #c6f5df;
+  background:
+    rgba(65, 214, 158, 0.08);
+}
+
+.research-evidence-action-button {
+  display: inline-flex;
+  min-height: 30px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid
+    rgba(141, 107, 255, 0.2);
+  border-radius: 9px;
+  padding: 0 9px;
+  color: #d1c3ff;
+  background:
+    rgba(103, 74, 222, 0.085);
+  font-size: 8px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.research-evidence-action-button.map {
+  border-color:
+    rgba(87, 161, 255, 0.18);
+  color: #b8d4ff;
+  background:
+    rgba(55, 111, 198, 0.075);
+}
+
+.research-evidence-action-button:hover:not(:disabled) {
+  border-color:
+    rgba(141, 107, 255, 0.38);
+  color: #f4f0ff;
+  background:
+    rgba(103, 74, 222, 0.15);
+}
+
+.research-evidence-action-button.map:hover:not(:disabled) {
+  border-color:
+    rgba(87, 161, 255, 0.34);
+  color: #eef6ff;
+  background:
+    rgba(55, 111, 198, 0.14);
+}
+
+.research-evidence-action-button:disabled {
+  opacity: 0.48;
+  cursor: wait;
+}
+
+@media (max-width: 720px) {
+  .research-source-excerpt-list article > header > div:last-child {
+    width: 100%;
+  }
+
+  .research-evidence-action-button {
+    flex: 1 1 130px;
+  }
+}
+
+/* AIMERS RESEARCH AI — EVIDENCE ACTION PRESENTATION POLISH V1 */
+.research-map-grid article[data-node-type="EVIDENCE"] > strong {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.research-map-grid article[data-node-type="EVIDENCE"] > p {
+  display: -webkit-box;
+  max-height: calc(1.6em * 4);
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-height: 1.6;
+}
+
+.research-map-grid article[data-node-type="EVIDENCE"] > footer {
+  margin-top: 12px;
+}

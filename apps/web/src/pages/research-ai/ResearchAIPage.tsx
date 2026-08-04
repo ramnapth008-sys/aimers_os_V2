@@ -501,6 +501,16 @@ export function ResearchAIPage() {
     setCopiedSourceField,
   ] = useState<string | null>(null);
 
+  const [
+    evidenceActionKey,
+    setEvidenceActionKey,
+  ] = useState<string | null>(null);
+
+  const [
+    evidenceActionNotice,
+    setEvidenceActionNotice,
+  ] = useState<string | null>(null);
+
   const selectedSource =
     useMemo(
       () =>
@@ -1413,6 +1423,283 @@ export function ResearchAIPage() {
     }
   };
 
+  const handleAskAssistantFromExcerpt = async (
+    source:
+      ResearchSourceRecord,
+    excerpt:
+      NonNullable<
+        ResearchSourceRecord["excerpts"]
+      >[number],
+  ) => {
+    if (
+      !project ||
+      evidenceActionKey ||
+      generating ||
+      saving
+    ) {
+      return;
+    }
+
+    const actionKey =
+      `assistant:${excerpt.id}`;
+
+    const projectId =
+      project.id;
+
+    setEvidenceActionKey(
+      actionKey,
+    );
+
+    setEvidenceActionNotice(
+      null,
+    );
+
+    setError("");
+
+    try {
+      let threadId =
+        activeThread?.id ??
+        null;
+
+      if (!threadId) {
+        const thread =
+          await createResearchThread(
+            apiFetch,
+            projectId,
+            {
+              title:
+                `Evidence review: ${source.title}`
+                  .slice(
+                    0,
+                    240,
+                  ),
+            },
+          );
+
+        threadId =
+          thread.id;
+      }
+
+      setSelectedThreadId(
+        threadId,
+      );
+
+      setGeneratingThreadId(
+        threadId,
+      );
+
+      const prompt = [
+        "Analyze the selected evidence passage in relation to the project research question.",
+        "Explain what it supports, what it does not establish, and any important limitations or alternative interpretations.",
+        "Use the attached source and excerpt provenance. Do not invent evidence.",
+      ].join("\n");
+
+      const result =
+        await generateResearchAssistantReply(
+          apiFetch,
+          projectId,
+          threadId,
+          {
+            content:
+              prompt,
+
+            researchSourceId:
+              source.id,
+
+            researchSourceExcerptId:
+              excerpt.id,
+          },
+        );
+
+      setAssistantProvider(
+        result.provider,
+      );
+
+      await Promise.all([
+        loadProject(
+          projectId,
+          true,
+        ),
+
+        loadWorkspace(
+          true,
+        ),
+      ]);
+
+      setSelectedThreadId(
+        threadId,
+      );
+
+      setActiveTab(
+        "assistant",
+      );
+
+      setEvidenceActionNotice(
+        "The selected passage was sent to Research AI with its source citation attached.",
+      );
+
+      closeSourceViewer();
+    } catch (requestError) {
+      setError(
+        messageFrom(
+          requestError,
+        ),
+      );
+    } finally {
+      setGeneratingThreadId(
+        null,
+      );
+
+      setEvidenceActionKey(
+        null,
+      );
+    }
+  };
+
+  const handleCreateEvidenceNode = async (
+    source:
+      ResearchSourceRecord,
+    excerpt:
+      NonNullable<
+        ResearchSourceRecord["excerpts"]
+      >[number],
+  ) => {
+    if (
+      !project ||
+      evidenceActionKey ||
+      saving ||
+      generating
+    ) {
+      return;
+    }
+
+    const actionKey =
+      `node:${excerpt.id}`;
+
+    const projectId =
+      project.id;
+
+    setEvidenceActionKey(
+      actionKey,
+    );
+
+    setEvidenceActionNotice(
+      null,
+    );
+
+    setError("");
+
+    try {
+      const nodeTitle =
+        [
+          excerpt.locator ||
+            "Evidence",
+
+          source.title,
+        ]
+          .filter(Boolean)
+          .join(" · ")
+          .slice(
+            0,
+            240,
+          );
+
+      const locator = [
+        excerpt.locator,
+        excerpt.pageNumber
+          ? `Page ${excerpt.pageNumber}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+      const provenance = [
+        excerpt.quote,
+        "",
+        `Source: ${source.title}`,
+        source.url
+          ? `URL: ${source.url}`
+          : "",
+        locator
+          ? `Locator: ${locator}`
+          : "",
+        `Research source ID: ${source.id}`,
+        `Research excerpt ID: ${excerpt.id}`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      await createResearchMindMapNode(
+        apiFetch,
+        projectId,
+        {
+          title:
+            nodeTitle,
+
+          content:
+            provenance,
+
+          type:
+            "EVIDENCE",
+
+          researchSourceId:
+            source.id,
+
+          positionX:
+            (
+              project.mindMapNodes
+                .length %
+              3
+            ) *
+            260,
+
+          positionY:
+            Math.floor(
+              project.mindMapNodes
+                .length /
+              3,
+            ) *
+            170,
+
+          sequenceNumber:
+            project.mindMapNodes
+              .length,
+        },
+      );
+
+      await Promise.all([
+        loadProject(
+          projectId,
+          true,
+        ),
+
+        loadWorkspace(
+          true,
+        ),
+      ]);
+
+      setActiveTab(
+        "mind-map",
+      );
+
+      setEvidenceActionNotice(
+        "An evidence node was created with the source relation and excerpt provenance.",
+      );
+
+      closeSourceViewer();
+    } catch (requestError) {
+      setError(
+        messageFrom(
+          requestError,
+        ),
+      );
+    } finally {
+      setEvidenceActionKey(
+        null,
+      );
+    }
+  };
+
   const handleCreateSource = async () => {
     const title =
       sourceTitle.trim();
@@ -1960,6 +2247,31 @@ export function ResearchAIPage() {
             type="button"
             aria-label="Dismiss error"
             onClick={() => setError("")}
+          >
+            <X size={15} />
+          </button>
+        </section>
+      )}
+
+      {evidenceActionNotice && (
+        <section
+          className="research-evidence-action-notice"
+          role="status"
+          aria-live="polite"
+        >
+          <CheckCircle2 size={16} />
+          <span>
+            {evidenceActionNotice}
+          </span>
+
+          <button
+            type="button"
+            aria-label="Dismiss evidence action message"
+            onClick={() =>
+              setEvidenceActionNotice(
+                null,
+              )
+            }
           >
             <X size={15} />
           </button>
@@ -3196,6 +3508,74 @@ export function ResearchAIPage() {
                               </div>
 
                               <div>
+                                <button
+                                  className="research-evidence-action-button assistant"
+                                  type="button"
+                                  disabled={
+                                    evidenceActionKey !==
+                                      null ||
+                                    generating ||
+                                    saving
+                                  }
+                                  onClick={() =>
+                                    void handleAskAssistantFromExcerpt(
+                                      selectedSource,
+                                      excerpt,
+                                    )
+                                  }
+                                >
+                                  {evidenceActionKey ===
+                                  `assistant:${excerpt.id}` ? (
+                                    <LoaderCircle
+                                      className="research-spin"
+                                      size={13}
+                                    />
+                                  ) : (
+                                    <MessageSquare
+                                      size={13}
+                                    />
+                                  )}
+
+                                  {evidenceActionKey ===
+                                  `assistant:${excerpt.id}`
+                                    ? "Sending…"
+                                    : "Ask Assistant"}
+                                </button>
+
+                                <button
+                                  className="research-evidence-action-button map"
+                                  type="button"
+                                  disabled={
+                                    evidenceActionKey !==
+                                      null ||
+                                    generating ||
+                                    saving
+                                  }
+                                  onClick={() =>
+                                    void handleCreateEvidenceNode(
+                                      selectedSource,
+                                      excerpt,
+                                    )
+                                  }
+                                >
+                                  {evidenceActionKey ===
+                                  `node:${excerpt.id}` ? (
+                                    <LoaderCircle
+                                      className="research-spin"
+                                      size={13}
+                                    />
+                                  ) : (
+                                    <Network
+                                      size={13}
+                                    />
+                                  )}
+
+                                  {evidenceActionKey ===
+                                  `node:${excerpt.id}`
+                                    ? "Creating…"
+                                    : "Add to map"}
+                                </button>
+
                                 <button
                                   className="research-source-copy-button"
                                   type="button"

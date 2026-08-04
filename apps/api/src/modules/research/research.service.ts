@@ -2022,6 +2022,83 @@ export class ResearchService {
       );
     }
 
+    if (
+      dto.researchSourceExcerptId &&
+      !dto.researchSourceId
+    ) {
+      throw new BadRequestException(
+        "A research source is required when an evidence excerpt is selected.",
+      );
+    }
+
+    const selectedEvidenceSource =
+      dto.researchSourceId
+        ? await this.getOwnedSource(
+            profile.id,
+            projectId,
+            dto.researchSourceId,
+          )
+        : null;
+
+    const selectedEvidenceExcerpt =
+      dto.researchSourceExcerptId
+        ? await this.database
+            .researchSourceExcerpt
+            .findFirst({
+              where: {
+                id:
+                  dto.researchSourceExcerptId,
+
+                researchSourceId:
+                  selectedEvidenceSource
+                    ?.id,
+              },
+            })
+        : null;
+
+    if (
+      dto.researchSourceExcerptId &&
+      !selectedEvidenceExcerpt
+    ) {
+      throw new BadRequestException(
+        "The selected evidence excerpt does not belong to the selected research source.",
+      );
+    }
+
+    const selectedEvidenceContext =
+      selectedEvidenceSource
+        ? [
+            `Selected source: ${selectedEvidenceSource.title}`,
+            `Selected source ID: ${selectedEvidenceSource.id}`,
+            selectedEvidenceSource.author
+              ? `Author: ${selectedEvidenceSource.author}`
+              : "",
+            selectedEvidenceSource.publisher
+              ? `Publisher: ${selectedEvidenceSource.publisher}`
+              : "",
+            selectedEvidenceSource.url
+              ? `URL: ${selectedEvidenceSource.url}`
+              : "",
+            selectedEvidenceExcerpt
+              ? `Selected excerpt ID: ${selectedEvidenceExcerpt.id}`
+              : "",
+            selectedEvidenceExcerpt?.locator
+              ? `Locator: ${selectedEvidenceExcerpt.locator}`
+              : "",
+            selectedEvidenceExcerpt?.pageNumber
+              ? `Page: ${selectedEvidenceExcerpt.pageNumber}`
+              : "",
+            selectedEvidenceExcerpt
+              ? `Exact selected passage: ${clipResearchText(
+                  selectedEvidenceExcerpt.quote,
+                  2200,
+                )}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join("\n")
+        : "";
+
     const sourceBlocks =
       project.sources.map(
         (
@@ -2120,6 +2197,13 @@ export class ResearchService {
       nodeContext ||
         "No knowledge-map nodes have been added.",
       "",
+      "Explicitly selected evidence for this request:",
+      selectedEvidenceContext ||
+        "No source passage was explicitly selected.",
+      "",
+      "When a passage is explicitly selected, analyze that exact passage first.",
+      "Explain what the selected passage supports, what it does not establish, and any limitations.",
+      "",
       "Saved evidence sources:",
       sourceBlocks.join("\n\n") ||
         "No saved evidence sources are available. Do not fabricate citations.",
@@ -2199,6 +2283,35 @@ export class ResearchService {
                       null,
                   },
                 });
+
+            if (
+              selectedEvidenceSource
+            ) {
+              await transaction
+                .researchCitation
+                .create({
+                  data: {
+                    researchMessageId:
+                      userMessage.id,
+
+                    researchSourceId:
+                      selectedEvidenceSource.id,
+
+                    researchSourceExcerptId:
+                      selectedEvidenceExcerpt
+                        ?.id ??
+                      null,
+
+                    label:
+                      "Selected evidence",
+
+                    quote:
+                      selectedEvidenceExcerpt
+                        ?.quote ??
+                      null,
+                  },
+                });
+            }
 
             const assistantMessage =
               await transaction
