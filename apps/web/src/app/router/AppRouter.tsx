@@ -27,6 +27,12 @@ import {
 } from "../../pages/mock-tests";
 
 
+import {
+  PredictionPage,
+} from "../../pages/prediction";
+
+
+
 
 import { ModulePage } from "../../pages/shared/ModulePage";
 
@@ -58,13 +64,6 @@ const modules = [
     title: "Analytics",
     description:
       "Explore progress, performance, consistency and learning trends.",
-  },
-  {
-    path: "prediction",
-    eyebrow: "PERFORMANCE FORECASTING",
-    title: "Prediction",
-    description:
-      "Estimate score, rank, confidence and academic risk patterns.",
   },
   {
     path: "memory-engine",
@@ -211,6 +210,11 @@ export function AppRouter() {
           <Route
             path="mock-tests"
             element={<MockTestsPage />}
+          />
+
+          <Route
+            path="prediction"
+            element={<PredictionPage />}
           />
 
           {modules.map((module) => (
