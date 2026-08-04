@@ -126,6 +126,19 @@ export function createResearchSource(
   );
 }
 
+export function ingestResearchSource(
+  apiFetch: ApiFetch,
+  projectId: string,
+  sourceId: string,
+): Promise<ResearchSourceRecord> {
+  return apiFetch<ResearchSourceRecord>(
+    `/research/projects/${projectId}/sources/${sourceId}/ingest`,
+    {
+      method: "POST",
+    },
+  );
+}
+
 export function updateResearchSource(
   apiFetch: ApiFetch,
   projectId: string,

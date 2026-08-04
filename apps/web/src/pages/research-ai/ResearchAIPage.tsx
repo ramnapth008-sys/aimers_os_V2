@@ -53,6 +53,7 @@ import {
   getResearchProject,
   getResearchWorkspace,
   generateResearchAssistantReply,
+  ingestResearchSource,
   updateResearchProject,
   updateResearchSource,
 } from "./research-ai.service";
@@ -475,6 +476,11 @@ export function ResearchAIPage() {
     sourceTypeValue,
     setSourceTypeValue,
   ] = useState<ResearchSourceType>("WEB_PAGE");
+
+  const [
+    ingestingSourceId,
+    setIngestingSourceId,
+  ] = useState<string | null>(null);
 
   const [
     threadTitle,
@@ -1144,7 +1150,21 @@ export function ResearchAIPage() {
   };
 
   const handleCreateSource = async () => {
-    if (!project || !sourceTitle.trim()) {
+    const title =
+      sourceTitle.trim();
+
+    const url =
+      sourceUrl.trim();
+
+    if (
+      !project ||
+      !title ||
+      (
+        sourceTypeValue ===
+          "WEB_PAGE" &&
+        !url
+      )
+    ) {
       return;
     }
 
@@ -1152,17 +1172,56 @@ export function ResearchAIPage() {
     setError("");
 
     try {
-      await createResearchSource(
-        apiFetch,
-        project.id,
-        {
-          type: sourceTypeValue,
-          title: sourceTitle.trim(),
-          url: sourceUrl.trim() || null,
-          summary: sourceSummary.trim() || null,
-          status: "SAVED",
-        },
-      );
+      const created =
+        await createResearchSource(
+          apiFetch,
+          project.id,
+          {
+            type:
+              sourceTypeValue,
+
+            title,
+
+            url:
+              url ||
+              null,
+
+            summary:
+              sourceSummary
+                .trim() ||
+              null,
+
+            status:
+              "SAVED",
+          },
+        );
+
+      if (
+        created.type ===
+          "WEB_PAGE" &&
+        created.url
+      ) {
+        setIngestingSourceId(
+          created.id,
+        );
+
+        const ingested =
+          await ingestResearchSource(
+            apiFetch,
+            project.id,
+            created.id,
+          );
+
+        if (
+          ingested.status ===
+            "FAILED"
+        ) {
+          setError(
+            ingested.processingError ||
+            "The webpage was saved but could not be ingested.",
+          );
+        }
+      }
 
       setSourceFormOpen(false);
       setSourceTitle("");
@@ -1170,9 +1229,68 @@ export function ResearchAIPage() {
       setSourceSummary("");
       await refreshAll();
     } catch (requestError) {
-      setError(messageFrom(requestError));
+      setError(
+        messageFrom(
+          requestError,
+        ),
+      );
     } finally {
       setSaving(false);
+      setIngestingSourceId(
+        null,
+      );
+    }
+  };
+
+  const handleIngestSource = async (
+    source:
+      ResearchSourceRecord,
+  ) => {
+    if (
+      !project ||
+      source.type !==
+        "WEB_PAGE" ||
+      !source.url ||
+      ingestingSourceId
+    ) {
+      return;
+    }
+
+    setIngestingSourceId(
+      source.id,
+    );
+
+    setError("");
+
+    try {
+      const ingested =
+        await ingestResearchSource(
+          apiFetch,
+          project.id,
+          source.id,
+        );
+
+      if (
+        ingested.status ===
+          "FAILED"
+      ) {
+        setError(
+          ingested.processingError ||
+          "The webpage could not be ingested.",
+        );
+      }
+
+      await refreshAll();
+    } catch (requestError) {
+      setError(
+        messageFrom(
+          requestError,
+        ),
+      );
+    } finally {
+      setIngestingSourceId(
+        null,
+      );
     }
   };
 
@@ -1940,8 +2058,21 @@ export function ResearchAIPage() {
                               </button>
                             </header>
 
-                            <p>
-                              {source.summary || source.author || "No summary added yet."}
+                            <p
+                              className={
+                                source.status === "FAILED"
+                                  ? "research-source-error"
+                                  : ""
+                              }
+                            >
+                              {source.status === "PROCESSING"
+                                ? "Extracting readable evidence from this webpage…"
+                                : source.status === "FAILED"
+                                  ? source.processingError ||
+                                    "The webpage could not be ingested."
+                                  : source.summary ||
+                                    source.author ||
+                                    "Saved without extracted content."}
                             </p>
 
                             <footer>
@@ -1960,6 +2091,40 @@ export function ResearchAIPage() {
                                   Open <ArrowUpRight size={13} />
                                 </a>
                               )}
+
+                              {source.type === "WEB_PAGE" &&
+                                source.url &&
+                                source.status !== "PROCESSING" && (
+                                  <button
+                                    className="research-source-ingest-button"
+                                    type="button"
+                                    disabled={ingestingSourceId !== null}
+                                    title={
+                                      source.status === "FAILED"
+                                        ? "Retry webpage ingestion"
+                                        : "Refresh extracted webpage evidence"
+                                    }
+                                    onClick={() =>
+                                      void handleIngestSource(
+                                        source,
+                                      )
+                                    }
+                                  >
+                                    <RefreshCw
+                                      className={
+                                        ingestingSourceId === source.id
+                                          ? "research-spin"
+                                          : ""
+                                      }
+                                      size={13}
+                                    />
+
+                                    {source.status === "FAILED"
+                                      ? "Retry"
+                                      : "Refresh"}
+                                  </button>
+                                )}
+
                               <button
                                 className="danger"
                                 type="button"
@@ -2473,9 +2638,17 @@ export function ResearchAIPage() {
               URL
               <input
                 value={sourceUrl}
+                inputMode="url"
                 placeholder="https://..."
+                required={sourceTypeValue === "WEB_PAGE"}
                 onChange={(event: ValueChangeEvent) => setSourceUrl(event.target.value)}
               />
+
+              {sourceTypeValue === "WEB_PAGE" && (
+                <small className="research-source-form-hint">
+                  AIMERS will fetch public HTML or text, remove page chrome and create evidence excerpts.
+                </small>
+              )}
             </label>
             <label>
               Summary or relevance
@@ -2496,11 +2669,28 @@ export function ResearchAIPage() {
               <button
                 className="research-primary-button"
                 type="button"
-                disabled={!sourceTitle.trim() || saving}
+                disabled={
+                  !sourceTitle.trim() ||
+                  saving ||
+                  (
+                    sourceTypeValue === "WEB_PAGE" &&
+                    !sourceUrl.trim()
+                  )
+                }
                 onClick={() => void handleCreateSource()}
               >
-                <Plus size={16} />
-                Add source
+                {saving ? (
+                  <LoaderCircle
+                    className="research-spin"
+                    size={16}
+                  />
+                ) : (
+                  <Plus size={16} />
+                )}
+
+                {sourceTypeValue === "WEB_PAGE"
+                  ? "Save and ingest"
+                  : "Add source"}
               </button>
             </footer>
           </section>

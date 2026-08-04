@@ -15,6 +15,7 @@ import {
   ResearchMessageRole,
   ResearchProjectStatus,
   ResearchSourceStatus,
+  ResearchSourceType,
   StudentStatus,
 } from "@aimers/database";
 
@@ -25,6 +26,10 @@ import {
 import {
   DatabaseService,
 } from "../../infrastructure/database/database.service";
+
+import {
+  ResearchSourceIngestionService,
+} from "./research-source-ingestion.service";
 
 import type {
   CreateResearchCitationDto,
@@ -289,6 +294,12 @@ export class ResearchService {
     @Inject(AiService)
     private readonly aiService:
       AiService,
+
+    @Inject(
+      ResearchSourceIngestionService,
+    )
+    private readonly sourceIngestion:
+      ResearchSourceIngestionService,
   ) {}
 
   private async getStudentContext(
@@ -1320,6 +1331,267 @@ export class ResearchService {
           id: source.id,
         },
         data,
+      });
+  }
+
+  async ingestSource(
+    userId: string,
+    projectId: string,
+    sourceId: string,
+  ) {
+    const {
+      profile,
+    } =
+      await this.getStudentContext(
+        userId,
+      );
+
+    const source =
+      await this.getOwnedSource(
+        profile.id,
+        projectId,
+        sourceId,
+      );
+
+    if (
+      source.type !==
+      ResearchSourceType.WEB_PAGE
+    ) {
+      throw new BadRequestException(
+        "Only webpage sources can be fetched automatically.",
+      );
+    }
+
+    if (
+      !source.url?.trim()
+    ) {
+      throw new BadRequestException(
+        "A webpage URL is required before ingestion.",
+      );
+    }
+
+    await this.database
+      .researchSource
+      .update({
+        where: {
+          id:
+            source.id,
+        },
+
+        data: {
+          status:
+            ResearchSourceStatus
+              .PROCESSING,
+
+          processingError:
+            null,
+        },
+      });
+
+    try {
+      const ingested =
+        await this.sourceIngestion
+          .ingestWebpage(
+            source.url,
+          );
+
+      const existingMetadata =
+        source.metadata &&
+        typeof source.metadata ===
+          "object" &&
+        !Array.isArray(
+          source.metadata,
+        )
+          ? source.metadata
+          : {};
+
+      const accessedAt =
+        new Date();
+
+      const citationText = [
+        source.title,
+        ingested.publisher,
+        `Accessed ${accessedAt.toISOString().slice(0, 10)}`,
+        ingested.finalUrl,
+      ]
+        .filter(Boolean)
+        .join(". ");
+
+      await this.database
+        .$transaction(
+          async (
+            transaction,
+          ) => {
+            await transaction
+              .researchSourceExcerpt
+              .deleteMany({
+                where: {
+                  researchSourceId:
+                    source.id,
+                },
+              });
+
+            if (
+              ingested.excerpts
+                .length
+            ) {
+              await transaction
+                .researchSourceExcerpt
+                .createMany({
+                  data:
+                    ingested.excerpts
+                      .map(
+                        (
+                          excerpt,
+                        ) => ({
+                          researchSourceId:
+                            source.id,
+
+                          quote:
+                            excerpt.quote,
+
+                          locator:
+                            excerpt.locator,
+
+                          startOffset:
+                            excerpt.startOffset,
+
+                          endOffset:
+                            excerpt.endOffset,
+                        }),
+                      ),
+                });
+            }
+
+            await transaction
+              .researchSource
+              .update({
+                where: {
+                  id:
+                    source.id,
+                },
+
+                data: {
+                  status:
+                    ResearchSourceStatus
+                      .READY,
+
+                  url:
+                    ingested.finalUrl,
+
+                  author:
+                    source.author ??
+                    ingested.author,
+
+                  publisher:
+                    source.publisher ??
+                    ingested.publisher,
+
+                  accessedAt,
+
+                  rawContent:
+                    ingested.rawContent,
+
+                  summary:
+                    ingested.summary,
+
+                  citationText,
+
+                  processingError:
+                    null,
+
+                  metadata: {
+                    ...existingMetadata,
+
+                    ingestion: {
+                      version:
+                        1,
+
+                      fetchedAt:
+                        accessedAt
+                          .toISOString(),
+
+                      finalUrl:
+                        ingested.finalUrl,
+
+                      contentType:
+                        ingested.contentType,
+
+                      pageTitle:
+                        ingested.pageTitle,
+
+                      description:
+                        ingested.description,
+
+                      language:
+                        ingested.language,
+
+                      wordCount:
+                        ingested.wordCount,
+
+                      characterCount:
+                        ingested.rawContent
+                          .length,
+                    },
+                  } as any,
+                },
+              });
+          },
+        );
+    } catch (error) {
+      const processingError =
+        error instanceof Error
+          ? error.message
+          : "The webpage could not be ingested.";
+
+      await this.database
+        .researchSource
+        .update({
+          where: {
+            id:
+              source.id,
+          },
+
+          data: {
+            status:
+              ResearchSourceStatus
+                .FAILED,
+
+            processingError:
+              processingError
+                .slice(
+                  0,
+                  2000,
+                ),
+          },
+        });
+    }
+
+    return this.database
+      .researchSource
+      .findUnique({
+        where: {
+          id:
+            source.id,
+        },
+
+        include: {
+          excerpts: {
+            orderBy: {
+              createdAt:
+                "asc",
+            },
+          },
+
+          _count: {
+            select: {
+              citations:
+                true,
+              mindMapNodes:
+                true,
+            },
+          },
+        },
       });
   }
 

@@ -11,6 +11,10 @@ import {
 } from "./research.controller";
 
 import {
+  ResearchSourceIngestionService,
+} from "./research-source-ingestion.service";
+
+import {
   ResearchService,
 } from "./research.service";
 
@@ -24,6 +28,7 @@ import {
   ],
   providers: [
     ResearchService,
+    ResearchSourceIngestionService,
   ],
   exports: [
     ResearchService,

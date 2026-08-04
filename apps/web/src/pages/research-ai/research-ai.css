@@ -1993,3 +1993,92 @@
     max-width: 100%;
   }
 }
+
+/* AIMERS RESEARCH AI — WEBPAGE SOURCE INGESTION V1 */
+.research-source-status.processing {
+  color: #c7b1ff;
+  border-color:
+    rgba(164, 132, 255, 0.22);
+  background:
+    rgba(117, 78, 222, 0.09);
+}
+
+.research-source-status.saved {
+  color: #9fb1ce;
+  border-color:
+    rgba(132, 168, 255, 0.12);
+  background:
+    rgba(66, 102, 188, 0.055);
+}
+
+.research-source-error {
+  color: #e1a0a8 !important;
+}
+
+.research-source-ingest-button {
+  display: inline-flex;
+  min-height: 25px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid
+    rgba(141, 107, 255, 0.16);
+  border-radius: 8px;
+  padding: 0 7px;
+  color: #bca9ff;
+  background:
+    rgba(103, 74, 222, 0.055);
+  font-size: 8px;
+}
+
+.research-source-ingest-button:hover:not(:disabled) {
+  border-color:
+    rgba(141, 107, 255, 0.31);
+  color: #eee9ff;
+  background:
+    rgba(103, 74, 222, 0.1);
+}
+
+.research-source-ingest-button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.research-source-form-hint {
+  display: block;
+  margin-top: 6px;
+  color: #6f7c93;
+  font-size: 8px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* AIMERS RESEARCH AI — SOURCE CARD ACTION LAYOUT FIX V1 */
+.research-source-grid article > footer {
+  flex-wrap: wrap;
+  row-gap: 7px;
+}
+
+.research-source-grid article > footer .research-source-ingest-button {
+  width: auto;
+  min-width: max-content;
+  height: 27px;
+  min-height: 27px;
+  flex: 0 0 auto;
+  overflow: visible;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
+.research-source-grid article > footer .research-source-ingest-button svg {
+  flex: 0 0 auto;
+}
+
+.research-source-grid article > footer > a {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.research-source-grid article > footer > button.danger {
+  flex: 0 0 auto;
+}

@@ -203,6 +203,25 @@ export class ResearchController {
       );
   }
 
+  @Post(
+    "projects/:projectId/sources/:sourceId/ingest",
+  )
+  ingestSource(
+    @CurrentUser()
+    user: AuthenticatedUser,
+    @Param("projectId")
+    projectId: string,
+    @Param("sourceId")
+    sourceId: string,
+  ) {
+    return this.researchService
+      .ingestSource(
+        user.userId,
+        projectId,
+        sourceId,
+      );
+  }
+
   @Delete(
     "projects/:projectId/sources/:sourceId",
   )

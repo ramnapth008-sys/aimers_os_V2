@@ -294,6 +294,18 @@ export interface UpdateResearchSourceInput
   processingError?: string | null;
 }
 
+export interface ResearchSourceIngestionMetadata {
+  version: number;
+  fetchedAt: string;
+  finalUrl: string;
+  contentType: string;
+  pageTitle: string | null;
+  description: string | null;
+  language: string | null;
+  wordCount: number;
+  characterCount: number;
+}
+
 export interface CreateResearchSourceExcerptInput {
   quote: string;
   note?: string | null;
