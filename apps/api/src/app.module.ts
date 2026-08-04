@@ -55,6 +55,10 @@ import {
 } from "./memory-engine/memory-engine.module";
 
 import {
+  NotesModule,
+} from "./modules/notes/notes.module";
+
+import {
   QuestionBankModule,
 } from "./question-bank/question-bank.module";
 
@@ -79,6 +83,7 @@ import {
     MockTestsModule,
     FlashcardsModule,
     MemoryEngineModule,
+    NotesModule,
     QuestionBankModule,
     ProfileModule,
     OnboardingModule,
