@@ -51,6 +51,10 @@ import {
   MemoryEnginePage,
 } from "../../pages/memory-engine";
 
+import {
+  NotesPage,
+} from "../../pages/notes";
+
 
 
 
@@ -79,13 +83,6 @@ const modules = [
     title: "Digital Activity",
     description:
       "Analyse app, browser, lecture and productive usage patterns.",
-  },
-  {
-    path: "notes",
-    eyebrow: "KNOWLEDGE WORKSPACE",
-    title: "Notes",
-    description:
-      "Write, organise, connect and retrieve your learning notes.",
   },
   {
     path: "research-ai",
@@ -240,6 +237,11 @@ export function AppRouter() {
           <Route
             path="memory-engine"
             element={<MemoryEnginePage />}
+          />
+
+          <Route
+            path="notes"
+            element={<NotesPage />}
           />
 
           {modules.map((module) => (
