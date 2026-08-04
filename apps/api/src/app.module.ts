@@ -47,6 +47,10 @@ import {
 } from "./planner/planner.module";
 
 import {
+  QuestionBankModule,
+} from "./question-bank/question-bank.module";
+
+import {
   ProfileModule,
 } from "./profile/profile.module";
 
@@ -65,6 +69,7 @@ import {
     AcademicModule,
     PlannerModule,
     MockTestsModule,
+    QuestionBankModule,
     ProfileModule,
     OnboardingModule,
   ],
