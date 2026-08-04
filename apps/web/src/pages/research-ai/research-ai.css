@@ -1591,3 +1591,250 @@
       300px minmax(0, 1fr);
   }
 }
+
+/* AIMERS RESEARCH AI — LIVE ASSISTANT FRONTEND V1 */
+.research-assistant-status {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+  text-align: right;
+}
+
+.research-assistant-status > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #9fb8ec;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.research-assistant-status > span > i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #65d7a0;
+  box-shadow:
+    0 0 10px rgba(101, 215, 160, 0.7);
+}
+
+.research-assistant-status > span.active {
+  color: #c3b5ff;
+}
+
+.research-assistant-status > span.active > i {
+  background: #a98cff;
+  box-shadow:
+    0 0 12px rgba(169, 140, 255, 0.75);
+  animation:
+    research-assistant-pulse
+    1.25s ease-in-out infinite;
+}
+
+.research-assistant-status > small {
+  color: #687387;
+  font-size: 8px;
+}
+
+.research-message.assistant > span {
+  background:
+    rgba(117, 78, 222, 0.12);
+  color: #b19aff;
+}
+
+.research-message.assistant > div {
+  border-color:
+    rgba(141, 107, 255, 0.11);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(103, 74, 222, 0.055),
+      rgba(255, 255, 255, 0.02)
+    );
+}
+
+.research-message > div {
+  min-width: 0;
+}
+
+.research-message-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.research-message-meta span {
+  display: inline-flex;
+  min-height: 20px;
+  align-items: center;
+  border: 1px solid
+    rgba(255, 255, 255, 0.045);
+  border-radius: 7px;
+  padding: 0 6px;
+  color: #687488;
+  background:
+    rgba(255, 255, 255, 0.018);
+  font-size: 7px;
+}
+
+.research-message-citations {
+  align-items: flex-start;
+}
+
+.research-message-citations > svg {
+  flex: 0 0 auto;
+  margin-top: 5px;
+}
+
+.research-message-citations > div {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.research-message-citations a,
+.research-message-citations > div > span {
+  display: inline-flex;
+  min-height: 24px;
+  max-width: 100%;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  border: 1px solid
+    rgba(132, 168, 255, 0.13);
+  border-radius: 8px;
+  padding: 0 7px;
+  color: #a9c3f7;
+  background:
+    rgba(66, 102, 188, 0.055);
+  font-size: 8px;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.research-message-citations a:hover {
+  border-color:
+    rgba(141, 107, 255, 0.27);
+  color: #e8e2ff;
+  background:
+    rgba(103, 74, 222, 0.09);
+}
+
+.research-message.generating > div {
+  min-width: 260px;
+}
+
+.research-generating-copy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: #a9b6d2;
+  font-size: 10px;
+}
+
+.research-generating-copy svg {
+  color: #a98cff;
+}
+
+.research-composer-field {
+  min-width: 0;
+  flex: 1;
+}
+
+.research-composer-field textarea {
+  width: 100%;
+}
+
+.research-composer-field textarea:focus {
+  border-color:
+    rgba(141, 107, 255, 0.32);
+  box-shadow:
+    0 0 0 3px
+    rgba(103, 74, 222, 0.07);
+}
+
+.research-composer-field textarea:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.research-composer-field > footer {
+  display: flex;
+  min-height: 23px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 5px;
+  padding: 0 2px;
+  color: #677287;
+  font-size: 8px;
+}
+
+.research-composer-field > footer > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.research-composer-field > footer svg {
+  color: #9e88ef;
+}
+
+.research-composer > button {
+  margin-top: 1px;
+}
+
+.research-composer > button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.research-composer > button.generating {
+  cursor: wait;
+}
+
+@keyframes research-assistant-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@media (max-width: 720px) {
+  .research-chat-panel > header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .research-assistant-status {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .research-composer {
+    align-items: flex-start;
+  }
+
+  .research-composer-field > footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .research-message {
+    max-width: 96%;
+  }
+}

@@ -8,6 +8,8 @@ import type {
   CreateResearchSourceExcerptInput,
   CreateResearchSourceInput,
   CreateResearchThreadInput,
+  GenerateResearchAssistantReplyInput,
+  ResearchAssistantReplyResult,
   ResearchCitationRecord,
   ResearchMessageRecord,
   ResearchMindMapEdgeRecord,
@@ -203,6 +205,21 @@ export function createResearchMessage(
 ): Promise<ResearchMessageRecord> {
   return apiFetch<ResearchMessageRecord>(
     `/research/projects/${projectId}/threads/${threadId}/messages`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function generateResearchAssistantReply(
+  apiFetch: ApiFetch,
+  projectId: string,
+  threadId: string,
+  input: GenerateResearchAssistantReplyInput,
+): Promise<ResearchAssistantReplyResult> {
+  return apiFetch<ResearchAssistantReplyResult>(
+    `/research/projects/${projectId}/threads/${threadId}/assistant`,
     {
       method: "POST",
       body: JSON.stringify(input),

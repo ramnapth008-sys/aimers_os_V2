@@ -1,6 +1,7 @@
 import {
   BadGatewayException,
   GatewayTimeoutException,
+  Inject,
   Injectable,
   ServiceUnavailableException,
 } from "@nestjs/common";
@@ -34,6 +35,7 @@ export class AiService {
     number;
 
   constructor(
+    @Inject(ConfigService)
     private readonly config:
       ConfigService<
         Environment,

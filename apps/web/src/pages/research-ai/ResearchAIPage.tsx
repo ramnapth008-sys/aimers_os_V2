@@ -36,11 +36,11 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import {
-  createResearchMessage,
   createResearchMindMapEdge,
   createResearchMindMapNode,
   createResearchProject,
@@ -52,11 +52,13 @@ import {
   deleteResearchSource,
   getResearchProject,
   getResearchWorkspace,
+  generateResearchAssistantReply,
   updateResearchProject,
   updateResearchSource,
 } from "./research-ai.service";
 
 import type {
+  ResearchAssistantProviderInfo,
   ResearchMindMapNodeType,
   ResearchProjectStatus,
   ResearchProjectWorkspace,
@@ -337,6 +339,22 @@ export function ResearchAIPage() {
   ] = useState(false);
 
   const [
+    generatingThreadId,
+    setGeneratingThreadId,
+  ] = useState<string | null>(null);
+
+  const [
+    assistantProvider,
+    setAssistantProvider,
+  ] = useState<ResearchAssistantProviderInfo | null>(null);
+
+  const messageStreamRef =
+    useRef<HTMLDivElement | null>(null);
+
+  const generating =
+    generatingThreadId !== null;
+
+  const [
     error,
     setError,
   ] = useState("");
@@ -451,6 +469,34 @@ export function ResearchAIPage() {
     [project, selectedThreadId],
   );
 
+  useEffect(
+    () => {
+      const frame =
+        window.requestAnimationFrame(
+          () => {
+            const stream =
+              messageStreamRef.current;
+
+            if (stream) {
+              stream.scrollTop =
+                stream.scrollHeight;
+            }
+          },
+        );
+
+      return () => {
+        window.cancelAnimationFrame(
+          frame,
+        );
+      };
+    },
+    [
+      activeThread?.id,
+      activeThread?.messages.length,
+      generatingThreadId,
+    ],
+  );
+
   const loadWorkspace = useCallback(
     async (
       quiet = false,
@@ -558,9 +604,11 @@ export function ResearchAIPage() {
     () => {
       if (!selectedProjectId) {
         setProject(null);
+        setAssistantProvider(null);
         return;
       }
 
+      setAssistantProvider(null);
       void loadProject(selectedProjectId);
     },
     [loadProject, selectedProjectId],
@@ -838,33 +886,115 @@ export function ResearchAIPage() {
   };
 
   const handleSendMessage = async () => {
+    const content =
+      message.trim();
+
     if (
       !project ||
       !activeThread ||
-      !message.trim()
+      !content ||
+      generating ||
+      saving
     ) {
       return;
     }
 
-    setSaving(true);
+    const projectId =
+      project.id;
+
+    const threadId =
+      activeThread.id;
+
+    setGeneratingThreadId(
+      threadId,
+    );
+
+    setError("");
 
     try {
-      await createResearchMessage(
-        apiFetch,
-        project.id,
-        activeThread.id,
-        {
-          role: "USER",
-          content: message.trim(),
+      const result =
+        await generateResearchAssistantReply(
+          apiFetch,
+          projectId,
+          threadId,
+          {
+            content,
+          },
+        );
+
+      setMessage("");
+      setAssistantProvider(
+        result.provider,
+      );
+
+      setProject(
+        (current) => {
+          if (
+            !current ||
+            current.id !== projectId
+          ) {
+            return current;
+          }
+
+          return {
+            ...current,
+
+            threads:
+              current.threads.map(
+                (thread) => {
+                  if (
+                    thread.id !== threadId
+                  ) {
+                    return thread;
+                  }
+
+                  const existingIds =
+                    new Set(
+                      thread.messages.map(
+                        (item) =>
+                          item.id,
+                      ),
+                    );
+
+                  const additions = [
+                    result.userMessage,
+                    result.assistantMessage,
+                  ].filter(
+                    (item) =>
+                      !existingIds.has(
+                        item.id,
+                      ),
+                  );
+
+                  return {
+                    ...thread,
+
+                    updatedAt:
+                      result.assistantMessage
+                        .createdAt,
+
+                    messages: [
+                      ...thread.messages,
+                      ...additions,
+                    ],
+                  };
+                },
+              ),
+          };
         },
       );
 
-      setMessage("");
-      await loadProject(project.id, true);
+      await loadWorkspace(true);
     } catch (requestError) {
-      setError(messageFrom(requestError));
+      setError(
+        messageFrom(
+          requestError,
+        ),
+      );
     } finally {
-      setSaving(false);
+      setGeneratingThreadId(
+        null,
+      );
     }
   };
 
@@ -1491,12 +1621,35 @@ export function ResearchAIPage() {
                               <span>THREAD</span>
                               <h2>{activeThread.title}</h2>
                             </div>
-                            <small>
-                              AI provider connection is a later milestone.
-                            </small>
+                            <div
+                              className="research-assistant-status"
+                              aria-live="polite"
+                            >
+                              <span className={generating ? "active" : ""}>
+                                <i />
+
+                                {generating
+                                  ? "Generating evidence-aware reply"
+                                  : assistantProvider
+                                    ? `${assistantProvider.name.toUpperCase()} · ${assistantProvider.model}`
+                                    : "Server assistant ready"}
+                              </span>
+
+                              <small>
+                                {project.sources.length}
+                                {" "}
+                                saved source
+                                {project.sources.length === 1 ? "" : "s"}
+                                {" "}
+                                available
+                              </small>
+                            </div>
                           </header>
 
-                          <div className="research-message-stream">
+                          <div
+                            ref={messageStreamRef}
+                            className="research-message-stream"
+                          >
                             {!activeThread.messages.length && (
                               <div className="research-chat-notice">
                                 <Sparkles size={16} />
@@ -1510,34 +1663,189 @@ export function ResearchAIPage() {
                                 className={`research-message ${item.role.toLowerCase()}`}
                               >
                                 <span>
-                                  {item.role === "USER" ? <User size={15} /> : <Bot size={15} />}
+                                  {item.role === "USER" ? (
+                                    <User size={15} />
+                                  ) : (
+                                    <Bot size={15} />
+                                  )}
                                 </span>
+
                                 <div>
-                                  <small>{item.role}</small>
+                                  <small>
+                                    {item.role === "ASSISTANT"
+                                      ? "AIMERS RESEARCH AI"
+                                      : item.role}
+                                  </small>
+
                                   <p>{item.content}</p>
+
+                                  <div className="research-message-meta">
+                                    <span>
+                                      {formatDate(
+                                        item.createdAt,
+                                      )}
+                                    </span>
+
+                                    {item.model && (
+                                      <span>
+                                        {item.model}
+                                      </span>
+                                    )}
+
+                                    {(
+                                      typeof item.promptTokens === "number" ||
+                                      typeof item.completionTokens === "number"
+                                    ) && (
+                                      <span>
+                                        {(
+                                          item.promptTokens ?? 0
+                                        ).toLocaleString("en-IN")}
+                                        {" + "}
+                                        {(
+                                          item.completionTokens ?? 0
+                                        ).toLocaleString("en-IN")}
+                                        {" tokens"}
+                                      </span>
+                                    )}
+                                  </div>
+
                                   {!!item.citations.length && (
-                                    <footer>
+                                    <footer className="research-message-citations">
                                       <Quote size={13} />
-                                      {item.citations.length} citations
+
+                                      <div>
+                                        {item.citations.map(
+                                          (citation) =>
+                                            citation.researchSource.url ? (
+                                              <a
+                                                key={citation.id}
+                                                href={citation.researchSource.url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                title={
+                                                  citation.quote ||
+                                                  citation.researchSource.title
+                                                }
+                                              >
+                                                {citation.label || "Source"}
+                                                {" · "}
+                                                {citation.researchSource.title}
+                                                <ArrowUpRight size={11} />
+                                              </a>
+                                            ) : (
+                                              <span
+                                                key={citation.id}
+                                                title={
+                                                  citation.quote ||
+                                                  citation.researchSource.title
+                                                }
+                                              >
+                                                {citation.label || "Source"}
+                                                {" · "}
+                                                {citation.researchSource.title}
+                                              </span>
+                                            ),
+                                        )}
+                                      </div>
                                     </footer>
                                   )}
                                 </div>
                               </article>
                             ))}
+
+                            {generatingThreadId === activeThread.id && (
+                              <article
+                                className="research-message assistant generating"
+                                role="status"
+                              >
+                                <span>
+                                  <Bot size={15} />
+                                </span>
+
+                                <div>
+                                  <small>AIMERS RESEARCH AI</small>
+
+                                  <div className="research-generating-copy">
+                                    <LoaderCircle
+                                      className="research-spin"
+                                      size={15}
+                                    />
+
+                                    <span>
+                                      Reading project context and saved evidence…
+                                    </span>
+                                  </div>
+                                </div>
+                              </article>
+                            )}
                           </div>
 
                           <div className="research-composer">
-                            <textarea
-                              value={message}
-                              placeholder="Record a question, finding or research instruction..."
-                              onChange={(event: ValueChangeEvent) => setMessage(event.target.value)}
-                            />
+                            <div className="research-composer-field">
+                              <textarea
+                                value={message}
+                                maxLength={12000}
+                                disabled={generating}
+                                placeholder="Ask for an evidence-backed explanation, comparison or conclusion…"
+                                onChange={(event: ValueChangeEvent) =>
+                                  setMessage(
+                                    event.target.value,
+                                  )
+                                }
+                                onKeyDown={(event) => {
+                                  if (
+                                    event.key === "Enter" &&
+                                    (
+                                      event.metaKey ||
+                                      event.ctrlKey
+                                    )
+                                  ) {
+                                    event.preventDefault();
+                                    void handleSendMessage();
+                                  }
+                                }}
+                              />
+
+                              <footer>
+                                <span>
+                                  <Sparkles size={12} />
+                                  Project, sources and mind map included
+                                </span>
+
+                                <small>
+                                  ⌘/Ctrl + Enter to send
+                                </small>
+                              </footer>
+                            </div>
+
                             <button
                               type="button"
-                              disabled={!message.trim() || saving}
+                              className={generating ? "generating" : ""}
+                              disabled={
+                                !message.trim() ||
+                                generating ||
+                                saving
+                              }
+                              aria-label={
+                                generating
+                                  ? "Research AI is generating"
+                                  : "Send to Research AI"
+                              }
+                              title={
+                                generating
+                                  ? "Generating response"
+                                  : "Send message"
+                              }
                               onClick={() => void handleSendMessage()}
                             >
-                              <Send size={16} />
+                              {generating ? (
+                                <LoaderCircle
+                                  className="research-spin"
+                                  size={16}
+                                />
+                              ) : (
+                                <Send size={16} />
+                              )}
                             </button>
                           </div>
                         </>

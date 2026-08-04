@@ -29,6 +29,10 @@ export type ResearchMessageRole =
   | "USER"
   | "ASSISTANT";
 
+export type ResearchAiProviderName =
+  | "mock"
+  | "openai";
+
 export type ResearchMindMapNodeType =
   | "ROOT"
   | "QUESTION"
@@ -163,6 +167,17 @@ export interface ResearchMessageRecord {
   citations: ResearchCitationRecord[];
 }
 
+export interface ResearchAssistantProviderInfo {
+  name: ResearchAiProviderName;
+  model: string;
+}
+
+export interface ResearchAssistantReplyResult {
+  userMessage: ResearchMessageRecord;
+  assistantMessage: ResearchMessageRecord;
+  provider: ResearchAssistantProviderInfo;
+}
+
 export interface ResearchThreadRecord {
   id: string;
   studentProfileId: string;
@@ -294,8 +309,10 @@ export interface CreateResearchThreadInput {
 
 export interface CreateResearchMessageInput {
   content: string;
-  role?: ResearchMessageRole;
-  model?: string | null;
+}
+
+export interface GenerateResearchAssistantReplyInput {
+  content: string;
 }
 
 export interface CreateResearchCitationInput {
