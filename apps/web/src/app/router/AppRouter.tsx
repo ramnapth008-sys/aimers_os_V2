@@ -23,6 +23,7 @@ import {
 } from "../../pages/planner";
 
 import {
+  MockTestRunnerPage,
   MockTestsPage,
 } from "../../pages/mock-tests";
 
@@ -209,6 +210,12 @@ export function AppRouter() {
             path="mock-tests"
             element={<MockTestsPage />}
           />
+
+          <Route
+            path="mock-tests/runner/:attemptId"
+            element={<MockTestRunnerPage />}
+          />
+
 
           <Route
             path="prediction"

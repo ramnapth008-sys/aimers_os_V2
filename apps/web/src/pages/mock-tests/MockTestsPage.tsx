@@ -50,6 +50,10 @@ import type {
   RecordMockTestAttemptInput,
 } from "./mock-tests.types";
 
+import {
+  MockTestRunnerCataloguePanel,
+} from "./MockTestRunnerCataloguePanel";
+
 import "./mock-tests.css";
 
 interface SectionForm {
@@ -1012,6 +1016,8 @@ export function MockTestsPage() {
 
       <section className="mock-layout">
         <div className="mock-primary">
+          <MockTestRunnerCataloguePanel />
+
           <article className="mock-panel">
             <header className="mock-panel-header">
               <div>
