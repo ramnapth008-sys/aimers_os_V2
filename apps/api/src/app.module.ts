@@ -51,6 +51,10 @@ import {
 } from "./flashcards/flashcards.module";
 
 import {
+  MemoryEngineModule,
+} from "./memory-engine/memory-engine.module";
+
+import {
   QuestionBankModule,
 } from "./question-bank/question-bank.module";
 
@@ -74,6 +78,7 @@ import {
     PlannerModule,
     MockTestsModule,
     FlashcardsModule,
+    MemoryEngineModule,
     QuestionBankModule,
     ProfileModule,
     OnboardingModule,
