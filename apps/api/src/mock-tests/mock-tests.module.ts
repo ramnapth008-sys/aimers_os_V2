@@ -3,8 +3,16 @@ import {
 } from "@nestjs/common";
 
 import {
+  MockTestRunnerController,
+} from "./mock-test-runner.controller";
+
+import {
   MockTestsController,
 } from "./mock-tests.controller";
+
+import {
+  MockTestRunnerService,
+} from "./mock-test-runner.service";
 
 import {
   MockTestsService,
@@ -13,14 +21,17 @@ import {
 @Module({
   controllers: [
     MockTestsController,
+    MockTestRunnerController,
   ],
 
   providers: [
     MockTestsService,
+    MockTestRunnerService,
   ],
 
   exports: [
     MockTestsService,
+    MockTestRunnerService,
   ],
 })
 export class MockTestsModule {}
