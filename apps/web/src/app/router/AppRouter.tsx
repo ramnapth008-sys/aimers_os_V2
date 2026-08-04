@@ -32,6 +32,12 @@ import {
 } from "../../pages/prediction";
 
 
+import {
+  AnalyticsPage,
+} from "../../pages/analytics";
+
+
+
 
 
 import { ModulePage } from "../../pages/shared/ModulePage";
@@ -57,13 +63,6 @@ const modules = [
     title: "Digital Activity",
     description:
       "Analyse app, browser, lecture and productive usage patterns.",
-  },
-  {
-    path: "analytics",
-    eyebrow: "LEARNING ANALYTICS",
-    title: "Analytics",
-    description:
-      "Explore progress, performance, consistency and learning trends.",
   },
   {
     path: "memory-engine",
@@ -215,6 +214,11 @@ export function AppRouter() {
           <Route
             path="prediction"
             element={<PredictionPage />}
+          />
+
+          <Route
+            path="analytics"
+            element={<AnalyticsPage />}
           />
 
           {modules.map((module) => (
