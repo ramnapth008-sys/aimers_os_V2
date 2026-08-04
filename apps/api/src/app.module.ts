@@ -59,6 +59,10 @@ import {
 } from "./modules/notes/notes.module";
 
 import {
+  ResearchModule,
+} from "./modules/research/research.module";
+
+import {
   QuestionBankModule,
 } from "./question-bank/question-bank.module";
 
@@ -84,6 +88,7 @@ import {
     FlashcardsModule,
     MemoryEngineModule,
     NotesModule,
+    ResearchModule,
     QuestionBankModule,
     ProfileModule,
     OnboardingModule,
