@@ -55,6 +55,10 @@ import {
   NotesPage,
 } from "../../pages/notes";
 
+import {
+  ResearchAIPage,
+} from "../../pages/research-ai";
+
 
 
 
@@ -83,13 +87,6 @@ const modules = [
     title: "Digital Activity",
     description:
       "Analyse app, browser, lecture and productive usage patterns.",
-  },
-  {
-    path: "research-ai",
-    eyebrow: "RESEARCH WORKSPACE",
-    title: "Research AI",
-    description:
-      "Build projects, collect sources and develop structured understanding.",
   },
   {
     path: "community",
@@ -242,6 +239,11 @@ export function AppRouter() {
           <Route
             path="notes"
             element={<NotesPage />}
+          />
+
+          <Route
+            path="research-ai"
+            element={<ResearchAIPage />}
           />
 
           {modules.map((module) => (
