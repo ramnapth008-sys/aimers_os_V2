@@ -47,6 +47,10 @@ import {
   FlashcardsPage,
 } from "../../pages/flashcards";
 
+import {
+  MemoryEnginePage,
+} from "../../pages/memory-engine";
+
 
 
 
@@ -75,13 +79,6 @@ const modules = [
     title: "Digital Activity",
     description:
       "Analyse app, browser, lecture and productive usage patterns.",
-  },
-  {
-    path: "memory-engine",
-    eyebrow: "RETENTION INTELLIGENCE",
-    title: "Memory Engine",
-    description:
-      "Optimise recall using review queues and forgetting-curve analysis.",
   },
   {
     path: "notes",
@@ -238,6 +235,11 @@ export function AppRouter() {
           <Route
             path="flashcards/review/:sessionId"
             element={<FlashcardReviewPage />}
+          />
+
+          <Route
+            path="memory-engine"
+            element={<MemoryEnginePage />}
           />
 
           {modules.map((module) => (

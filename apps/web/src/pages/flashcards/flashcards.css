@@ -1427,3 +1427,341 @@ kbd {
     ),
     rgba(47, 113, 78, 0.045);
 }
+
+/* AIMERS recall palette unification
+   Purple remains the product identity.
+   Periwinkle remains the Flashcards recall accent. */
+
+.fc-hero-copy {
+  background:
+    radial-gradient(
+      circle at 86% 18%,
+      rgba(169, 79, 255, 0.28),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 69% 79%,
+      rgba(72, 127, 255, 0.16),
+      transparent 40%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(25, 19, 48, 0.99),
+      rgba(14, 17, 30, 0.97) 49%,
+      rgba(33, 19, 59, 0.97)
+    );
+  border-color: rgba(166, 111, 255, 0.2);
+}
+
+.fc-hero-copy::before {
+  background:
+    radial-gradient(
+      circle,
+      rgba(160, 91, 255, 0.21),
+      transparent 68%
+    );
+}
+
+.fc-hero-copy::after {
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(158, 93, 255, 0.8),
+      rgba(93, 145, 255, 0.65),
+      transparent
+    );
+  box-shadow:
+    0 0 20px rgba(143, 91, 255, 0.4);
+}
+
+.fc-due-card {
+  background:
+    radial-gradient(
+      circle at 50% 18%,
+      rgba(148, 82, 255, 0.17),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 82% 86%,
+      rgba(68, 136, 255, 0.11),
+      transparent 40%
+    ),
+    linear-gradient(
+      160deg,
+      rgba(24, 20, 45, 0.99),
+      rgba(11, 16, 28, 0.99)
+    );
+  border-color: rgba(158, 108, 255, 0.19);
+  box-shadow:
+    0 22px 64px rgba(0, 0, 0, 0.24),
+    inset 0 0 0 1px rgba(154, 108, 255, 0.04),
+    0 0 34px rgba(127, 77, 224, 0.075);
+}
+
+.fc-due-card::before {
+  background:
+    linear-gradient(
+      130deg,
+      rgba(167, 111, 255, 0.12),
+      transparent 24%,
+      transparent 76%,
+      rgba(91, 145, 255, 0.09)
+    );
+}
+
+.fc-due-card > svg {
+  filter:
+    drop-shadow(
+      0 0 16px rgba(150, 96, 255, 0.31)
+    );
+}
+
+.fc-actions .primary {
+  border-color: rgba(177, 132, 255, 0.58);
+  background:
+    linear-gradient(
+      135deg,
+      #f4efff,
+      #e7ddff 54%,
+      #d8e1ff
+    );
+  box-shadow:
+    0 10px 26px rgba(130, 77, 223, 0.19),
+    inset 0 1px 0 rgba(255, 255, 255, 0.76);
+}
+
+.fc-actions .primary:hover:not(:disabled) {
+  box-shadow:
+    0 14px 32px rgba(132, 79, 225, 0.27),
+    0 0 22px rgba(119, 88, 255, 0.13),
+    inset 0 1px 0 rgba(255, 255, 255, 0.84);
+}
+
+.fc-deck::before {
+  background:
+    radial-gradient(
+      circle at 82% 12%,
+      rgba(148, 91, 255, 0.11),
+      transparent 35%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.018),
+      transparent 58%
+    );
+}
+
+.fc-deck:hover {
+  border-color: rgba(154, 111, 255, 0.25);
+  background: rgba(111, 75, 190, 0.05);
+  box-shadow:
+    0 18px 36px rgba(0, 0, 0, 0.22),
+    0 0 26px rgba(131, 83, 232, 0.075);
+}
+
+.fc-deck button:hover:not(:disabled) {
+  border-color: rgba(155, 115, 255, 0.39);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(117, 76, 224, 0.18),
+      rgba(75, 116, 233, 0.1)
+    );
+  box-shadow:
+    0 9px 22px rgba(114, 73, 216, 0.14);
+}
+
+.fc-card {
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(145, 94, 255, 0.085),
+      transparent 39%
+    ),
+    rgba(255, 255, 255, 0.022);
+}
+
+/* AIMERS final purple accent pass
+   Remove residual blue from labels, lines and interface chrome.
+   Keep green/orange/red only for semantic status feedback. */
+
+.fc-eyebrow,
+.fc-section-head > div > span,
+.fc-memory > header > div > span,
+.fc-logic > header > div > span,
+.fc-state-list > div > header > span,
+.fc-deck-copy small,
+.fc-rate > header > div > span {
+  color: #b69aff;
+}
+
+.fc-hero h1 strong {
+  color: #b7a0ff;
+}
+
+.fc-metrics svg,
+.fc-deck-icon,
+.fc-memory > header > svg,
+.fc-logic > header > svg,
+.fc-history .fc-section-head > svg,
+.fc-due-card > svg {
+  color: #ae91ff;
+}
+
+.fc-deck-icon {
+  border-color: rgba(166, 113, 255, 0.2);
+  background: rgba(127, 79, 225, 0.12);
+  box-shadow:
+    inset 0 0 0 1px rgba(190, 151, 255, 0.025),
+    0 0 20px rgba(132, 82, 231, 0.07);
+}
+
+.fc-state-list > div > div {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.fc-state-list > div > div > span {
+  background:
+    linear-gradient(
+      90deg,
+      #8f63f4,
+      #b56df1
+    );
+  box-shadow:
+    0 0 14px rgba(149, 91, 237, 0.18);
+}
+
+.fc-rating-preview b span {
+  color: #bba7ef;
+}
+
+.fc-deck button {
+  border-color: rgba(157, 111, 255, 0.24);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(111, 73, 209, 0.1),
+      rgba(91, 65, 166, 0.045)
+    );
+}
+
+.fc-deck button:hover:not(:disabled) {
+  border-color: rgba(184, 137, 255, 0.43);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(135, 84, 236, 0.2),
+      rgba(105, 72, 191, 0.12)
+    );
+  box-shadow:
+    0 10px 24px rgba(125, 75, 222, 0.16);
+}
+
+.fc-deck:hover {
+  border-color: rgba(172, 121, 255, 0.28);
+}
+
+.fc-due-card {
+  background:
+    radial-gradient(
+      circle at 50% 17%,
+      rgba(157, 88, 255, 0.21),
+      transparent 36%
+    ),
+    radial-gradient(
+      circle at 84% 88%,
+      rgba(111, 70, 206, 0.11),
+      transparent 40%
+    ),
+    linear-gradient(
+      160deg,
+      rgba(27, 20, 49, 0.99),
+      rgba(12, 15, 27, 0.99)
+    );
+  border-color: rgba(165, 112, 255, 0.21);
+}
+
+.fc-due-card::before {
+  background:
+    linear-gradient(
+      130deg,
+      rgba(176, 119, 255, 0.13),
+      transparent 25%,
+      transparent 76%,
+      rgba(128, 78, 225, 0.09)
+    );
+}
+
+.fc-due-card > svg {
+  filter:
+    drop-shadow(
+      0 0 16px rgba(158, 96, 255, 0.34)
+    );
+}
+
+.fc-hero-copy {
+  background:
+    radial-gradient(
+      circle at 86% 18%,
+      rgba(179, 83, 255, 0.32),
+      transparent 36%
+    ),
+    radial-gradient(
+      circle at 68% 80%,
+      rgba(119, 73, 224, 0.14),
+      transparent 42%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(27, 19, 50, 0.99),
+      rgba(14, 16, 29, 0.97) 49%,
+      rgba(37, 19, 63, 0.98)
+    );
+  border-color: rgba(173, 117, 255, 0.23);
+}
+
+.fc-hero-copy::after {
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(181, 107, 255, 0.84),
+      rgba(133, 79, 230, 0.72),
+      transparent
+    );
+  box-shadow:
+    0 0 22px rgba(157, 91, 255, 0.46);
+}
+
+.fc-card {
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(156, 96, 255, 0.1),
+      transparent 40%
+    ),
+    rgba(255, 255, 255, 0.022);
+}
+
+.fc-rate > header > svg,
+.fc-review-page svg,
+.flashcard-review-page .fc-topbar svg {
+  color: #ae91ff;
+}
+
+.fc-reveal,
+.flashcard-review-page .fc-topbar button {
+  border-color: rgba(160, 113, 255, 0.27);
+  background: rgba(118, 76, 214, 0.09);
+}
+
+.fc-progress > span,
+.fc-review-progress > span {
+  background:
+    linear-gradient(
+      90deg,
+      #8f63f4,
+      #b56df1
+    );
+}
