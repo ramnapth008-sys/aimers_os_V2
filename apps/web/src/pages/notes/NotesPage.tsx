@@ -49,6 +49,7 @@ import remarkGfm from "remark-gfm";
 import {
   createNote,
   createNoteFolder,
+  createNoteTag,
   getNote,
   getNoteRevisions,
   getNotesWorkspace,
@@ -205,6 +206,56 @@ export function NotesPage() {
     useState(false);
 
   const [
+    subjectId,
+    setSubjectId,
+  ] =
+    useState<string | null>(
+      null,
+    );
+
+  const [
+    chapterId,
+    setChapterId,
+  ] =
+    useState<string | null>(
+      null,
+    );
+
+  const [
+    topicId,
+    setTopicId,
+  ] =
+    useState<string | null>(
+      null,
+    );
+
+  const [
+    selectedTagIds,
+    setSelectedTagIds,
+  ] =
+    useState<string[]>(
+      [],
+    );
+
+  const [
+    tagFormOpen,
+    setTagFormOpen,
+  ] =
+    useState(false);
+
+  const [
+    tagName,
+    setTagName,
+  ] =
+    useState("");
+
+  const [
+    creatingTag,
+    setCreatingTag,
+  ] =
+    useState(false);
+
+  const [
     loading,
     setLoading,
   ] =
@@ -267,6 +318,14 @@ export function NotesPage() {
       content: "",
       folderId:
         null as string | null,
+      subjectId:
+        null as string | null,
+      chapterId:
+        null as string | null,
+      topicId:
+        null as string | null,
+      tagIds:
+        [] as string[],
       isPinned: false,
     });
 
@@ -313,6 +372,17 @@ export function NotesPage() {
         savedSnapshot.content ||
       folderId !==
         savedSnapshot.folderId ||
+      subjectId !==
+        savedSnapshot.subjectId ||
+      chapterId !==
+        savedSnapshot.chapterId ||
+      topicId !==
+        savedSnapshot.topicId ||
+      [...selectedTagIds]
+        .sort()
+        .join("|") !==
+        savedSnapshot.tagIds
+          .join("|") ||
       isPinned !==
         savedSnapshot.isPinned
     );
@@ -335,6 +405,24 @@ export function NotesPage() {
           folderId:
             note?.folderId ??
             null,
+          subjectId:
+            note?.subjectId ??
+            null,
+          chapterId:
+            note?.chapterId ??
+            null,
+          topicId:
+            note?.topicId ??
+            null,
+          tagIds:
+            note?.tags
+              .map(
+                (
+                  tag,
+                ) => tag.id,
+              )
+              .sort() ??
+            [],
           isPinned:
             note?.isPinned ??
             false,
@@ -348,6 +436,18 @@ export function NotesPage() {
         );
         setFolderId(
           next.folderId,
+        );
+        setSubjectId(
+          next.subjectId,
+        );
+        setChapterId(
+          next.chapterId,
+        );
+        setTopicId(
+          next.topicId,
+        );
+        setSelectedTagIds(
+          next.tagIds,
         );
         setIsPinned(
           next.isPinned,
@@ -540,6 +640,112 @@ export function NotesPage() {
       [workspace],
     );
 
+  const academicSubjects =
+    useMemo(
+      () =>
+        workspace
+          ?.syllabusVersion
+          ?.subjects ??
+        [],
+      [workspace],
+    );
+
+  const selectedSubjectNode =
+    useMemo(
+      () =>
+        academicSubjects.find(
+          (
+            item,
+          ) =>
+            item.subject.id ===
+            subjectId,
+        ) ??
+        null,
+      [
+        academicSubjects,
+        subjectId,
+      ],
+    );
+
+  const availableChapters =
+    useMemo(
+      () =>
+        selectedSubjectNode
+          ?.units
+          .flatMap(
+            (
+              unit,
+            ) =>
+              unit.chapters,
+          ) ??
+        [],
+      [selectedSubjectNode],
+    );
+
+  const selectedChapterNode =
+    useMemo(
+      () =>
+        availableChapters.find(
+          (
+            chapter,
+          ) =>
+            chapter.id ===
+            chapterId,
+        ) ??
+        null,
+      [
+        availableChapters,
+        chapterId,
+      ],
+    );
+
+  const availableTopics =
+    selectedChapterNode
+      ?.topics ??
+    [];
+
+  const selectedTags =
+    useMemo(
+      () =>
+        (
+          workspace
+            ?.tags ??
+          []
+        ).filter(
+          (
+            tag,
+          ) =>
+            selectedTagIds.includes(
+              tag.id,
+            ),
+        ),
+      [
+        selectedTagIds,
+        workspace,
+      ],
+    );
+
+  const availableTags =
+    useMemo(
+      () =>
+        (
+          workspace
+            ?.tags ??
+          []
+        ).filter(
+          (
+            tag,
+          ) =>
+            !selectedTagIds.includes(
+              tag.id,
+            ),
+        ),
+      [
+        selectedTagIds,
+        workspace,
+      ],
+    );
+
   const openNote =
     async (
       noteId: string,
@@ -640,6 +846,11 @@ export function NotesPage() {
               "Untitled note",
             content,
             folderId,
+            subjectId,
+            chapterId,
+            topicId,
+            tagIds:
+              selectedTagIds,
             isPinned,
             contentFormat:
               "MARKDOWN",
@@ -883,6 +1094,64 @@ export function NotesPage() {
         );
       } finally {
         setCreatingFolder(
+          false,
+        );
+      }
+    };
+
+  const handleCreateTag =
+    async () => {
+      const name =
+        tagName.trim();
+
+      if (!name) {
+        return;
+      }
+
+      setCreatingTag(
+        true,
+      );
+      setError("");
+
+      try {
+        const tag =
+          await createNoteTag(
+            apiFetch,
+            {
+              name,
+            },
+          );
+
+        setSelectedTagIds(
+          (
+            current,
+          ) =>
+            [
+              ...new Set([
+                ...current,
+                tag.id,
+              ]),
+            ].sort(),
+        );
+
+        setTagName("");
+        setTagFormOpen(
+          false,
+        );
+
+        await loadWorkspace(
+          true,
+        );
+      } catch (
+        requestError
+      ) {
+        setError(
+          messageFrom(
+            requestError,
+          ),
+        );
+      } finally {
+        setCreatingTag(
           false,
         );
       }
@@ -1711,61 +1980,381 @@ export function NotesPage() {
                   }}
                 />
 
-                <div>
-                  <select
-                    value={
-                      folderId ?? ""
-                    }
-                    onChange={(
-                      event,
-                    ) => {
-                      setFolderId(
-                        event.target
-                          .value ||
-                          null,
-                      );
-                    }}
-                  >
-                    <option value="">
-                      No folder
-                    </option>
-
-                    {workspace.folders.map(
-                      (
-                        folder,
-                      ) => (
-                        <option
-                          key={
-                            folder.id
-                          }
-                          value={
-                            folder.id
-                          }
-                        >
-                          {
-                            folder.name
-                          }
-                        </option>
-                      ),
-                    )}
-                  </select>
-
-                  {selectedNote
-                    .subject && (
+                <div className="notes-editor-academic-grid">
+                  <label>
                     <span>
-                      <BookOpen
+                      Folder
+                    </span>
+
+                    <select
+                      value={
+                        folderId ?? ""
+                      }
+                      onChange={(
+                        event,
+                      ) => {
+                        setFolderId(
+                          event.target
+                            .value ||
+                            null,
+                        );
+                      }}
+                    >
+                      <option value="">
+                        No folder
+                      </option>
+
+                      {workspace.folders.map(
+                        (
+                          folder,
+                        ) => (
+                          <option
+                            key={
+                              folder.id
+                            }
+                            value={
+                              folder.id
+                            }
+                          >
+                            {
+                              folder.name
+                            }
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>
+                      Subject
+                    </span>
+
+                    <select
+                      value={
+                        subjectId ?? ""
+                      }
+                      onChange={(
+                        event,
+                      ) => {
+                        setSubjectId(
+                          event.target
+                            .value ||
+                            null,
+                        );
+                        setChapterId(
+                          null,
+                        );
+                        setTopicId(
+                          null,
+                        );
+                      }}
+                    >
+                      <option value="">
+                        No subject
+                      </option>
+
+                      {academicSubjects.map(
+                        (
+                          item,
+                        ) => (
+                          <option
+                            key={
+                              item
+                                .subject
+                                .id
+                            }
+                            value={
+                              item
+                                .subject
+                                .id
+                            }
+                          >
+                            {
+                              item
+                                .subject
+                                .name
+                            }
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>
+                      Chapter
+                    </span>
+
+                    <select
+                      value={
+                        chapterId ?? ""
+                      }
+                      disabled={
+                        !subjectId
+                      }
+                      onChange={(
+                        event,
+                      ) => {
+                        setChapterId(
+                          event.target
+                            .value ||
+                            null,
+                        );
+                        setTopicId(
+                          null,
+                        );
+                      }}
+                    >
+                      <option value="">
+                        No chapter
+                      </option>
+
+                      {availableChapters.map(
+                        (
+                          chapter,
+                        ) => (
+                          <option
+                            key={
+                              chapter.id
+                            }
+                            value={
+                              chapter.id
+                            }
+                          >
+                            {
+                              chapter.name
+                            }
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>
+                      Topic
+                    </span>
+
+                    <select
+                      value={
+                        topicId ?? ""
+                      }
+                      disabled={
+                        !chapterId
+                      }
+                      onChange={(
+                        event,
+                      ) => {
+                        setTopicId(
+                          event.target
+                            .value ||
+                            null,
+                        );
+                      }}
+                    >
+                      <option value="">
+                        No topic
+                      </option>
+
+                      {availableTopics.map(
+                        (
+                          topic,
+                        ) => (
+                          <option
+                            key={
+                              topic.id
+                            }
+                            value={
+                              topic.id
+                            }
+                          >
+                            {
+                              topic.name
+                            }
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+                </div>
+
+                <div className="notes-editor-tags">
+                  <div className="notes-editor-tags-head">
+                    <span>
+                      <Tags
                         size={13}
                       />
-                      {
-                        selectedNote
-                          .subject
-                          .name
-                      }
-                      {selectedNote
-                        .chapter
-                        ? ` / ${selectedNote.chapter.name}`
-                        : ""}
+                      Tags
                     </span>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTagFormOpen(
+                          (
+                            value,
+                          ) => !value,
+                        );
+                      }}
+                    >
+                      Add new
+                    </button>
+                  </div>
+
+                  <div className="notes-editor-tag-controls">
+                    {selectedTags.map(
+                      (
+                        tag,
+                      ) => (
+                        <span
+                          key={
+                            tag.id
+                          }
+                          className="notes-editor-tag-chip"
+                        >
+                          {tag.name}
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedTagIds(
+                                (
+                                  current,
+                                ) =>
+                                  current.filter(
+                                    (
+                                      id,
+                                    ) =>
+                                      id !==
+                                      tag.id,
+                                  ),
+                              );
+                            }}
+                          >
+                            <X
+                              size={11}
+                            />
+                          </button>
+                        </span>
+                      ),
+                    )}
+
+                    {availableTags.length >
+                      0 && (
+                      <select
+                        value=""
+                        onChange={(
+                          event,
+                        ) => {
+                          const nextId =
+                            event.target
+                              .value;
+
+                          if (
+                            nextId
+                          ) {
+                            setSelectedTagIds(
+                              (
+                                current,
+                              ) =>
+                                [
+                                  ...new Set([
+                                    ...current,
+                                    nextId,
+                                  ]),
+                                ].sort(),
+                            );
+                          }
+                        }}
+                      >
+                        <option value="">
+                          Add existing tag…
+                        </option>
+
+                        {availableTags.map(
+                          (
+                            tag,
+                          ) => (
+                            <option
+                              key={
+                                tag.id
+                              }
+                              value={
+                                tag.id
+                              }
+                            >
+                              {
+                                tag.name
+                              }
+                            </option>
+                          ),
+                        )}
+                      </select>
+                    )}
+
+                    {selectedTags.length ===
+                      0 &&
+                      availableTags.length ===
+                        0 &&
+                      !tagFormOpen && (
+                        <small>
+                          No tags yet
+                        </small>
+                      )}
+                  </div>
+
+                  {tagFormOpen && (
+                    <div className="notes-inline-tag-form">
+                      <input
+                        value={
+                          tagName
+                        }
+                        placeholder="New tag name"
+                        onChange={(
+                          event,
+                        ) => {
+                          setTagName(
+                            event.target
+                              .value,
+                          );
+                        }}
+                        onKeyDown={(
+                          event,
+                        ) => {
+                          if (
+                            event.key ===
+                            "Enter"
+                          ) {
+                            event.preventDefault();
+                            void handleCreateTag();
+                          }
+                        }}
+                      />
+
+                      <button
+                        type="button"
+                        disabled={
+                          creatingTag ||
+                          !tagName.trim()
+                        }
+                        onClick={() => {
+                          void handleCreateTag();
+                        }}
+                      >
+                        {creatingTag ? (
+                          <LoaderCircle
+                            className="notes-spin"
+                            size={13}
+                          />
+                        ) : (
+                          <Check
+                            size={13}
+                          />
+                        )}
+                        Create
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

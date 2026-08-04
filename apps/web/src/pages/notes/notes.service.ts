@@ -2,8 +2,10 @@ import type {
   ApiFetch,
   CreateNoteFolderInput,
   CreateNoteInput,
+  CreateNoteTagInput,
   NoteFolder,
   NoteRecord,
+  NoteTag,
   NoteRevision,
   NotesWorkspace,
   NotesWorkspaceFilters,
@@ -152,6 +154,19 @@ export function createNoteFolder(
 ): Promise<NoteFolder> {
   return apiFetch<NoteFolder>(
     "/notes/folders",
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function createNoteTag(
+  apiFetch: ApiFetch,
+  input: CreateNoteTagInput,
+): Promise<NoteTag> {
+  return apiFetch<NoteTag>(
+    "/notes/tags",
     {
       method: "POST",
       body: JSON.stringify(input),

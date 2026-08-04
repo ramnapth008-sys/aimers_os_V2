@@ -196,3 +196,8 @@ export interface CreateNoteFolderInput {
   parentFolderId?: string | null;
   sequenceNumber?: number;
 }
+
+export interface CreateNoteTagInput {
+  name: string;
+  color?: string | null;
+}

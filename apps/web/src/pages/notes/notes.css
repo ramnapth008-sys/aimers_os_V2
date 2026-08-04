@@ -1054,3 +1054,182 @@
     grid-template-columns: 1fr;
   }
 }
+
+.notes-editor-academic-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 15px;
+}
+
+.notes-editor-academic-grid label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.notes-editor-academic-grid label > span {
+  color: #746d80;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.notes-editor-academic-grid select,
+.notes-editor-tag-controls select {
+  min-width: 0;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 9px;
+  outline: 0;
+  background: #16131d;
+  color: #aaa4b5;
+  font: inherit;
+  font-size: 9px;
+}
+
+.notes-editor-academic-grid select:focus,
+.notes-editor-tag-controls select:focus {
+  border-color: rgba(172, 121, 255, 0.38);
+}
+
+.notes-editor-academic-grid select:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.notes-editor-tags {
+  display: grid;
+  gap: 9px;
+  margin-top: 13px;
+  padding: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.014);
+}
+
+.notes-editor-tags-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notes-editor-tags-head > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #8f849c;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.notes-editor-tags-head > button {
+  border: 0;
+  background: transparent;
+  color: #b99cff;
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.notes-editor-tag-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.notes-editor-tag-controls select {
+  width: auto;
+  max-width: 180px;
+}
+
+.notes-editor-tag-controls small {
+  color: #716a7b;
+  font-size: 9px;
+}
+
+.notes-editor-tag-chip {
+  display: inline-flex;
+  min-height: 29px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 10px;
+  border: 1px solid rgba(174, 120, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(126, 77, 225, 0.09);
+  color: #cdbbff;
+  font-size: 9px;
+}
+
+.notes-editor-tag-chip button {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.045);
+  color: #a79db4;
+  cursor: pointer;
+}
+
+.notes-inline-tag-form {
+  display: flex;
+  gap: 7px;
+}
+
+.notes-inline-tag-form input {
+  min-width: 0;
+  height: 35px;
+  flex: 1;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 9px;
+  outline: 0;
+  background: rgba(255, 255, 255, 0.022);
+  color: #eef1f8;
+  font: inherit;
+  font-size: 10px;
+}
+
+.notes-inline-tag-form input:focus {
+  border-color: rgba(172, 121, 255, 0.38);
+}
+
+.notes-inline-tag-form button {
+  display: inline-flex;
+  min-height: 35px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid rgba(174, 120, 255, 0.22);
+  border-radius: 9px;
+  background: rgba(126, 77, 225, 0.1);
+  color: #ccb9ff;
+  font: inherit;
+  font-size: 9px;
+}
+
+@media (max-width: 900px) {
+  .notes-editor-academic-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .notes-editor-academic-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .notes-inline-tag-form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+

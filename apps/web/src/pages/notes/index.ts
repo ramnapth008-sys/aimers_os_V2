@@ -5,6 +5,7 @@ export {
 export {
   createNote,
   createNoteFolder,
+  createNoteTag,
   getNote,
   getNoteRevisions,
   getNotesWorkspace,
@@ -18,6 +19,7 @@ export type {
   ApiFetch,
   CreateNoteFolderInput,
   CreateNoteInput,
+  CreateNoteTagInput,
   NoteAcademicRef,
   NoteContentFormat,
   NoteFolder,
