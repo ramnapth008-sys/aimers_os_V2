@@ -12,7 +12,8 @@
     "predev": "pnpm --filter @aimers/database build",
     "prebuild": "pnpm --filter @aimers/database build",
     "pretypecheck": "pnpm --filter @aimers/database build",
-    "seed:dev-users": "dotenv -e .env -- tsx scripts/seed-dev-users.ts"
+    "seed:dev-users": "dotenv -e .env -- tsx scripts/seed-dev-users.ts",
+    "seed:dev-mock-test": "dotenv -e .env -- tsx scripts/seed-dev-mock-test.ts"
   },
   "dependencies": {
     "@aimers/database": "workspace:*",

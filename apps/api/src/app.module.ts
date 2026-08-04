@@ -39,6 +39,10 @@ import {
 } from "./onboarding/onboarding.module";
 
 import {
+  MockTestsModule,
+} from "./mock-tests/mock-tests.module";
+
+import {
   PlannerModule,
 } from "./planner/planner.module";
 
@@ -60,6 +64,7 @@ import {
     AuthModule,
     AcademicModule,
     PlannerModule,
+    MockTestsModule,
     ProfileModule,
     OnboardingModule,
   ],
