@@ -37,6 +37,12 @@ import {
 } from "../../pages/analytics";
 
 
+import {
+  QuestionBankPage,
+} from "../../pages/question-bank";
+
+
+
 
 
 
@@ -70,13 +76,6 @@ const modules = [
     title: "Memory Engine",
     description:
       "Optimise recall using review queues and forgetting-curve analysis.",
-  },
-  {
-    path: "question-bank",
-    eyebrow: "PRACTICE SYSTEM",
-    title: "Question Bank",
-    description:
-      "Practice filtered questions with explanations and performance tracking.",
   },
   {
     path: "flashcards",
@@ -219,6 +218,11 @@ export function AppRouter() {
           <Route
             path="analytics"
             element={<AnalyticsPage />}
+          />
+
+          <Route
+            path="question-bank"
+            element={<QuestionBankPage />}
           />
 
           {modules.map((module) => (
