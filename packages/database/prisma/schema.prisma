@@ -1314,8 +1314,9 @@ model Flashcard {
 
   sourceQuestion Question? @relation("FlashcardSourceQuestion", fields: [sourceQuestionId], references: [id], onDelete: SetNull)
 
-  schedule FlashcardSchedule?
-  reviews  FlashcardReview[]
+  schedule           FlashcardSchedule?
+  reviews            FlashcardReview[]
+  reviewSessionItems FlashcardReviewSessionItem[]
 
   @@unique([deckId, sourceQuestionId])
   @@index([studentProfileId, status])
@@ -1370,6 +1371,7 @@ model FlashcardReviewSession {
   deck FlashcardDeck? @relation(fields: [deckId], references: [id], onDelete: SetNull)
 
   reviews FlashcardReview[]
+  items   FlashcardReviewSessionItem[]
 
   @@index([studentProfileId, status, startedAt])
   @@index([deckId, status])
@@ -1393,8 +1395,28 @@ model FlashcardReview {
 
   flashcard Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
 
+  @@unique([reviewSessionId, flashcardId])
   @@index([reviewSessionId, reviewedAt])
   @@index([flashcardId, reviewedAt])
   @@index([rating, reviewedAt])
   @@map("flashcard_reviews")
+}
+
+model FlashcardReviewSessionItem {
+  id              String    @id @default(uuid()) @db.Uuid
+  reviewSessionId String    @map("review_session_id") @db.Uuid
+  flashcardId     String    @map("flashcard_id") @db.Uuid
+  sequenceNumber  Int       @map("sequence_number")
+  reviewedAt      DateTime? @map("reviewed_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  reviewSession FlashcardReviewSession @relation(fields: [reviewSessionId], references: [id], onDelete: Cascade)
+  flashcard     Flashcard              @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewSessionId, flashcardId])
+  @@unique([reviewSessionId, sequenceNumber])
+  @@index([flashcardId])
+  @@index([reviewSessionId, reviewedAt])
+  @@map("flashcard_review_session_items")
 }
