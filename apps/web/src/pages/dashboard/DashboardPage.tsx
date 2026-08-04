@@ -2,8 +2,8 @@
 import { useAuth } from "@aimers/auth";
 import {
   Activity, AppWindow, ArrowRight, ArrowUpRight, BarChart3, BookOpenCheck,
-  Bot, Brain, Check, ChevronRight, CircleCheckBig, Clock3, Flame, Globe2,
-  Headphones, Library, LoaderCircle, Mic2, Play, Radio, RefreshCw,
+  Bot, Brain, Check, ChevronRight, CircleCheckBig, Clock3, FileText, Flame, Globe2,
+  Headphones, Library, LoaderCircle, Mic2, Pin, Play, Plus, Radio, RefreshCw,
   Sparkles, Target, TrendingUp, Video, Zap,
 } from "lucide-react";
 import {
@@ -13,6 +13,13 @@ import { Link } from "react-router-dom";
 import { getAcademicWorkspace } from "../subjects/subjects.service";
 import { getPlannerWorkspace } from "../planner/planner.service";
 import { getMockTestWorkspace } from "../mock-tests/mock-tests.service";
+import {
+  createNote,
+  getNotesWorkspace,
+} from "../notes/notes.service";
+import type {
+  NotesWorkspace,
+} from "../notes/notes.types";
 import type {
   PlannerWorkspace,
   StudyTask,
@@ -92,6 +99,45 @@ function formatChartMinutes(
   return Number.isInteger(hours)
     ? `${hours}h`
     : `${hours.toFixed(1)}h`;
+}
+
+function formatNoteUpdated(
+  value: string,
+): string {
+  const date = new Date(value);
+  const elapsed = Date.now() - date.getTime();
+
+  if (!Number.isFinite(elapsed) || elapsed < 0) {
+    return "Recently";
+  }
+
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (elapsed < minute) {
+    return "Just now";
+  }
+
+  if (elapsed < hour) {
+    return `${Math.floor(elapsed / minute)}m ago`;
+  }
+
+  if (elapsed < day) {
+    return `${Math.floor(elapsed / hour)}h ago`;
+  }
+
+  if (elapsed < 7 * day) {
+    return `${Math.floor(elapsed / day)}d ago`;
+  }
+
+  return new Intl.DateTimeFormat(
+    "en-IN",
+    {
+      day: "numeric",
+      month: "short",
+    },
+  ).format(date);
 }
 
 function studyDayLabel(
@@ -388,6 +434,11 @@ export function DashboardPage() {
   const [workspace, setWorkspace] = useState<AcademicWorkspace | null>(null);
   const [planner, setPlanner] = useState<PlannerWorkspace | null>(null);
   const [mockTests, setMockTests] = useState<MockTestWorkspace | null>(null);
+  const [notes, setNotes] = useState<NotesWorkspace | null>(null);
+  const [quickNoteTitle, setQuickNoteTitle] = useState("");
+  const [quickNoteContent, setQuickNoteContent] = useState("");
+  const [creatingQuickNote, setCreatingQuickNote] = useState(false);
+  const [quickNoteMessage, setQuickNoteMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -401,6 +452,7 @@ export function DashboardPage() {
         academicResult,
         plannerResult,
         mockTestResult,
+        notesResult,
       ] = await Promise.all([
         getAcademicWorkspace(
           apiFetch,
@@ -410,6 +462,12 @@ export function DashboardPage() {
         ),
         getMockTestWorkspace(
           apiFetch,
+        ),
+        getNotesWorkspace(
+          apiFetch,
+          {
+            status: "ACTIVE",
+          },
         ),
       ]);
 
@@ -423,6 +481,10 @@ export function DashboardPage() {
 
       setMockTests(
         mockTestResult,
+      );
+
+      setNotes(
+        notesResult,
       );
     } catch (caught) {
       setError(
@@ -441,7 +503,14 @@ export function DashboardPage() {
   }, [load]);
 
   const data = useMemo(() => {
-    if (!workspace || !planner || !mockTests) return null;
+    if (
+      !workspace ||
+      !planner ||
+      !mockTests ||
+      !notes
+    ) {
+      return null;
+    }
 
     const subjects = workspace.syllabusVersion.subjects;
     const chapters: ChapterEntry[] = subjects.flatMap((subject) =>
@@ -911,6 +980,24 @@ export function DashboardPage() {
       (left, right) => left.value - right.value,
     )[0] ?? null;
 
+    const recentNotes =
+      [...notes.notes]
+        .sort((left, right) => {
+          const pinDifference =
+            Number(right.isPinned) -
+            Number(left.isPinned);
+
+          if (pinDifference !== 0) {
+            return pinDifference;
+          }
+
+          return (
+            new Date(right.updatedAt).getTime() -
+            new Date(left.updatedAt).getTime()
+          );
+        })
+        .slice(0, 4);
+
     return {
       subjects,
       chapters,
@@ -968,8 +1055,75 @@ export function DashboardPage() {
         mockWeakTopics.length > 0
           ? "/mock-tests"
           : "/subjects",
+      recentNotes,
     };
-  }, [mockTests, planner, workspace]);
+  }, [
+    mockTests,
+    notes,
+    planner,
+    workspace,
+  ]);
+
+  const handleQuickNote =
+    async () => {
+      const nextTitle =
+        quickNoteTitle.trim();
+
+      const nextContent =
+        quickNoteContent.trim();
+
+      if (
+        !nextTitle &&
+        !nextContent
+      ) {
+        return;
+      }
+
+      setCreatingQuickNote(true);
+      setQuickNoteMessage("");
+      setError("");
+
+      try {
+        await createNote(
+          apiFetch,
+          {
+            title:
+              nextTitle ||
+              "Quick note",
+            content:
+              quickNoteContent,
+            contentFormat:
+              "MARKDOWN",
+            sourceType:
+              "MANUAL",
+          },
+        );
+
+        setQuickNoteTitle("");
+        setQuickNoteContent("");
+
+        setNotes(
+          await getNotesWorkspace(
+            apiFetch,
+            {
+              status: "ACTIVE",
+            },
+          ),
+        );
+
+        setQuickNoteMessage(
+          "Quick note saved",
+        );
+      } catch (caught) {
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : "Unable to save the quick note.",
+        );
+      } finally {
+        setCreatingQuickNote(false);
+      }
+    };
 
   if (loading) {
     return (
@@ -979,7 +1133,13 @@ export function DashboardPage() {
     );
   }
 
-  if (!workspace || !planner || !mockTests || !data) {
+  if (
+    !workspace ||
+    !planner ||
+    !mockTests ||
+    !notes ||
+    !data
+  ) {
     return (
       <div className="ref-dashboard state-page">
         <DashboardState
@@ -1461,13 +1621,219 @@ export function DashboardPage() {
             </Panel>
           </section>
 
+          <section className="ref-notes-dashboard">
+            <Panel
+              title="Connected Notes"
+              eyebrow="Live knowledge workspace"
+              className="ref-notes-panel"
+              action={
+                <Link
+                  className="ref-notes-open"
+                  to="/notes"
+                >
+                  Open Notes
+                  <ArrowUpRight size={13} />
+                </Link>
+              }
+            >
+              <div className="ref-notes-summary">
+                <span>
+                  <FileText size={14} />
+                  <small>Active</small>
+                  <strong>
+                    {notes.summary.activeNotes}
+                  </strong>
+                </span>
+
+                <span>
+                  <Pin size={14} />
+                  <small>Pinned</small>
+                  <strong>
+                    {notes.summary.pinnedNotes}
+                  </strong>
+                </span>
+
+                <span>
+                  <BookOpenCheck size={14} />
+                  <small>Words</small>
+                  <strong>
+                    {notes.summary.totalWords.toLocaleString(
+                      "en-IN",
+                    )}
+                  </strong>
+                </span>
+              </div>
+
+              <div className="ref-notes-dashboard-grid">
+                <form
+                  className="ref-quick-note-form"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void handleQuickNote();
+                  }}
+                >
+                  <header>
+                    <span>
+                      <Plus size={14} />
+                    </span>
+
+                    <div>
+                      <strong>
+                        Quick capture
+                      </strong>
+
+                      <small>
+                        Save an idea without leaving the dashboard.
+                      </small>
+                    </div>
+                  </header>
+
+                  <input
+                    value={quickNoteTitle}
+                    maxLength={160}
+                    placeholder="Note title"
+                    onChange={(event) => {
+                      setQuickNoteTitle(
+                        event.target.value,
+                      );
+                      setQuickNoteMessage("");
+                    }}
+                  />
+
+                  <textarea
+                    value={quickNoteContent}
+                    rows={4}
+                    placeholder="Write a thought, formula, doubt or revision point…"
+                    onChange={(event) => {
+                      setQuickNoteContent(
+                        event.target.value,
+                      );
+                      setQuickNoteMessage("");
+                    }}
+                  />
+
+                  <footer>
+                    <small>
+                      Markdown supported
+                    </small>
+
+                    <button
+                      type="submit"
+                      disabled={
+                        creatingQuickNote ||
+                        (
+                          !quickNoteTitle.trim() &&
+                          !quickNoteContent.trim()
+                        )
+                      }
+                    >
+                      {creatingQuickNote ? (
+                        <LoaderCircle
+                          className="ref-spin"
+                          size={14}
+                        />
+                      ) : (
+                        <Plus size={14} />
+                      )}
+
+                      Save note
+                    </button>
+                  </footer>
+
+                  {quickNoteMessage && (
+                    <p className="ref-quick-note-message">
+                      <Check size={13} />
+                      {quickNoteMessage}
+                    </p>
+                  )}
+                </form>
+
+                <div className="ref-recent-notes">
+                  <header>
+                    <div>
+                      <strong>
+                        Recent and pinned
+                      </strong>
+
+                      <small>
+                        Pinned notes stay at the top.
+                      </small>
+                    </div>
+
+                    <Link to="/notes">
+                      View all
+                      <ArrowRight size={12} />
+                    </Link>
+                  </header>
+
+                  {data.recentNotes.length ===
+                  0 ? (
+                    <div className="ref-recent-notes-empty">
+                      <FileText size={24} />
+
+                      <strong>
+                        No active notes yet
+                      </strong>
+
+                      <small>
+                        Create your first note from the quick capture form.
+                      </small>
+                    </div>
+                  ) : (
+                    <div className="ref-recent-notes-list">
+                      {data.recentNotes.map(
+                        (note) => (
+                          <Link
+                            key={note.id}
+                            className="ref-recent-note"
+                            to="/notes"
+                            aria-label={`Open Notes workspace for ${note.title}`}
+                          >
+                            <header>
+                              <strong>
+                                {note.title}
+                              </strong>
+
+                              {note.isPinned && (
+                                <Pin size={12} />
+                              )}
+                            </header>
+
+                            <p>
+                              {note.excerpt ||
+                                "Empty note"}
+                            </p>
+
+                            <footer>
+                              <span>
+                                {note.subject?.name ||
+                                  note.folder?.name ||
+                                  "General note"}
+                              </span>
+
+                              <small>
+                                {formatNoteUpdated(
+                                  note.updatedAt,
+                                )}
+                              </small>
+                            </footer>
+                          </Link>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Panel>
+          </section>
+
           <section className="ref-quick-actions">
             <header><h2>Quick Actions</h2></header>
             <div>
               <Link to="/mock-tests"><Target size={16} />Mock Test</Link>
               <Link to="/flashcards"><BookOpenCheck size={16} />Flashcards</Link>
               <Link to="/ai-mentor"><Bot size={16} />AI Doubt Solver</Link>
-              <Link to="/notes"><Mic2 size={16} />Voice Notes</Link>
+              <Link to="/notes"><FileText size={16} />Quick Note</Link>
               <Link to="/memory-engine"><Brain size={16} />Memory Review</Link>
               <Link to="/question-bank"><Library size={16} />Question Bank</Link>
               <Link to="/planner"><Clock3 size={16} />Study Planner</Link>
@@ -1586,7 +1952,7 @@ export function DashboardPage() {
           <i />
           {data.activeStudySession
             ? "Study session active"
-            : "Academic, planner and mock-test data connected"}
+            : "Academic, planner, mock-test and notes data connected"}
         </span>
         <button disabled={refreshing} type="button" onClick={() => void load(true)}>
           <RefreshCw className={refreshing ? "ref-spin" : ""} size={14} />
