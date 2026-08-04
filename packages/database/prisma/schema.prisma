@@ -189,6 +189,46 @@ enum MockTestAttemptStatus {
   ABANDONED
 }
 
+enum QuestionStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum QuestionType {
+  SINGLE_CORRECT
+  MULTIPLE_CORRECT
+  INTEGER
+  ASSERTION_REASON
+}
+
+enum QuestionDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum QuestionSourceType {
+  PLATFORM
+  INSTITUTION
+  CUSTOM
+  PYQ
+  EXTERNAL
+}
+
+enum QuestionPracticeSessionStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
+enum QuestionPracticeItemStatus {
+  UNANSWERED
+  CORRECT
+  INCORRECT
+  SKIPPED
+}
+
 model User {
   id              String     @id @default(uuid()) @db.Uuid
   email           String     @unique @db.VarChar(320)
@@ -254,6 +294,7 @@ model Organization {
   mentorAssignments  StudentMentorAssignment[]
   academicProgrammes AcademicProgramme[]
   mockTests          MockTest[]
+  questions          Question[]
 
   @@index([type, status])
   @@map("organizations")
@@ -358,13 +399,15 @@ model StudentProfile {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  guardians           GuardianStudentLink[]
-  mentorAssignments   StudentMentorAssignment[]
-  academicEnrollments StudentEnrollment[]
-  studyPlans          StudyPlan[]
-  studyTasks          StudyTask[]
-  studySessions       StudySession[]
-  mockTestAttempts    MockTestAttempt[]
+  guardians                GuardianStudentLink[]
+  mentorAssignments        StudentMentorAssignment[]
+  academicEnrollments      StudentEnrollment[]
+  studyPlans               StudyPlan[]
+  studyTasks               StudyTask[]
+  studySessions            StudySession[]
+  mockTestAttempts         MockTestAttempt[]
+  questionBookmarks        QuestionBookmark[]
+  questionPracticeSessions QuestionPracticeSession[]
 
   @@unique([userId, organizationId])
   @@unique([organizationId, admissionNumber])
@@ -514,6 +557,7 @@ model Subject {
   syllabi          SyllabusSubject[]
   studyTasks       StudyTask[]
   mockTestSections MockTestSection[]
+  questions        Question[]
 
   @@index([status])
   @@map("subjects")
@@ -578,6 +622,7 @@ model Chapter {
   progress      ChapterProgress[]
   studyTasks    StudyTask[]
   studySessions StudySession[]
+  questions     Question[]
 
   @@unique([unitId, code])
   @@unique([unitId, sequenceNumber])
@@ -603,6 +648,7 @@ model Topic {
   studySessions      StudySession[]
   mockTestBlueprints MockTestTopicBlueprint[]
   mockTestResults    MockTestTopicResult[]
+  questions          Question[]
 
   @@unique([chapterId, code])
   @@unique([chapterId, sequenceNumber])
@@ -833,6 +879,7 @@ model MockTestSection {
 
   topicBlueprints MockTestTopicBlueprint[]
   results         MockTestSectionResult[]
+  questions       MockTestQuestion[]
 
   @@unique([mockTestId, sequenceNumber])
   @@index([mockTestId])
@@ -886,8 +933,9 @@ model MockTestAttempt {
 
   mockTest MockTest @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
 
-  sectionResults MockTestSectionResult[]
-  topicResults   MockTestTopicResult[]
+  sectionResults    MockTestSectionResult[]
+  topicResults      MockTestTopicResult[]
+  questionResponses MockTestQuestionResponse[]
 
   @@unique([studentProfileId, mockTestId, attemptNumber])
   @@index([studentProfileId, status, submittedAt])
@@ -941,4 +989,216 @@ model MockTestTopicResult {
   @@unique([mockTestAttemptId, topicId])
   @@index([topicId, isWeak])
   @@map("mock_test_topic_results")
+}
+
+model Question {
+  id                  String             @id @default(uuid()) @db.Uuid
+  ownerOrganizationId String?            @map("owner_organization_id") @db.Uuid
+  subjectId           String             @map("subject_id") @db.Uuid
+  chapterId           String?            @map("chapter_id") @db.Uuid
+  topicId             String?            @map("topic_id") @db.Uuid
+  code                String             @unique @db.VarChar(120)
+  type                QuestionType       @default(SINGLE_CORRECT)
+  difficulty          QuestionDifficulty @default(MEDIUM)
+  status              QuestionStatus     @default(DRAFT)
+  stem                String             @db.Text
+  explanation         String?            @db.Text
+  sourceType          QuestionSourceType @default(PLATFORM) @map("source_type")
+  sourceName          String?            @map("source_name") @db.VarChar(200)
+  sourceYear          Int?               @map("source_year")
+  marks               Int                @default(4)
+  negativeMarks       Int                @default(1) @map("negative_marks")
+  estimatedSeconds    Int                @default(90) @map("estimated_seconds")
+  publishedAt         DateTime?          @map("published_at") @db.Timestamptz(6)
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  ownerOrganization Organization? @relation(fields: [ownerOrganizationId], references: [id], onDelete: SetNull)
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+
+  chapter Chapter? @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+
+  topic Topic? @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  options           QuestionOption[]
+  tagLinks          QuestionTagAssignment[]
+  bookmarks         QuestionBookmark[]
+  practiceItems     QuestionPracticeItem[]
+  mockTestQuestions MockTestQuestion[]
+
+  @@index([subjectId, status])
+  @@index([chapterId, status])
+  @@index([topicId, status])
+  @@index([difficulty, status])
+  @@index([sourceType, sourceYear])
+  @@index([ownerOrganizationId, status])
+  @@map("questions")
+}
+
+model QuestionOption {
+  id             String   @id @default(uuid()) @db.Uuid
+  questionId     String   @map("question_id") @db.Uuid
+  label          String   @db.VarChar(10)
+  text           String   @db.Text
+  isCorrect      Boolean  @default(false) @map("is_correct")
+  explanation    String?  @db.Text
+  sequenceNumber Int      @default(1) @map("sequence_number")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  practiceSelections QuestionPracticeItem[]
+  mockTestSelections MockTestQuestionResponse[]
+
+  @@unique([questionId, label])
+  @@unique([questionId, sequenceNumber])
+  @@index([questionId, isCorrect])
+  @@map("question_options")
+}
+
+model QuestionTag {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique @db.VarChar(80)
+  name        String   @db.VarChar(120)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  assignments QuestionTagAssignment[]
+
+  @@map("question_tags")
+}
+
+model QuestionTagAssignment {
+  id            String   @id @default(uuid()) @db.Uuid
+  questionId    String   @map("question_id") @db.Uuid
+  questionTagId String   @map("question_tag_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  questionTag QuestionTag @relation(fields: [questionTagId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, questionTagId])
+  @@index([questionTagId])
+  @@map("question_tag_assignments")
+}
+
+model QuestionBookmark {
+  id               String   @id @default(uuid()) @db.Uuid
+  studentProfileId String   @map("student_profile_id") @db.Uuid
+  questionId       String   @map("question_id") @db.Uuid
+  note             String?  @db.Text
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([studentProfileId, questionId])
+  @@index([questionId])
+  @@map("question_bookmarks")
+}
+
+model QuestionPracticeSession {
+  id                String                        @id @default(uuid()) @db.Uuid
+  studentProfileId  String                        @map("student_profile_id") @db.Uuid
+  name              String                        @db.VarChar(200)
+  status            QuestionPracticeSessionStatus @default(ACTIVE)
+  totalQuestions    Int                           @default(0) @map("total_questions")
+  answeredQuestions Int                           @default(0) @map("answered_questions")
+  correctAnswers    Int                           @default(0) @map("correct_answers")
+  incorrectAnswers  Int                           @default(0) @map("incorrect_answers")
+  skippedQuestions  Int                           @default(0) @map("skipped_questions")
+  score             Int                           @default(0)
+  accuracyPercent   Int                           @default(0) @map("accuracy_percent")
+  durationSeconds   Int                           @default(0) @map("duration_seconds")
+  startedAt         DateTime                      @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt       DateTime?                     @map("completed_at") @db.Timestamptz(6)
+  createdAt         DateTime                      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  items QuestionPracticeItem[]
+
+  @@index([studentProfileId, status, startedAt])
+  @@index([completedAt])
+  @@map("question_practice_sessions")
+}
+
+model QuestionPracticeItem {
+  id                        String                     @id @default(uuid()) @db.Uuid
+  questionPracticeSessionId String                     @map("question_practice_session_id") @db.Uuid
+  questionId                String                     @map("question_id") @db.Uuid
+  selectedOptionId          String?                    @map("selected_option_id") @db.Uuid
+  sequenceNumber            Int                        @default(1) @map("sequence_number")
+  status                    QuestionPracticeItemStatus @default(UNANSWERED)
+  isCorrect                 Boolean?                   @map("is_correct")
+  awardedMarks              Int                        @default(0) @map("awarded_marks")
+  timeSpentSeconds          Int                        @default(0) @map("time_spent_seconds")
+  answeredAt                DateTime?                  @map("answered_at") @db.Timestamptz(6)
+  createdAt                 DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  questionPracticeSession QuestionPracticeSession @relation(fields: [questionPracticeSessionId], references: [id], onDelete: Cascade)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  selectedOption QuestionOption? @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
+
+  @@unique([questionPracticeSessionId, questionId])
+  @@unique([questionPracticeSessionId, sequenceNumber])
+  @@index([questionId, status])
+  @@index([selectedOptionId])
+  @@map("question_practice_items")
+}
+
+model MockTestQuestion {
+  id                String   @id @default(uuid()) @db.Uuid
+  mockTestSectionId String   @map("mock_test_section_id") @db.Uuid
+  questionId        String   @map("question_id") @db.Uuid
+  sequenceNumber    Int      @default(1) @map("sequence_number")
+  marks             Int      @default(4)
+  negativeMarks     Int      @default(1) @map("negative_marks")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  mockTestSection MockTestSection @relation(fields: [mockTestSectionId], references: [id], onDelete: Cascade)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  responses MockTestQuestionResponse[]
+
+  @@unique([mockTestSectionId, questionId])
+  @@unique([mockTestSectionId, sequenceNumber])
+  @@index([questionId])
+  @@map("mock_test_questions")
+}
+
+model MockTestQuestionResponse {
+  id                 String    @id @default(uuid()) @db.Uuid
+  mockTestAttemptId  String    @map("mock_test_attempt_id") @db.Uuid
+  mockTestQuestionId String    @map("mock_test_question_id") @db.Uuid
+  selectedOptionId   String?   @map("selected_option_id") @db.Uuid
+  isCorrect          Boolean?  @map("is_correct")
+  awardedMarks       Int       @default(0) @map("awarded_marks")
+  timeSpentSeconds   Int       @default(0) @map("time_spent_seconds")
+  isMarkedForReview  Boolean   @default(false) @map("is_marked_for_review")
+  answeredAt         DateTime? @map("answered_at") @db.Timestamptz(6)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  mockTestAttempt MockTestAttempt @relation(fields: [mockTestAttemptId], references: [id], onDelete: Cascade)
+
+  mockTestQuestion MockTestQuestion @relation(fields: [mockTestQuestionId], references: [id], onDelete: Cascade)
+
+  selectedOption QuestionOption? @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
+
+  @@unique([mockTestAttemptId, mockTestQuestionId])
+  @@index([mockTestQuestionId])
+  @@index([selectedOptionId])
+  @@map("mock_test_question_responses")
 }
