@@ -229,6 +229,45 @@ enum QuestionPracticeItemStatus {
   SKIPPED
 }
 
+enum FlashcardDeckStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum FlashcardStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum FlashcardSourceType {
+  MANUAL
+  QUESTION_BANK
+  MOCK_TEST
+  PLATFORM
+}
+
+enum FlashcardLearningState {
+  NEW
+  LEARNING
+  REVIEW
+  RELEARNING
+  MASTERED
+}
+
+enum FlashcardReviewRating {
+  AGAIN
+  HARD
+  GOOD
+  EASY
+}
+
+enum FlashcardReviewSessionStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
 model User {
   id              String     @id @default(uuid()) @db.Uuid
   email           String     @unique @db.VarChar(320)
@@ -408,6 +447,9 @@ model StudentProfile {
   mockTestAttempts         MockTestAttempt[]
   questionBookmarks        QuestionBookmark[]
   questionPracticeSessions QuestionPracticeSession[]
+  flashcardDecks           FlashcardDeck[]
+  flashcards               Flashcard[]
+  flashcardReviewSessions  FlashcardReviewSession[]
 
   @@unique([userId, organizationId])
   @@unique([organizationId, admissionNumber])
@@ -558,6 +600,8 @@ model Subject {
   studyTasks       StudyTask[]
   mockTestSections MockTestSection[]
   questions        Question[]
+  flashcardDecks   FlashcardDeck[]
+  flashcards       Flashcard[]
 
   @@index([status])
   @@map("subjects")
@@ -618,11 +662,13 @@ model Chapter {
 
   unit AcademicUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
 
-  topics        Topic[]
-  progress      ChapterProgress[]
-  studyTasks    StudyTask[]
-  studySessions StudySession[]
-  questions     Question[]
+  topics         Topic[]
+  progress       ChapterProgress[]
+  studyTasks     StudyTask[]
+  studySessions  StudySession[]
+  questions      Question[]
+  flashcardDecks FlashcardDeck[]
+  flashcards     Flashcard[]
 
   @@unique([unitId, code])
   @@unique([unitId, sequenceNumber])
@@ -649,6 +695,8 @@ model Topic {
   mockTestBlueprints MockTestTopicBlueprint[]
   mockTestResults    MockTestTopicResult[]
   questions          Question[]
+  flashcardDecks     FlashcardDeck[]
+  flashcards         Flashcard[]
 
   @@unique([chapterId, code])
   @@unique([chapterId, sequenceNumber])
@@ -1026,6 +1074,7 @@ model Question {
   bookmarks         QuestionBookmark[]
   practiceItems     QuestionPracticeItem[]
   mockTestQuestions MockTestQuestion[]
+  flashcards        Flashcard[]             @relation("FlashcardSourceQuestion")
 
   @@index([subjectId, status])
   @@index([chapterId, status])
@@ -1201,4 +1250,151 @@ model MockTestQuestionResponse {
   @@index([mockTestQuestionId])
   @@index([selectedOptionId])
   @@map("mock_test_question_responses")
+}
+
+model FlashcardDeck {
+  id               String              @id @default(uuid()) @db.Uuid
+  studentProfileId String              @map("student_profile_id") @db.Uuid
+  subjectId        String?             @map("subject_id") @db.Uuid
+  chapterId        String?             @map("chapter_id") @db.Uuid
+  topicId          String?             @map("topic_id") @db.Uuid
+  name             String              @db.VarChar(200)
+  description      String?             @db.Text
+  color            String?             @db.VarChar(30)
+  status           FlashcardDeckStatus @default(ACTIVE)
+  isDefault        Boolean             @default(false) @map("is_default")
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  subject Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  chapter Chapter? @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+
+  topic Topic? @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  cards          Flashcard[]
+  reviewSessions FlashcardReviewSession[]
+
+  @@unique([studentProfileId, name])
+  @@index([studentProfileId, status])
+  @@index([subjectId])
+  @@index([chapterId])
+  @@index([topicId])
+  @@map("flashcard_decks")
+}
+
+model Flashcard {
+  id               String              @id @default(uuid()) @db.Uuid
+  deckId           String              @map("deck_id") @db.Uuid
+  studentProfileId String              @map("student_profile_id") @db.Uuid
+  subjectId        String              @map("subject_id") @db.Uuid
+  chapterId        String?             @map("chapter_id") @db.Uuid
+  topicId          String?             @map("topic_id") @db.Uuid
+  sourceQuestionId String?             @map("source_question_id") @db.Uuid
+  sourceType       FlashcardSourceType @default(MANUAL) @map("source_type")
+  status           FlashcardStatus     @default(ACTIVE)
+  front            String              @db.Text
+  back             String              @db.Text
+  hint             String?             @db.Text
+  mnemonic         String?             @db.Text
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  deck FlashcardDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+
+  chapter Chapter? @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+
+  topic Topic? @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  sourceQuestion Question? @relation("FlashcardSourceQuestion", fields: [sourceQuestionId], references: [id], onDelete: SetNull)
+
+  schedule FlashcardSchedule?
+  reviews  FlashcardReview[]
+
+  @@unique([deckId, sourceQuestionId])
+  @@index([studentProfileId, status])
+  @@index([deckId, status])
+  @@index([subjectId])
+  @@index([chapterId])
+  @@index([topicId])
+  @@index([sourceQuestionId])
+  @@map("flashcards")
+}
+
+model FlashcardSchedule {
+  id             String                 @id @default(uuid()) @db.Uuid
+  flashcardId    String                 @unique @map("flashcard_id") @db.Uuid
+  state          FlashcardLearningState @default(NEW)
+  dueAt          DateTime               @default(now()) @map("due_at") @db.Timestamptz(6)
+  intervalDays   Int                    @default(0) @map("interval_days")
+  scheduleStep   Int                    @default(0) @map("schedule_step")
+  easeFactor     Float                  @default(2.5) @map("ease_factor")
+  repetitions    Int                    @default(0)
+  lapseCount     Int                    @default(0) @map("lapse_count")
+  lastReviewedAt DateTime?              @map("last_reviewed_at") @db.Timestamptz(6)
+  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  flashcard Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+
+  @@index([state, dueAt])
+  @@index([dueAt])
+  @@map("flashcard_schedules")
+}
+
+model FlashcardReviewSession {
+  id               String                       @id @default(uuid()) @db.Uuid
+  studentProfileId String                       @map("student_profile_id") @db.Uuid
+  deckId           String?                      @map("deck_id") @db.Uuid
+  status           FlashcardReviewSessionStatus @default(ACTIVE)
+  totalCards       Int                          @default(0) @map("total_cards")
+  reviewedCards    Int                          @default(0) @map("reviewed_cards")
+  againCount       Int                          @default(0) @map("again_count")
+  hardCount        Int                          @default(0) @map("hard_count")
+  goodCount        Int                          @default(0) @map("good_count")
+  easyCount        Int                          @default(0) @map("easy_count")
+  durationSeconds  Int                          @default(0) @map("duration_seconds")
+  startedAt        DateTime                     @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt      DateTime?                    @map("completed_at") @db.Timestamptz(6)
+  createdAt        DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  deck FlashcardDeck? @relation(fields: [deckId], references: [id], onDelete: SetNull)
+
+  reviews FlashcardReview[]
+
+  @@index([studentProfileId, status, startedAt])
+  @@index([deckId, status])
+  @@map("flashcard_review_sessions")
+}
+
+model FlashcardReview {
+  id                   String                 @id @default(uuid()) @db.Uuid
+  reviewSessionId      String                 @map("review_session_id") @db.Uuid
+  flashcardId          String                 @map("flashcard_id") @db.Uuid
+  rating               FlashcardReviewRating
+  previousState        FlashcardLearningState @map("previous_state")
+  newState             FlashcardLearningState @map("new_state")
+  previousIntervalDays Int                    @default(0) @map("previous_interval_days")
+  newIntervalDays      Int                    @default(0) @map("new_interval_days")
+  responseSeconds      Int                    @default(0) @map("response_seconds")
+  reviewedAt           DateTime               @default(now()) @map("reviewed_at") @db.Timestamptz(6)
+  createdAt            DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  reviewSession FlashcardReviewSession @relation(fields: [reviewSessionId], references: [id], onDelete: Cascade)
+
+  flashcard Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+
+  @@index([reviewSessionId, reviewedAt])
+  @@index([flashcardId, reviewedAt])
+  @@index([rating, reviewedAt])
+  @@map("flashcard_reviews")
 }
