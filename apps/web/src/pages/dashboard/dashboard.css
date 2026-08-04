@@ -2413,3 +2413,99 @@
 @media(max-width:1050px){.ref-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.ref-analysis-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ref-quick-actions>div{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:760px){.ref-top-grid,.ref-secondary,.ref-insight-grid,.ref-secondary-lower{grid-template-columns:1fr}.ref-metrics,.ref-analysis-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ref-mission-content,.ref-subject-progress{grid-template-columns:1fr}.ref-progress-ring{justify-self:center}.ref-brain-map{grid-template-columns:1fr}.ref-brain-signals{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.ref-metrics,.ref-analysis-grid{grid-template-columns:1fr}.ref-quick-actions>div{grid-template-columns:repeat(2,minmax(0,1fr))}.ref-mission-footer{align-items:stretch;flex-direction:column}.ref-mission-footer a{justify-content:center}}
+
+/* AIMERS PLANNER DASHBOARD ACTIVITY */
+
+.ref-active-session {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 13px;
+  border: 1px solid
+    rgba(77, 222, 162, 0.2);
+  border-radius: 13px;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(41, 188, 130, 0.09),
+      rgba(26, 56, 91, 0.05)
+    );
+}
+
+.ref-active-session > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.ref-active-session
+  > div
+  > span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  color: #69e1aa;
+  background:
+    rgba(46, 205, 143, 0.11);
+}
+
+.ref-active-session small,
+.ref-active-session strong {
+  display: block;
+}
+
+.ref-active-session small {
+  color: #6cdca9;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.ref-active-session strong {
+  margin-top: 2px;
+  overflow: hidden;
+  color: #e1e6f2;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ref-active-session p {
+  margin: 2px 0 0;
+  color: var(--aimers-text-muted);
+  font-size: 7px;
+}
+
+.ref-active-session > a {
+  display: inline-flex;
+  min-height: 31px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid
+    rgba(89, 220, 168, 0.2);
+  border-radius: 8px;
+  color: #a9e8cb;
+  background:
+    rgba(48, 180, 129, 0.07);
+  font-size: 8px;
+  text-decoration: none;
+}
+
+@media (max-width: 620px) {
+  .ref-active-session {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ref-active-session > a {
+    justify-content: center;
+  }
+}

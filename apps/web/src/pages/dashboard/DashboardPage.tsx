@@ -11,6 +11,11 @@ import {
 } from "react";
 import { Link } from "react-router-dom";
 import { getAcademicWorkspace } from "../subjects/subjects.service";
+import { getPlannerWorkspace } from "../planner/planner.service";
+import type {
+  PlannerWorkspace,
+  StudyTask,
+} from "../planner/planner.types";
 import type {
   AcademicChapter, AcademicSyllabusSubject, AcademicWorkspace,
   ChapterProgress, TopicMastery,
@@ -48,6 +53,117 @@ function signalTone(score: number, isAssessed: boolean): SignalTone {
   if (score < 40) return "danger";
   if (score < 60) return "warning";
   return "success";
+}
+
+function formatStudyMinutes(
+  minutes: number,
+): string {
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+
+  const hours =
+    Math.floor(
+      minutes / 60,
+    );
+
+  const remainder =
+    minutes % 60;
+
+  return remainder > 0
+    ? `${hours}h ${remainder}m`
+    : `${hours}h`;
+}
+
+function dateKeyInTimeZone(
+  value: string | null,
+  timeZone: string,
+): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const parts =
+    new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      },
+    ).formatToParts(
+      new Date(value),
+    );
+
+  const values =
+    new Map(
+      parts.map(
+        (part) => [
+          part.type,
+          part.value,
+        ],
+      ),
+    );
+
+  return [
+    values.get("year"),
+    values.get("month"),
+    values.get("day"),
+  ].join("-");
+}
+
+function plannerTaskRank(
+  task: StudyTask,
+  todayDateKey: string,
+  timeZone: string,
+): number {
+  if (
+    task.status === "COMPLETED"
+  ) {
+    return 4;
+  }
+
+  const dueTime =
+    task.dueAt
+      ? new Date(
+          task.dueAt,
+        ).getTime()
+      : null;
+
+  if (
+    dueTime !== null &&
+    dueTime < Date.now()
+  ) {
+    return 0;
+  }
+
+  const scheduledToday =
+    dateKeyInTimeZone(
+      task.scheduledFor,
+      timeZone,
+    ) === todayDateKey;
+
+  const dueToday =
+    dateKeyInTimeZone(
+      task.dueAt,
+      timeZone,
+    ) === todayDateKey;
+
+  if (
+    scheduledToday ||
+    dueToday
+  ) {
+    return 1;
+  }
+
+  if (
+    task.status === "IN_PROGRESS"
+  ) {
+    return 2;
+  }
+
+  return 3;
 }
 
 function makePoints(values: readonly number[]): string {
@@ -164,6 +280,7 @@ function DashboardState({
 export function DashboardPage() {
   const { apiFetch, user } = useAuth();
   const [workspace, setWorkspace] = useState<AcademicWorkspace | null>(null);
+  const [planner, setPlanner] = useState<PlannerWorkspace | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -173,7 +290,25 @@ export function DashboardPage() {
     setError("");
 
     try {
-      setWorkspace(await getAcademicWorkspace(apiFetch));
+      const [
+        academicResult,
+        plannerResult,
+      ] = await Promise.all([
+        getAcademicWorkspace(
+          apiFetch,
+        ),
+        getPlannerWorkspace(
+          apiFetch,
+        ),
+      ]);
+
+      setWorkspace(
+        academicResult,
+      );
+
+      setPlanner(
+        plannerResult,
+      );
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -191,7 +326,7 @@ export function DashboardPage() {
   }, [load]);
 
   const data = useMemo(() => {
-    if (!workspace) return null;
+    if (!workspace || !planner) return null;
 
     const subjects = workspace.syllabusVersion.subjects;
     const chapters: ChapterEntry[] = subjects.flatMap((subject) =>
@@ -273,7 +408,7 @@ export function DashboardPage() {
       };
     });
 
-    const missions = [...chapters]
+    const academicMissions = [...chapters]
       .sort((left, right) => {
         const leftProgress = progressByChapter.get(left.chapter.id);
         const rightProgress = progressByChapter.get(right.chapter.id);
@@ -294,6 +429,9 @@ export function DashboardPage() {
           title: `${subject.subject.name}: ${chapter.name}`,
           detail: `${chapter.topics.length} topics · ${progress?.completionPercent ?? 0}% complete`,
           completed: progress?.state === "COMPLETED",
+          percent:
+            progress?.completionPercent ?? 0,
+          source: "academic" as const,
         };
       });
 
@@ -319,6 +457,140 @@ export function DashboardPage() {
       })
       .slice(0, 4);
 
+    const {
+      timeZone,
+      todayDateKey,
+    } = planner.activity;
+
+    const priorityOrder = {
+      URGENT: 0,
+      HIGH: 1,
+      MEDIUM: 2,
+      LOW: 3,
+    } as const;
+
+    const completedToday =
+      planner.tasks.filter(
+        (task) =>
+          task.status ===
+            "COMPLETED" &&
+          dateKeyInTimeZone(
+            task.completedAt,
+            timeZone,
+          ) === todayDateKey,
+      );
+
+    const activePlannerTasks =
+      planner.tasks.filter(
+        (task) =>
+          task.status === "TODO" ||
+          task.status ===
+            "IN_PROGRESS",
+      );
+
+    const plannerMissions = [
+      ...activePlannerTasks,
+      ...completedToday,
+    ]
+      .sort(
+        (left, right) => {
+          const rankDifference =
+            plannerTaskRank(
+              left,
+              todayDateKey,
+              timeZone,
+            ) -
+            plannerTaskRank(
+              right,
+              todayDateKey,
+              timeZone,
+            );
+
+          if (
+            rankDifference !== 0
+          ) {
+            return rankDifference;
+          }
+
+          const priorityDifference =
+            priorityOrder[
+              left.priority
+            ] -
+            priorityOrder[
+              right.priority
+            ];
+
+          if (
+            priorityDifference !== 0
+          ) {
+            return priorityDifference;
+          }
+
+          return (
+            new Date(
+              left.scheduledFor ??
+              left.dueAt ??
+              left.createdAt,
+            ).getTime() -
+            new Date(
+              right.scheduledFor ??
+              right.dueAt ??
+              right.createdAt,
+            ).getTime()
+          );
+        },
+      )
+      .slice(0, 4)
+      .map((task) => ({
+        id: task.id,
+        title: task.title,
+
+        detail:
+          `${task.type.replaceAll("_", " ")} · ${task.estimatedMinutes} min · ${task.completionPercent}% complete`,
+
+        completed:
+          task.status ===
+          "COMPLETED",
+
+        percent:
+          task.completionPercent,
+
+        source: "planner" as const,
+      }));
+
+    const missions =
+      plannerMissions.length > 0
+        ? plannerMissions
+        : academicMissions;
+
+    const missionProgress =
+      missions.length === 0
+        ? 0
+        : clamp(
+            missions.reduce(
+              (
+                total,
+                mission,
+              ) =>
+                total +
+                mission.percent,
+              0,
+            ) /
+            missions.length,
+          );
+
+    const missionSource =
+      plannerMissions.length > 0
+        ? "planner"
+        : "academic";
+
+    const activeStudySession =
+      planner.sessions.find(
+        (session) =>
+          session.status ===
+          "ACTIVE",
+      ) ?? null;
+
     const coverageSeries = chapters
       .slice(0, 7)
       .map((item) => progressByChapter.get(item.chapter.id)?.completionPercent ?? 0);
@@ -342,13 +614,24 @@ export function DashboardPage() {
       assessedCount: assessedTopics.length,
       subjectProgress,
       missions,
+      missionProgress,
+      missionSource,
       weakTopics,
       coverageSeries,
       coveragePoints: makePoints(coverageSeries),
       weakestSubject,
       currentMission: missions.find((item) => !item.completed) ?? missions[0] ?? null,
+      studyStreakDays:
+        planner.activity.studyStreakDays,
+      todayStudyMinutes:
+        planner.activity.todayMinutes,
+      weeklyStudyMinutes:
+        planner.activity.weeklyMinutes,
+      completedSessionCount:
+        planner.activity.completedSessionCount,
+      activeStudySession,
     };
-  }, [workspace]);
+  }, [planner, workspace]);
 
   if (loading) {
     return (
@@ -358,7 +641,7 @@ export function DashboardPage() {
     );
   }
 
-  if (!workspace || !data) {
+  if (!workspace || !planner || !data) {
     return (
       <div className="ref-dashboard state-page">
         <DashboardState
@@ -388,10 +671,10 @@ export function DashboardPage() {
       <section className="ref-metrics">
         <MetricCard
           label="Study Streak"
-          value="—"
+          value={`${data.studyStreakDays}`}
           unit="days"
-          detail="Daily log not connected"
-          change="Awaiting planner sessions"
+          detail={`${data.completedSessionCount} completed sessions`}
+          change={`Timezone: ${planner.activity.timeZone}`}
           icon={<Flame size={17} />}
           tone="orange"
         />
@@ -406,9 +689,9 @@ export function DashboardPage() {
         />
         <MetricCard
           label="Study Time"
-          value="—"
-          detail="Session tracking not connected"
-          change="Awaiting focus sessions"
+          value={formatStudyMinutes(data.todayStudyMinutes)}
+          detail="Completed study time today"
+          change={`${formatStudyMinutes(data.weeklyStudyMinutes)} this week`}
           icon={<Clock3 size={17} />}
           tone="blue"
         />
@@ -431,12 +714,41 @@ export function DashboardPage() {
         />
       </section>
 
+      {data.activeStudySession && (
+        <section className="ref-active-session">
+          <div>
+            <span>
+              <Flame size={18} />
+            </span>
+
+            <div>
+              <small>
+                ACTIVE STUDY SESSION
+              </small>
+
+              <strong>
+                {data.activeStudySession.studyTask?.title ?? "Focused study session"}
+              </strong>
+
+              <p>
+                Session timer is running in your Planner workspace.
+              </p>
+            </div>
+          </div>
+
+          <Link to="/planner">
+            Open Planner
+            <ArrowRight size={14} />
+          </Link>
+        </section>
+      )}
+
       <section className="ref-main">
         <div className="ref-primary">
           <section className="ref-top-grid">
             <Panel
               title="Today's Mission"
-              eyebrow="Live chapter queue"
+              eyebrow={data.missionSource === "planner" ? "Live planner queue" : "Live chapter queue"}
               className="ref-mission-panel"
               action={
                 <span className="ref-tag">
@@ -459,15 +771,24 @@ export function DashboardPage() {
                     </section>
                   ))}
                 </div>
-                <ProgressRing value={data.overall} />
+                <ProgressRing value={data.missionProgress} />
               </div>
 
               <footer className="ref-mission-footer">
                 <span>
                   <CircleCheckBig size={15} />
-                  Synced with Subjects
+                  {data.missionSource === "planner"
+                    ? "Synced with Study Planner"
+                    : "Synced with Subjects"}
                 </span>
-                <Link to="/subjects">
+
+                <Link
+                  to={
+                    data.missionSource === "planner"
+                      ? "/planner"
+                      : "/subjects"
+                  }
+                >
                   Continue Mission
                   <ArrowRight size={14} />
                 </Link>
@@ -669,7 +990,7 @@ export function DashboardPage() {
                 <span>Subjects<strong>{data.subjects.length}</strong></span>
                 <span>Chapters<strong>{data.chapters.length}</strong></span>
                 <span>Questions<strong>{data.attempts}</strong></span>
-                <span>Mastered Topics<strong>{data.mastered}</strong></span>
+                <span>Study Sessions<strong>{data.completedSessionCount}</strong></span>
               </div>
             </div>
 
@@ -745,7 +1066,12 @@ export function DashboardPage() {
       </section>
 
       <footer className="ref-footer">
-        <span><i />Live academic data connected</span>
+        <span>
+          <i />
+          {data.activeStudySession
+            ? "Study session active"
+            : "Academic and planner data connected"}
+        </span>
         <button disabled={refreshing} type="button" onClick={() => void load(true)}>
           <RefreshCw className={refreshing ? "ref-spin" : ""} size={14} />
           Refresh

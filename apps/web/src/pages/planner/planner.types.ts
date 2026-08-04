@@ -113,11 +113,31 @@ export interface PlannerSummary {
   completedSessionMinutes: number;
 }
 
+
+export interface PlannerActivityDay {
+  dateKey: string;
+  durationMinutes: number;
+  focusMinutes: number;
+}
+
+export interface PlannerActivitySummary {
+  timeZone: string;
+  todayDateKey: string;
+  weekStartDateKey: string;
+  todayMinutes: number;
+  weeklyMinutes: number;
+  completedSessionCount: number;
+  studyStreakDays: number;
+  activeSessionId: string | null;
+  dailyMinutes: PlannerActivityDay[];
+}
+
 export interface PlannerWorkspace {
   plans: StudyPlan[];
   tasks: StudyTask[];
   sessions: StudySession[];
   summary: PlannerSummary;
+  activity: PlannerActivitySummary;
 }
 
 export interface CreateStudyPlanInput {

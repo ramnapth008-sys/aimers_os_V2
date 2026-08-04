@@ -36,6 +36,103 @@ import type {
   UpdateStudyTaskDto,
 } from "./dto/update-study-task.dto";
 
+
+function localDateKey(
+  value: Date,
+  timeZone: string,
+): string {
+  const parts =
+    new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      },
+    ).formatToParts(value);
+
+  const values =
+    new Map(
+      parts.map(
+        (part) => [
+          part.type,
+          part.value,
+        ],
+      ),
+    );
+
+  return [
+    values.get("year"),
+    values.get("month"),
+    values.get("day"),
+  ].join("-");
+}
+
+function shiftDateKey(
+  dateKey: string,
+  days: number,
+): string {
+  const [
+    year,
+    month,
+    day,
+  ] = dateKey
+    .split("-")
+    .map(Number);
+
+  const value =
+    new Date(
+      Date.UTC(
+        year,
+        month - 1,
+        day,
+      ),
+    );
+
+  value.setUTCDate(
+    value.getUTCDate() + days,
+  );
+
+  return value
+    .toISOString()
+    .slice(0, 10);
+}
+
+function mondayDateKey(
+  dateKey: string,
+): string {
+  const [
+    year,
+    month,
+    day,
+  ] = dateKey
+    .split("-")
+    .map(Number);
+
+  const value =
+    new Date(
+      Date.UTC(
+        year,
+        month - 1,
+        day,
+      ),
+    );
+
+  const weekDay =
+    value.getUTCDay();
+
+  const offset =
+    weekDay === 0
+      ? -6
+      : 1 - weekDay;
+
+  return shiftDateKey(
+    dateKey,
+    offset,
+  );
+}
+
 @Injectable()
 export class PlannerService {
   constructor(
@@ -228,6 +325,24 @@ export class PlannerService {
         userId,
       );
 
+    const organization =
+      await this.database
+        .organization
+        .findUnique({
+          where: {
+            id:
+              profile.organizationId,
+          },
+
+          select: {
+            timezone: true,
+          },
+        });
+
+    const timeZone =
+      organization?.timezone ||
+      "Asia/Kolkata";
+
     const plans =
       await this.database.studyPlan
         .findMany({
@@ -316,6 +431,7 @@ export class PlannerService {
               orderBy: {
                 createdAt: "desc",
               },
+
               take: 5,
             },
           },
@@ -343,7 +459,82 @@ export class PlannerService {
           },
         });
 
-    const now = new Date();
+    const now =
+      new Date();
+
+    const historyStart =
+      new Date(
+        now.getTime() -
+        400 *
+        24 *
+        60 *
+        60 *
+        1000,
+      );
+
+    const [
+      completedHistory,
+      allTimeTotals,
+      completedSessionCount,
+    ] = await Promise.all([
+      this.database
+        .studySession
+        .findMany({
+          where: {
+            studentProfileId:
+              profile.id,
+
+            status:
+              StudySessionStatus
+                .COMPLETED,
+
+            endedAt: {
+              gte: historyStart,
+            },
+          },
+
+          orderBy: {
+            endedAt: "desc",
+          },
+
+          select: {
+            endedAt: true,
+            durationMinutes: true,
+            focusMinutes: true,
+          },
+        }),
+
+      this.database
+        .studySession
+        .aggregate({
+          where: {
+            studentProfileId:
+              profile.id,
+
+            status:
+              StudySessionStatus
+                .COMPLETED,
+          },
+
+          _sum: {
+            durationMinutes: true,
+            focusMinutes: true,
+          },
+        }),
+
+      this.database
+        .studySession
+        .count({
+          where: {
+            studentProfileId:
+              profile.id,
+
+            status:
+              StudySessionStatus
+                .COMPLETED,
+          },
+        }),
+    ]);
 
     const activeTasks =
       tasks.filter(
@@ -376,20 +567,167 @@ export class PlannerService {
         0,
       );
 
-    const completedSessionMinutes =
-      sessions
+    const todayDateKey =
+      localDateKey(
+        now,
+        timeZone,
+      );
+
+    const weekStartDateKey =
+      mondayDateKey(
+        todayDateKey,
+      );
+
+    const dailyTotals =
+      new Map<
+        string,
+        {
+          durationMinutes: number;
+          focusMinutes: number;
+        }
+      >();
+
+    for (
+      const session
+      of completedHistory
+    ) {
+      if (!session.endedAt) {
+        continue;
+      }
+
+      const dateKey =
+        localDateKey(
+          session.endedAt,
+          timeZone,
+        );
+
+      const existing =
+        dailyTotals.get(
+          dateKey,
+        ) ?? {
+          durationMinutes: 0,
+          focusMinutes: 0,
+        };
+
+      existing.durationMinutes +=
+        session.durationMinutes;
+
+      existing.focusMinutes +=
+        session.focusMinutes;
+
+      dailyTotals.set(
+        dateKey,
+        existing,
+      );
+    }
+
+    const activeDateKeys =
+      new Set(
+        dailyTotals.keys(),
+      );
+
+    let streakCursor =
+      todayDateKey;
+
+    if (
+      !activeDateKeys.has(
+        streakCursor,
+      )
+    ) {
+      streakCursor =
+        shiftDateKey(
+          streakCursor,
+          -1,
+        );
+    }
+
+    let studyStreakDays = 0;
+
+    while (
+      activeDateKeys.has(
+        streakCursor,
+      )
+    ) {
+      studyStreakDays += 1;
+
+      streakCursor =
+        shiftDateKey(
+          streakCursor,
+          -1,
+        );
+    }
+
+    const dailyMinutes =
+      Array.from(
+        {
+          length: 7,
+        },
+        (
+          _item,
+          index,
+        ) => {
+          const dateKey =
+            shiftDateKey(
+              todayDateKey,
+              index - 6,
+            );
+
+          const totals =
+            dailyTotals.get(
+              dateKey,
+            );
+
+          return {
+            dateKey,
+
+            durationMinutes:
+              totals
+                ?.durationMinutes ??
+              0,
+
+            focusMinutes:
+              totals
+                ?.focusMinutes ??
+              0,
+          };
+        },
+      );
+
+    const todayMinutes =
+      dailyTotals.get(
+        todayDateKey,
+      )?.durationMinutes ?? 0;
+
+    const weeklyMinutes =
+      Array.from(
+        dailyTotals.entries(),
+      )
         .filter(
-          (session) =>
-            session.status ===
-            StudySessionStatus
-              .COMPLETED,
+          ([dateKey]) =>
+            dateKey >=
+              weekStartDateKey &&
+            dateKey <=
+              todayDateKey,
         )
         .reduce(
-          (total, session) =>
+          (
+            total,
+            [
+              _dateKey,
+              values,
+            ],
+          ) =>
             total +
-            session.durationMinutes,
+            values.durationMinutes,
           0,
         );
+
+    const activeSession =
+      sessions.find(
+        (session) =>
+          session.status ===
+          StudySessionStatus.ACTIVE,
+      ) ?? null;
 
     return {
       plans,
@@ -399,14 +737,35 @@ export class PlannerService {
       summary: {
         planCount: plans.length,
         taskCount: tasks.length,
+
         activeTaskCount:
           activeTasks.length,
+
         completedTaskCount:
           completedTasks.length,
+
         overdueTaskCount:
           overdueTasks.length,
+
         plannedMinutes,
-        completedSessionMinutes,
+
+        completedSessionMinutes:
+          allTimeTotals
+            ._sum
+            .durationMinutes ?? 0,
+      },
+
+      activity: {
+        timeZone,
+        todayDateKey,
+        weekStartDateKey,
+        todayMinutes,
+        weeklyMinutes,
+        completedSessionCount,
+        studyStreakDays,
+        activeSessionId:
+          activeSession?.id ?? null,
+        dailyMinutes,
       },
     };
   }
