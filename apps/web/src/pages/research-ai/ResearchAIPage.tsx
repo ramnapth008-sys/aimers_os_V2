@@ -198,6 +198,46 @@ function formatDate(
   ).format(date);
 }
 
+type ResearchAutosaveStatus =
+  | "ready"
+  | "dirty"
+  | "saving"
+  | "saved"
+  | "error";
+
+type ResearchProjectDraft = {
+  id: string;
+  title: string;
+  researchQuestion: string;
+  description: string;
+};
+
+function projectDraftFrom(
+  project: ResearchProjectWorkspace,
+): ResearchProjectDraft {
+  return {
+    id:
+      project.id,
+    title:
+      project.title,
+    researchQuestion:
+      project.researchQuestion ?? "",
+    description:
+      project.description ?? "",
+  };
+}
+
+function projectDraftSignature(
+  draft: ResearchProjectDraft,
+): string {
+  return JSON.stringify([
+    draft.id,
+    draft.title,
+    draft.researchQuestion,
+    draft.description,
+  ]);
+}
+
 function sourceIcon(
   source: ResearchSourceRecord,
 ) {
@@ -339,6 +379,23 @@ export function ResearchAIPage() {
   ] = useState(false);
 
   const [
+    autosaveStatus,
+    setAutosaveStatus,
+  ] = useState<ResearchAutosaveStatus>("ready");
+
+  const autosaveTimerRef =
+    useRef<number | null>(null);
+
+  const autosaveRequestRef =
+    useRef(0);
+
+  const lastSavedProjectRef =
+    useRef<{
+      id: string;
+      signature: string;
+    } | null>(null);
+
+  const [
     generatingThreadId,
     setGeneratingThreadId,
   ] = useState<string | null>(null);
@@ -469,6 +526,281 @@ export function ResearchAIPage() {
     [project, selectedThreadId],
   );
 
+  const persistProjectDraft = useCallback(
+    async (
+      draft: ResearchProjectDraft,
+    ): Promise<boolean> => {
+      const signature =
+        projectDraftSignature(
+          draft,
+        );
+
+      const lastSaved =
+        lastSavedProjectRef.current;
+
+      if (
+        lastSaved?.id === draft.id &&
+        lastSaved.signature === signature
+      ) {
+        setAutosaveStatus(
+          "saved",
+        );
+
+        return true;
+      }
+
+      const requestId =
+        autosaveRequestRef.current + 1;
+
+      autosaveRequestRef.current =
+        requestId;
+
+      setAutosaveStatus(
+        "saving",
+      );
+
+      setError("");
+
+      try {
+        const updated =
+          await updateResearchProject(
+            apiFetch,
+            draft.id,
+            {
+              title:
+                draft.title.trim() ||
+                "Untitled research project",
+
+              researchQuestion:
+                draft.researchQuestion.trim() ||
+                null,
+
+              description:
+                draft.description.trim() ||
+                null,
+            },
+          );
+
+        const updatedDraft =
+          projectDraftFrom(
+            updated,
+          );
+
+        lastSavedProjectRef.current = {
+          id:
+            updated.id,
+
+          signature:
+            projectDraftSignature(
+              updatedDraft,
+            ),
+        };
+
+        if (
+          requestId ===
+          autosaveRequestRef.current
+        ) {
+          setProject(
+            (current) => {
+              if (
+                !current ||
+                current.id !==
+                  updated.id
+              ) {
+                return current;
+              }
+
+              const currentSignature =
+                projectDraftSignature(
+                  projectDraftFrom(
+                    current,
+                  ),
+                );
+
+              if (
+                currentSignature !==
+                signature
+              ) {
+                return current;
+              }
+
+              return {
+                ...current,
+                title:
+                  updated.title,
+                researchQuestion:
+                  updated.researchQuestion,
+                description:
+                  updated.description,
+                updatedAt:
+                  updated.updatedAt,
+              };
+            },
+          );
+
+          setWorkspace(
+            (current) => {
+              if (!current) {
+                return current;
+              }
+
+              return {
+                ...current,
+
+                projects:
+                  current.projects.map(
+                    (item) =>
+                      item.id === updated.id
+                        ? {
+                            ...item,
+                            title:
+                              updated.title,
+                            description:
+                              updated.description,
+                            researchQuestion:
+                              updated.researchQuestion,
+                            updatedAt:
+                              updated.updatedAt,
+                          }
+                        : item,
+                  ),
+              };
+            },
+          );
+
+          setAutosaveStatus(
+            "saved",
+          );
+        }
+
+        return true;
+      } catch (requestError) {
+        if (
+          requestId ===
+          autosaveRequestRef.current
+        ) {
+          setAutosaveStatus(
+            "error",
+          );
+
+          setError(
+            messageFrom(
+              requestError,
+            ),
+          );
+        }
+
+        return false;
+      }
+    },
+    [apiFetch],
+  );
+
+  const flushProjectAutosave = useCallback(
+    async (): Promise<boolean> => {
+      if (
+        autosaveTimerRef.current !==
+        null
+      ) {
+        window.clearTimeout(
+          autosaveTimerRef.current,
+        );
+
+        autosaveTimerRef.current =
+          null;
+      }
+
+      if (!project) {
+        return true;
+      }
+
+      return persistProjectDraft(
+        projectDraftFrom(
+          project,
+        ),
+      );
+    },
+    [
+      persistProjectDraft,
+      project,
+    ],
+  );
+
+  useEffect(
+    () => {
+      if (!project) {
+        return;
+      }
+
+      const draft =
+        projectDraftFrom(
+          project,
+        );
+
+      const signature =
+        projectDraftSignature(
+          draft,
+        );
+
+      const lastSaved =
+        lastSavedProjectRef.current;
+
+      if (
+        lastSaved?.id === project.id &&
+        lastSaved.signature === signature
+      ) {
+        return;
+      }
+
+      setAutosaveStatus(
+        "dirty",
+      );
+
+      if (
+        autosaveTimerRef.current !==
+        null
+      ) {
+        window.clearTimeout(
+          autosaveTimerRef.current,
+        );
+      }
+
+      autosaveTimerRef.current =
+        window.setTimeout(
+          () => {
+            autosaveTimerRef.current =
+              null;
+
+            void persistProjectDraft(
+              draft,
+            );
+          },
+          850,
+        );
+
+      return () => {
+        if (
+          autosaveTimerRef.current !==
+          null
+        ) {
+          window.clearTimeout(
+            autosaveTimerRef.current,
+          );
+
+          autosaveTimerRef.current =
+            null;
+        }
+      };
+    },
+    [
+      persistProjectDraft,
+      project?.description,
+      project?.id,
+      project?.researchQuestion,
+      project?.title,
+    ],
+  );
+
   useEffect(
     () => {
       const frame =
@@ -564,6 +896,25 @@ export function ResearchAIPage() {
           projectId,
         );
 
+        const nextDraft =
+          projectDraftFrom(
+            next,
+          );
+
+        lastSavedProjectRef.current = {
+          id:
+            next.id,
+
+          signature:
+            projectDraftSignature(
+              nextDraft,
+            ),
+        };
+
+        setAutosaveStatus(
+          "saved",
+        );
+
         setProject(next);
 
         setSelectedThreadId(
@@ -605,6 +956,11 @@ export function ResearchAIPage() {
       if (!selectedProjectId) {
         setProject(null);
         setAssistantProvider(null);
+        lastSavedProjectRef.current =
+          null;
+        setAutosaveStatus(
+          "ready",
+        );
         return;
       }
 
@@ -661,7 +1017,10 @@ export function ResearchAIPage() {
   };
 
   const handleSaveProject = async () => {
-    if (!project) {
+    if (
+      !project ||
+      saving
+    ) {
       return;
     }
 
@@ -669,25 +1028,39 @@ export function ResearchAIPage() {
     setError("");
 
     try {
-      const updated = await updateResearchProject(
-        apiFetch,
-        project.id,
-        {
-          title: project.title.trim() || "Untitled research project",
-          researchQuestion:
-            project.researchQuestion?.trim() || null,
-          description:
-            project.description?.trim() || null,
-        },
-      );
+      const saved =
+        await flushProjectAutosave();
 
-      setProject(updated);
-      await loadWorkspace(true);
-    } catch (requestError) {
-      setError(messageFrom(requestError));
+      if (saved) {
+        await loadWorkspace(
+          true,
+        );
+      }
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSelectProject = async (
+    nextProjectId: string,
+  ) => {
+    if (
+      nextProjectId ===
+      selectedProjectId
+    ) {
+      return;
+    }
+
+    const saved =
+      await flushProjectAutosave();
+
+    if (!saved) {
+      return;
+    }
+
+    setSelectedProjectId(
+      nextProjectId,
+    );
   };
 
   const handleProjectStatus = async (
@@ -1295,7 +1668,7 @@ export function ResearchAIPage() {
                 key={item.id}
                 type="button"
                 className={selectedProjectId === item.id ? "active" : ""}
-                onClick={() => setSelectedProjectId(item.id)}
+                onClick={() => void handleSelectProject(item.id)}
               >
                 <span className="research-project-icon">
                   <Brain size={16} />
@@ -1342,6 +1715,7 @@ export function ResearchAIPage() {
                         title: event.target.value,
                       })
                     }
+                    onBlur={() => void flushProjectAutosave()}
                   />
                   <small>
                     Updated {formatDate(project.updatedAt)}
@@ -1349,6 +1723,37 @@ export function ResearchAIPage() {
                 </div>
 
                 <div className="research-project-actions">
+                  <div
+                    className={`research-autosave-status ${autosaveStatus}`}
+                    aria-live="polite"
+                    title="Project title, question and context autosave automatically"
+                  >
+                    {autosaveStatus === "saving" ? (
+                      <LoaderCircle
+                        className="research-spin"
+                        size={14}
+                      />
+                    ) : autosaveStatus === "saved" ? (
+                      <CheckCircle2 size={14} />
+                    ) : autosaveStatus === "error" ? (
+                      <AlertTriangle size={14} />
+                    ) : (
+                      <Save size={14} />
+                    )}
+
+                    <span>
+                      {autosaveStatus === "saving"
+                        ? "Saving…"
+                        : autosaveStatus === "saved"
+                          ? "Saved"
+                          : autosaveStatus === "error"
+                            ? "Save failed"
+                            : autosaveStatus === "dirty"
+                              ? "Unsaved changes"
+                              : "Autosave ready"}
+                    </span>
+                  </div>
+
                   <button
                     type="button"
                     title={project.isPinned ? "Unpin" : "Pin"}
@@ -1358,7 +1763,11 @@ export function ResearchAIPage() {
                   </button>
                   <button
                     type="button"
-                    title="Save project"
+                    title="Save now"
+                    disabled={
+                      saving ||
+                      autosaveStatus === "saving"
+                    }
                     onClick={() => void handleSaveProject()}
                   >
                     <Save size={16} />
@@ -1426,6 +1835,7 @@ export function ResearchAIPage() {
                             researchQuestion: event.target.value,
                           })
                         }
+                        onBlur={() => void flushProjectAutosave()}
                       />
                     </article>
 
@@ -1440,6 +1850,7 @@ export function ResearchAIPage() {
                             description: event.target.value,
                           })
                         }
+                        onBlur={() => void flushProjectAutosave()}
                       />
                     </article>
 
