@@ -20,6 +20,12 @@ import {
 import type {
   NotesWorkspace,
 } from "../notes/notes.types";
+import {
+  getResearchWorkspace,
+} from "../research-ai/research-ai.service";
+import type {
+  ResearchWorkspace,
+} from "../research-ai/research-ai.types";
 import type {
   PlannerWorkspace,
   StudyTask,
@@ -138,6 +144,12 @@ function formatNoteUpdated(
       month: "short",
     },
   ).format(date);
+}
+
+function formatResearchUpdated(
+  value: string,
+): string {
+  return formatNoteUpdated(value);
 }
 
 function studyDayLabel(
@@ -435,6 +447,7 @@ export function DashboardPage() {
   const [planner, setPlanner] = useState<PlannerWorkspace | null>(null);
   const [mockTests, setMockTests] = useState<MockTestWorkspace | null>(null);
   const [notes, setNotes] = useState<NotesWorkspace | null>(null);
+  const [research, setResearch] = useState<ResearchWorkspace | null>(null);
   const [quickNoteTitle, setQuickNoteTitle] = useState("");
   const [quickNoteContent, setQuickNoteContent] = useState("");
   const [creatingQuickNote, setCreatingQuickNote] = useState(false);
@@ -453,6 +466,7 @@ export function DashboardPage() {
         plannerResult,
         mockTestResult,
         notesResult,
+        researchResult,
       ] = await Promise.all([
         getAcademicWorkspace(
           apiFetch,
@@ -468,6 +482,9 @@ export function DashboardPage() {
           {
             status: "ACTIVE",
           },
+        ),
+        getResearchWorkspace(
+          apiFetch,
         ),
       ]);
 
@@ -485,6 +502,10 @@ export function DashboardPage() {
 
       setNotes(
         notesResult,
+      );
+
+      setResearch(
+        researchResult,
       );
     } catch (caught) {
       setError(
@@ -507,7 +528,8 @@ export function DashboardPage() {
       !workspace ||
       !planner ||
       !mockTests ||
-      !notes
+      !notes ||
+      !research
     ) {
       return null;
     }
@@ -998,6 +1020,43 @@ export function DashboardPage() {
         })
         .slice(0, 4);
 
+
+    const recentResearchProjects =
+      [...research.projects]
+        .sort((left, right) => {
+          const pinDifference =
+            Number(right.isPinned) -
+            Number(left.isPinned);
+
+          if (pinDifference !== 0) {
+            return pinDifference;
+          }
+
+          return (
+            new Date(right.updatedAt).getTime() -
+            new Date(left.updatedAt).getTime()
+          );
+        })
+        .slice(0, 4);
+
+    const recentResearchSources =
+      [...research.recentSources]
+        .sort((left, right) => {
+          const pinDifference =
+            Number(right.isPinned) -
+            Number(left.isPinned);
+
+          if (pinDifference !== 0) {
+            return pinDifference;
+          }
+
+          return (
+            new Date(right.updatedAt).getTime() -
+            new Date(left.updatedAt).getTime()
+          );
+        })
+        .slice(0, 4);
+
     return {
       subjects,
       chapters,
@@ -1056,11 +1115,14 @@ export function DashboardPage() {
           ? "/mock-tests"
           : "/subjects",
       recentNotes,
+      recentResearchProjects,
+      recentResearchSources,
     };
   }, [
     mockTests,
     notes,
     planner,
+    research,
     workspace,
   ]);
 
@@ -1138,6 +1200,7 @@ export function DashboardPage() {
     !planner ||
     !mockTests ||
     !notes ||
+    !research ||
     !data
   ) {
     return (
@@ -1834,6 +1897,7 @@ export function DashboardPage() {
               <Link to="/flashcards"><BookOpenCheck size={16} />Flashcards</Link>
               <Link to="/ai-mentor"><Bot size={16} />AI Doubt Solver</Link>
               <Link to="/notes"><FileText size={16} />Quick Note</Link>
+              <Link to="/research-ai"><Sparkles size={16} />Research AI</Link>
               <Link to="/memory-engine"><Brain size={16} />Memory Review</Link>
               <Link to="/question-bank"><Library size={16} />Question Bank</Link>
               <Link to="/planner"><Clock3 size={16} />Study Planner</Link>
@@ -1947,12 +2011,243 @@ export function DashboardPage() {
         </aside>
       </section>
 
+      <section className="ref-research-dashboard">
+        <Panel
+          title="Research AI"
+          eyebrow="Connected evidence workspace"
+          className="ref-research-panel"
+          action={
+            <Link
+              className="ref-research-open"
+              to="/research-ai"
+            >
+              Open Research AI
+              <ArrowUpRight size={13} />
+            </Link>
+          }
+        >
+          <div className="ref-research-summary">
+            <span>
+              <Library size={14} />
+              <small>Active</small>
+              <strong>
+                {research.summary.activeProjects}
+              </strong>
+            </span>
+
+            <span>
+              <FileText size={14} />
+              <small>Ready sources</small>
+              <strong>
+                {research.summary.readySources}
+              </strong>
+            </span>
+
+            <span>
+              <Sparkles size={14} />
+              <small>Threads</small>
+              <strong>
+                {research.summary.totalThreads}
+              </strong>
+            </span>
+
+            <span>
+              <Brain size={14} />
+              <small>Knowledge nodes</small>
+              <strong>
+                {research.summary.totalNodes}
+              </strong>
+            </span>
+          </div>
+
+          <div className="ref-research-dashboard-grid">
+            <section className="ref-research-projects">
+              <header>
+                <div>
+                  <strong>
+                    Recent projects
+                  </strong>
+
+                  <small>
+                    Pinned and recently updated research.
+                  </small>
+                </div>
+
+                <Link to="/research-ai">
+                  View all
+                  <ArrowRight size={12} />
+                </Link>
+              </header>
+
+              {data.recentResearchProjects.length ===
+              0 ? (
+                <div className="ref-research-empty">
+                  <Brain size={24} />
+
+                  <strong>
+                    No research projects yet
+                  </strong>
+
+                  <small>
+                    Build a focused question and connect supporting evidence.
+                  </small>
+
+                  <Link to="/research-ai">
+                    <Plus size={13} />
+                    Start a project
+                  </Link>
+                </div>
+              ) : (
+                <div className="ref-research-project-list">
+                  {data.recentResearchProjects.map(
+                    (project) => (
+                      <Link
+                        key={project.id}
+                        className="ref-research-project"
+                        to="/research-ai"
+                        aria-label={`Open Research AI project ${project.title}`}
+                      >
+                        <span>
+                          <Brain size={15} />
+                        </span>
+
+                        <div>
+                          <header>
+                            <strong>
+                              {project.title}
+                            </strong>
+
+                            {project.isPinned && (
+                              <Pin size={11} />
+                            )}
+                          </header>
+
+                          <p>
+                            {project.researchQuestion ||
+                              project.description ||
+                              "Structured evidence project"}
+                          </p>
+
+                          <footer>
+                            <span>
+                              {project.subject?.name ||
+                                "Independent research"}
+                            </span>
+
+                            <small>
+                              {project._count.sources}
+                              {" "}
+                              source
+                              {project._count.sources === 1
+                                ? ""
+                                : "s"}
+                              {" · "}
+                              {project._count.mindMapNodes}
+                              {" "}
+                              node
+                              {project._count.mindMapNodes === 1
+                                ? ""
+                                : "s"}
+                            </small>
+                          </footer>
+                        </div>
+
+                        <ArrowRight size={13} />
+                      </Link>
+                    ),
+                  )}
+                </div>
+              )}
+            </section>
+
+            <section className="ref-research-sources">
+              <header>
+                <div>
+                  <strong>
+                    Evidence library
+                  </strong>
+
+                  <small>
+                    Recently saved sources across projects.
+                  </small>
+                </div>
+
+                <span>
+                  {research.summary.totalSources}
+                  {" "}
+                  total
+                </span>
+              </header>
+
+              {data.recentResearchSources.length ===
+              0 ? (
+                <div className="ref-research-empty compact">
+                  <FileText size={22} />
+
+                  <strong>
+                    No evidence sources yet
+                  </strong>
+
+                  <small>
+                    Add papers, web pages, books, videos or notes from Research AI.
+                  </small>
+                </div>
+              ) : (
+                <div className="ref-research-source-list">
+                  {data.recentResearchSources.map(
+                    (source) => (
+                      <Link
+                        key={source.id}
+                        className="ref-research-source"
+                        to="/research-ai"
+                        aria-label={`Open Research AI source ${source.title}`}
+                      >
+                        <span>
+                          <FileText size={14} />
+                        </span>
+
+                        <div>
+                          <strong>
+                            {source.title}
+                          </strong>
+
+                          <small>
+                            {source.researchProject?.title ||
+                              source.type.replaceAll("_", " ")}
+                          </small>
+                        </div>
+
+                        <footer>
+                          <b
+                            className={
+                              source.status.toLowerCase()
+                            }
+                          >
+                            {source.status}
+                          </b>
+
+                          <small>
+                            {formatResearchUpdated(
+                              source.updatedAt,
+                            )}
+                          </small>
+                        </footer>
+                      </Link>
+                    ),
+                  )}
+                </div>
+              )}
+            </section>
+          </div>
+        </Panel>
+      </section>
+
       <footer className="ref-footer">
         <span>
           <i />
           {data.activeStudySession
             ? "Study session active"
-            : "Academic, planner, mock-test and notes data connected"}
+            : "Academic, planner, mock-test, notes and research data connected"}
         </span>
         <button disabled={refreshing} type="button" onClick={() => void load(true)}>
           <RefreshCw className={refreshing ? "ref-spin" : ""} size={14} />
