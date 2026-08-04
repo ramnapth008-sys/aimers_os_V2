@@ -22,6 +22,11 @@ import {
   PlannerPage,
 } from "../../pages/planner";
 
+import {
+  MockTestsPage,
+} from "../../pages/mock-tests";
+
+
 
 import { ModulePage } from "../../pages/shared/ModulePage";
 
@@ -74,13 +79,6 @@ const modules = [
     title: "Question Bank",
     description:
       "Practice filtered questions with explanations and performance tracking.",
-  },
-  {
-    path: "mock-tests",
-    eyebrow: "ASSESSMENT ENGINE",
-    title: "Mock Tests",
-    description:
-      "Attempt timed assessments and analyse every answer.",
   },
   {
     path: "flashcards",
@@ -208,6 +206,11 @@ export function AppRouter() {
           <Route
             path="planner"
             element={<PlannerPage />}
+          />
+
+          <Route
+            path="mock-tests"
+            element={<MockTestsPage />}
           />
 
           {modules.map((module) => (
