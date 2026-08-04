@@ -66,7 +66,65 @@ export const environmentSchema = z.object({
     .default("aimers_refresh_token"),
 
   COOKIE_SECURE: booleanString,
-});
+
+  AI_PROVIDER: z
+    .enum([
+      "mock",
+      "openai",
+    ])
+    .default("mock"),
+
+  AI_MODEL: z
+    .string()
+    .trim()
+    .min(1)
+    .default("gpt-5-mini"),
+
+  AI_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(1000)
+    .max(120000)
+    .default(45000),
+
+  AI_MAX_OUTPUT_TOKENS: z.coerce
+    .number()
+    .int()
+    .min(64)
+    .max(8192)
+    .default(1200),
+
+  OPENAI_BASE_URL: z
+    .string()
+    .url()
+    .default(
+      "https://api.openai.com/v1",
+    ),
+
+  OPENAI_API_KEY: z
+    .string()
+    .trim()
+    .optional(),
+}).superRefine(
+  (
+    value,
+    context,
+  ) => {
+    if (
+      value.AI_PROVIDER === "openai" &&
+      !value.OPENAI_API_KEY
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: [
+          "OPENAI_API_KEY",
+        ],
+        message:
+          "OPENAI_API_KEY is required when AI_PROVIDER=openai.",
+      });
+    }
+  },
+);
 
 export type Environment =
   z.infer<typeof environmentSchema>;

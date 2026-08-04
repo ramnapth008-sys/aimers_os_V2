@@ -3,6 +3,10 @@ import {
 } from "@nestjs/common";
 
 import {
+  AiModule,
+} from "../../ai/ai.module";
+
+import {
   ResearchController,
 } from "./research.controller";
 
@@ -11,6 +15,10 @@ import {
 } from "./research.service";
 
 @Module({
+  imports: [
+    AiModule,
+  ],
+
   controllers: [
     ResearchController,
   ],

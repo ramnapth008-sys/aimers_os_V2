@@ -35,6 +35,10 @@ import {
 } from "./dto/create-research-message.dto";
 
 import {
+  GenerateResearchAssistantReplyDto,
+} from "./dto/generate-research-assistant-reply.dto";
+
+import {
   CreateResearchMindMapEdgeDto,
 } from "./dto/create-research-mind-map-edge.dto";
 
@@ -294,6 +298,28 @@ export class ResearchController {
   ) {
     return this.researchService
       .createMessage(
+        user.userId,
+        projectId,
+        threadId,
+        dto,
+      );
+  }
+
+  @Post(
+    "projects/:projectId/threads/:threadId/assistant",
+  )
+  generateAssistantReply(
+    @CurrentUser()
+    user: AuthenticatedUser,
+    @Param("projectId")
+    projectId: string,
+    @Param("threadId")
+    threadId: string,
+    @Body()
+    dto: GenerateResearchAssistantReplyDto,
+  ) {
+    return this.researchService
+      .generateAssistantReply(
         user.userId,
         projectId,
         threadId,

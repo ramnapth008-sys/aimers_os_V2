@@ -4,7 +4,7 @@ import {
   MinLength,
 } from "class-validator";
 
-export class CreateResearchMessageDto {
+export class GenerateResearchAssistantReplyDto {
   @IsString()
   @MinLength(1)
   @MaxLength(12000)

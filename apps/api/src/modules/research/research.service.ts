@@ -1,7 +1,12 @@
 import {
+  createHash,
+} from "node:crypto";
+
+import {
   BadRequestException,
   Inject,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from "@nestjs/common";
 
@@ -14,6 +19,10 @@ import {
 } from "@aimers/database";
 
 import {
+  AiService,
+} from "../../ai/ai.service";
+
+import {
   DatabaseService,
 } from "../../infrastructure/database/database.service";
 
@@ -24,6 +33,10 @@ import type {
 import type {
   CreateResearchMessageDto,
 } from "./dto/create-research-message.dto";
+
+import type {
+  GenerateResearchAssistantReplyDto,
+} from "./dto/generate-research-assistant-reply.dto";
 
 import type {
   CreateResearchMindMapEdgeDto,
@@ -216,12 +229,66 @@ const projectWorkspaceInclude = {
   },
 };
 
+function clipResearchText(
+  value:
+    | string
+    | null
+    | undefined,
+  maximum = 1800,
+): string {
+  const normalized =
+    value?.trim() ?? "";
+
+  if (
+    normalized.length <= maximum
+  ) {
+    return normalized;
+  }
+
+  return `${normalized.slice(
+    0,
+    maximum,
+  ).trimEnd()}…`;
+}
+
+function researchCitationIndexes(
+  content: string,
+  sourceCount: number,
+): number[] {
+  const indexes =
+    new Set<number>();
+
+  for (
+    const match
+    of content.matchAll(
+      /\[S(\d+)\]/g,
+    )
+  ) {
+    const number =
+      Number(match[1]);
+
+    if (
+      Number.isInteger(number) &&
+      number >= 1 &&
+      number <= sourceCount
+    ) {
+      indexes.add(number - 1);
+    }
+  }
+
+  return [...indexes];
+}
+
 @Injectable()
 export class ResearchService {
   constructor(
     @Inject(DatabaseService)
     private readonly database:
       DatabaseService,
+
+    @Inject(AiService)
+    private readonly aiService:
+      AiService,
   ) {}
 
   private async getStudentContext(
@@ -1457,12 +1524,11 @@ export class ResearchService {
             researchThreadId:
               thread.id,
             role:
-              dto.role ??
               ResearchMessageRole.USER,
             content:
-              dto.content,
+              dto.content.trim(),
             model:
-              dto.model ?? null,
+              null,
           },
         });
 
@@ -1480,6 +1546,541 @@ export class ResearchService {
       });
 
     return message;
+  }
+
+  async generateAssistantReply(
+    userId: string,
+    projectId: string,
+    threadId: string,
+    dto:
+      GenerateResearchAssistantReplyDto,
+  ) {
+    const content =
+      dto.content.trim();
+
+    if (!content) {
+      throw new BadRequestException(
+        "A research question is required.",
+      );
+    }
+
+    const {
+      profile,
+    } =
+      await this.getStudentContext(
+        userId,
+      );
+
+    const thread =
+      await this.getOwnedThread(
+        profile.id,
+        projectId,
+        threadId,
+      );
+
+    const [
+      project,
+      history,
+    ] = await Promise.all([
+      this.database
+        .researchProject
+        .findUnique({
+          where: {
+            id:
+              projectId,
+          },
+
+          select: {
+            title:
+              true,
+            description:
+              true,
+            researchQuestion:
+              true,
+
+            subject: {
+              select: {
+                name:
+                  true,
+              },
+            },
+
+            chapter: {
+              select: {
+                name:
+                  true,
+              },
+            },
+
+            topic: {
+              select: {
+                name:
+                  true,
+              },
+            },
+
+            sources: {
+              where: {
+                status: {
+                  not:
+                    ResearchSourceStatus
+                      .ARCHIVED,
+                },
+              },
+
+              take:
+                12,
+
+              orderBy: [
+                {
+                  isPinned:
+                    "desc",
+                },
+                {
+                  updatedAt:
+                    "desc",
+                },
+              ],
+
+              select: {
+                id:
+                  true,
+                title:
+                  true,
+                type:
+                  true,
+                status:
+                  true,
+                url:
+                  true,
+                author:
+                  true,
+                publisher:
+                  true,
+                summary:
+                  true,
+                rawContent:
+                  true,
+                citationKey:
+                  true,
+
+                excerpts: {
+                  take:
+                    5,
+
+                  orderBy: {
+                    createdAt:
+                      "desc",
+                  },
+
+                  select: {
+                    quote:
+                      true,
+                    locator:
+                      true,
+                    pageNumber:
+                      true,
+                  },
+                },
+              },
+            },
+
+            mindMapNodes: {
+              take:
+                20,
+
+              orderBy: [
+                {
+                  sequenceNumber:
+                    "asc",
+                },
+                {
+                  createdAt:
+                    "asc",
+                },
+              ],
+
+              select: {
+                type:
+                  true,
+                title:
+                  true,
+                content:
+                  true,
+              },
+            },
+          },
+        }),
+
+      this.database
+        .researchMessage
+        .findMany({
+          where: {
+            researchThreadId:
+              thread.id,
+
+            role: {
+              in: [
+                ResearchMessageRole.USER,
+                ResearchMessageRole.ASSISTANT,
+              ],
+            },
+          },
+
+          take:
+            20,
+
+          orderBy: {
+            createdAt:
+              "desc",
+          },
+
+          select: {
+            role:
+              true,
+            content:
+              true,
+          },
+        }),
+    ]);
+
+    if (!project) {
+      throw new NotFoundException(
+        "The requested research project was not found.",
+      );
+    }
+
+    const sourceBlocks =
+      project.sources.map(
+        (
+          source,
+          index,
+        ) => {
+          const excerpts =
+            source.excerpts
+              .map(
+                (
+                  excerpt,
+                  excerptIndex,
+                ) => {
+                  const locator = [
+                    excerpt.locator,
+                    excerpt.pageNumber
+                      ? `page ${excerpt.pageNumber}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(", ");
+
+                  return [
+                    `  Excerpt ${excerptIndex + 1}${locator ? ` (${locator})` : ""}:`,
+                    `  ${clipResearchText(
+                      excerpt.quote,
+                      700,
+                    )}`,
+                  ].join("\n");
+                },
+              )
+              .join("\n");
+
+          const evidence =
+            clipResearchText(
+              source.summary ||
+              source.rawContent,
+              1800,
+            );
+
+          return [
+            `[S${index + 1}] ${source.title}`,
+            `Type: ${String(source.type).replaceAll("_", " ")}`,
+            `Status: ${source.status}`,
+            source.author
+              ? `Author: ${source.author}`
+              : "",
+            source.publisher
+              ? `Publisher: ${source.publisher}`
+              : "",
+            source.url
+              ? `URL: ${source.url}`
+              : "",
+            source.citationKey
+              ? `Citation key: ${source.citationKey}`
+              : "",
+            evidence
+              ? `Saved evidence: ${evidence}`
+              : "Saved evidence: No summary or extracted content is available.",
+            excerpts,
+          ]
+            .filter(Boolean)
+            .join("\n");
+        },
+      );
+
+    const nodeContext =
+      project.mindMapNodes
+        .map(
+          (node) =>
+            `- ${node.type}: ${node.title}${node.content ? ` — ${clipResearchText(node.content, 500)}` : ""}`,
+        )
+        .join("\n");
+
+    const instructions = [
+      "You are AIMERS Research AI, an evidence-first academic research assistant for a student.",
+      "",
+      "Answer the student's exact question clearly and directly.",
+      "Use the saved project context and evidence sources when relevant.",
+      "Never invent a source, quote, experiment, author, statistic or citation.",
+      "Cite only the saved sources listed below, using their exact inline labels such as [S1].",
+      "Do not add a [S#] label unless that saved source genuinely supports the nearby claim.",
+      "Clearly state when the saved evidence is insufficient, conflicting or absent.",
+      "Separate evidence-backed statements from general reasoning or background explanation.",
+      "Do not claim that you searched the web or opened an external file.",
+      "Prefer concise structure, precise terminology and an explicit conclusion.",
+      "",
+      `Project title: ${project.title}`,
+      `Research question: ${project.researchQuestion || "Not defined"}`,
+      `Project description: ${clipResearchText(project.description, 1400) || "Not defined"}`,
+      `Academic subject: ${project.subject?.name || "Independent research"}`,
+      `Chapter: ${project.chapter?.name || "Not linked"}`,
+      `Topic: ${project.topic?.name || "Not linked"}`,
+      "",
+      "Knowledge-map context:",
+      nodeContext ||
+        "No knowledge-map nodes have been added.",
+      "",
+      "Saved evidence sources:",
+      sourceBlocks.join("\n\n") ||
+        "No saved evidence sources are available. Do not fabricate citations.",
+    ].join("\n");
+
+    const conversationMessages:
+      Array<{
+        role:
+          | "user"
+          | "assistant";
+        content:
+          string;
+      }> = [];
+
+    for (
+      const item
+      of [...history].reverse()
+    ) {
+      conversationMessages.push({
+        role:
+          item.role ===
+          ResearchMessageRole.ASSISTANT
+            ? "assistant"
+            : "user",
+
+        content:
+          clipResearchText(
+            item.content,
+            5000,
+          ),
+      });
+    }
+
+    conversationMessages.push({
+      role:
+        "user",
+      content,
+    });
+
+    const result =
+      await this.aiService
+        .generateText({
+          instructions,
+          messages:
+            conversationMessages,
+
+          safetyIdentifier:
+            createHash("sha256")
+              .update(profile.id)
+              .digest("hex")
+              .slice(0, 40),
+        });
+
+    const citedIndexes =
+      researchCitationIndexes(
+        result.text,
+        project.sources.length,
+      );
+
+    const records =
+      await this.database
+        .$transaction(
+          async (
+            transaction,
+          ) => {
+            const userMessage =
+              await transaction
+                .researchMessage
+                .create({
+                  data: {
+                    researchThreadId:
+                      thread.id,
+                    role:
+                      ResearchMessageRole.USER,
+                    content,
+                    model:
+                      null,
+                  },
+                });
+
+            const assistantMessage =
+              await transaction
+                .researchMessage
+                .create({
+                  data: {
+                    researchThreadId:
+                      thread.id,
+                    role:
+                      ResearchMessageRole.ASSISTANT,
+                    content:
+                      result.text,
+                    model:
+                      result.model,
+                    promptTokens:
+                      result.inputTokens,
+                    completionTokens:
+                      result.outputTokens,
+                  },
+                });
+
+            if (citedIndexes.length > 0) {
+              await transaction
+                .researchCitation
+                .createMany({
+                  data:
+                    citedIndexes.map(
+                      (
+                        sourceIndex,
+                      ) => ({
+                        researchMessageId:
+                          assistantMessage.id,
+                        researchSourceId:
+                          project.sources[
+                            sourceIndex
+                          ].id,
+                        label:
+                          `[S${sourceIndex + 1}]`,
+                      }),
+                    ),
+                });
+            }
+
+            await transaction
+              .researchThread
+              .update({
+                where: {
+                  id:
+                    thread.id,
+                },
+
+                data: {
+                  updatedAt:
+                    new Date(),
+                },
+              });
+
+            return {
+              userMessageId:
+                userMessage.id,
+              assistantMessageId:
+                assistantMessage.id,
+            };
+          },
+        );
+
+    const messageInclude = {
+      citations: {
+        orderBy: {
+          createdAt:
+            "asc" as const,
+        },
+
+        include: {
+          researchSource: {
+            select: {
+              id:
+                true,
+              title:
+                true,
+              type:
+                true,
+              citationKey:
+                true,
+              url:
+                true,
+            },
+          },
+
+          researchSourceExcerpt: {
+            select: {
+              id:
+                true,
+              quote:
+                true,
+              locator:
+                true,
+              pageNumber:
+                true,
+            },
+          },
+        },
+      },
+    };
+
+    const [
+      userMessage,
+      assistantMessage,
+    ] = await Promise.all([
+      this.database
+        .researchMessage
+        .findUnique({
+          where: {
+            id:
+              records.userMessageId,
+          },
+
+          include:
+            messageInclude,
+        }),
+
+      this.database
+        .researchMessage
+        .findUnique({
+          where: {
+            id:
+              records.assistantMessageId,
+          },
+
+          include:
+            messageInclude,
+        }),
+    ]);
+
+    if (
+      !userMessage ||
+      !assistantMessage
+    ) {
+      throw new InternalServerErrorException(
+        "Research AI generated a response but could not reload the stored conversation.",
+      );
+    }
+
+    return {
+      userMessage,
+      assistantMessage,
+
+      provider: {
+        name:
+          result.provider,
+        model:
+          result.model,
+      },
+    };
   }
 
   async createCitation(

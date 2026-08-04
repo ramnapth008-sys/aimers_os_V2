@@ -63,6 +63,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@aimers/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@aimers/database':
         specifier: workspace:*
         version: link:../../packages/database
