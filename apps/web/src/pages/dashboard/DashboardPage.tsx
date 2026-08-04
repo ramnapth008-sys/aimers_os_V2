@@ -12,10 +12,14 @@ import {
 import { Link } from "react-router-dom";
 import { getAcademicWorkspace } from "../subjects/subjects.service";
 import { getPlannerWorkspace } from "../planner/planner.service";
+import { getMockTestWorkspace } from "../mock-tests/mock-tests.service";
 import type {
   PlannerWorkspace,
   StudyTask,
 } from "../planner/planner.types";
+import type {
+  MockTestWorkspace,
+} from "../mock-tests/mock-tests.types";
 import type {
   AcademicChapter, AcademicSyllabusSubject, AcademicWorkspace,
   ChapterProgress, TopicMastery,
@@ -271,7 +275,15 @@ function makePoints(values: readonly number[]): string {
 }
 
 function MetricCard({
-  label, value, unit, detail, change, icon, tone, progress,
+  label,
+  value,
+  unit,
+  detail,
+  change,
+  icon,
+  tone,
+  progress,
+  to = "/subjects",
 }: {
   label: string;
   value: string;
@@ -281,13 +293,14 @@ function MetricCard({
   icon: ReactNode;
   tone: Tone;
   progress?: number;
+  to?: string;
 }) {
   return (
     <article className={`ref-metric ref-${tone}`}>
       <header>
         <span>{icon}</span>
         <small>{label}</small>
-        <Link to="/subjects" aria-label={`Open ${label}`}>
+        <Link to={to} aria-label={`Open ${label}`}>
           <ArrowUpRight size={12} />
         </Link>
       </header>
@@ -374,6 +387,7 @@ export function DashboardPage() {
   const { apiFetch, user } = useAuth();
   const [workspace, setWorkspace] = useState<AcademicWorkspace | null>(null);
   const [planner, setPlanner] = useState<PlannerWorkspace | null>(null);
+  const [mockTests, setMockTests] = useState<MockTestWorkspace | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -386,11 +400,15 @@ export function DashboardPage() {
       const [
         academicResult,
         plannerResult,
+        mockTestResult,
       ] = await Promise.all([
         getAcademicWorkspace(
           apiFetch,
         ),
         getPlannerWorkspace(
+          apiFetch,
+        ),
+        getMockTestWorkspace(
           apiFetch,
         ),
       ]);
@@ -402,11 +420,15 @@ export function DashboardPage() {
       setPlanner(
         plannerResult,
       );
+
+      setMockTests(
+        mockTestResult,
+      );
     } catch (caught) {
       setError(
         caught instanceof Error
           ? caught.message
-          : "Unable to load academic dashboard data.",
+          : "Unable to load dashboard data.",
       );
     } finally {
       setLoading(false);
@@ -419,7 +441,7 @@ export function DashboardPage() {
   }, [load]);
 
   const data = useMemo(() => {
-    if (!workspace || !planner) return null;
+    if (!workspace || !planner || !mockTests) return null;
 
     const subjects = workspace.syllabusVersion.subjects;
     const chapters: ChapterEntry[] = subjects.flatMap((subject) =>
@@ -458,17 +480,38 @@ export function DashboardPage() {
       (item) => progressByChapter.get(item.chapter.id)?.state === "IN_PROGRESS",
     ).length;
 
-    const attempts = workspace.chapterProgress.reduce(
-      (sum, progress) => sum + progress.questionAttempts,
-      0,
-    );
+    const attempts =
+      mockTests.attempts.reduce(
+        (
+          total,
+          attempt,
+        ) =>
+          total +
+          attempt.attemptedQuestions,
+        0,
+      );
 
-    const correct = workspace.chapterProgress.reduce(
-      (sum, progress) => sum + progress.correctAnswers,
-      0,
-    );
+    const correct =
+      mockTests.attempts.reduce(
+        (
+          total,
+          attempt,
+        ) =>
+          total +
+          attempt.correctAnswers,
+        0,
+      );
 
-    const accuracy = attempts === 0 ? 0 : clamp((correct / attempts) * 100);
+    const accuracy =
+      attempts === 0
+        ? 0
+        : clamp(
+            (
+              correct /
+              attempts
+            ) *
+            100,
+          );
     const assessedTopics = workspace.topicMastery.filter((item) => assessed(item));
     const mastery = assessedTopics.length === 0
       ? 0
@@ -528,27 +571,125 @@ export function DashboardPage() {
         };
       });
 
-    const weakTopics = topics
+    const academicWeakTopics = topics
       .map(({ subject, topic }) => {
-        const record = masteryByTopic.get(topic.id);
-        const isAssessed = assessed(record);
-        const score = record?.masteryScore ?? 0;
+        const record =
+          masteryByTopic.get(
+            topic.id,
+          );
+
+        const isAssessed =
+          assessed(record);
+
+        const score =
+          record?.masteryScore ??
+          0;
 
         return {
-          id: topic.id,
-          topic: topic.name,
-          subject: subject.subject.name,
-          assessed: isAssessed,
+          id:
+            `academic-${topic.id}`,
+
+          topic:
+            topic.name,
+
+          subject:
+            subject.subject.name,
+
+          detail:
+            subject.subject.name,
+
+          assessed:
+            isAssessed,
+
           score,
-          tone: signalTone(score, isAssessed),
+
+          tone:
+            signalTone(
+              score,
+              isAssessed,
+            ),
+
+          source:
+            "academic" as const,
         };
       })
-      .filter((item) => !item.assessed || item.score < 60)
-      .sort((left, right) => {
-        if (left.assessed !== right.assessed) return left.assessed ? -1 : 1;
-        return left.score - right.score;
-      })
-      .slice(0, 4);
+      .filter(
+        (item) =>
+          !item.assessed ||
+          item.score < 60,
+      )
+      .sort(
+        (
+          left,
+          right,
+        ) => {
+          if (
+            left.assessed !==
+            right.assessed
+          ) {
+            return left.assessed
+              ? -1
+              : 1;
+          }
+
+          return (
+            left.score -
+            right.score
+          );
+        },
+      );
+
+    const mockWeakTopics =
+      mockTests.weakTopics.map(
+        (item) => ({
+          id:
+            `mock-${item.topicId}`,
+
+          topic:
+            item.topic,
+
+          subject:
+            item.subject,
+
+          detail:
+            `${item.subject} · ${item.occurrences} weak signal${item.occurrences === 1 ? "" : "s"}`,
+
+          assessed: true,
+
+          score:
+            item.averageAccuracy,
+
+          tone:
+            signalTone(
+              item.averageAccuracy,
+              true,
+            ),
+
+          source:
+            "mock-tests" as const,
+        }),
+      );
+
+    const mockWeakTopicIds =
+      new Set(
+        mockTests.weakTopics.map(
+          (item) =>
+            item.topicId,
+        ),
+      );
+
+    const weakTopics = [
+      ...mockWeakTopics,
+      ...academicWeakTopics.filter(
+        (item) =>
+          !mockWeakTopicIds.has(
+            item.id.replace(
+              "academic-",
+              "",
+            ),
+          ),
+      ),
+    ].slice(0, 4);
 
     const {
       timeZone,
@@ -732,6 +873,40 @@ export function DashboardPage() {
       formatChartMinutes,
     );
 
+    const mockScoreSeries =
+      mockTests.trend.map(
+        (item) =>
+          item.percentage,
+      );
+
+    const latestMockScore =
+      mockScoreSeries.length > 0
+        ? mockScoreSeries[
+            mockScoreSeries.length -
+            1
+          ]
+        : null;
+
+    const previousMockScore =
+      mockScoreSeries.length > 1
+        ? mockScoreSeries[
+            mockScoreSeries.length -
+            2
+          ]
+        : null;
+
+    const scoreMovement =
+      latestMockScore !== null &&
+      previousMockScore !== null
+        ? latestMockScore -
+          previousMockScore
+        : null;
+
+    const predictionPoints =
+      makePoints(
+        mockScoreSeries,
+      );
+
     const weakestSubject = [...subjectProgress].sort(
       (left, right) => left.value - right.value,
     )[0] ?? null;
@@ -780,8 +955,21 @@ export function DashboardPage() {
       completedSessionCount:
         planner.activity.completedSessionCount,
       activeStudySession,
+      mockSummary:
+        mockTests.summary,
+      mockTrendCount:
+        mockTests.trend.length,
+      latestMockScore,
+      scoreMovement,
+      predictionPoints,
+      mockWeakTopicCount:
+        mockWeakTopics.length,
+      weakTopicLink:
+        mockWeakTopics.length > 0
+          ? "/mock-tests"
+          : "/subjects",
     };
-  }, [planner, workspace]);
+  }, [mockTests, planner, workspace]);
 
   if (loading) {
     return (
@@ -791,7 +979,7 @@ export function DashboardPage() {
     );
   }
 
-  if (!workspace || !planner || !data) {
+  if (!workspace || !planner || !mockTests || !data) {
     return (
       <div className="ref-dashboard state-page">
         <DashboardState
@@ -838,6 +1026,7 @@ export function DashboardPage() {
           change={`Timezone: ${planner.activity.timeZone}`}
           icon={<Flame size={17} />}
           tone="orange"
+          to="/planner"
         />
         <MetricCard
           label="AI Score"
@@ -847,6 +1036,7 @@ export function DashboardPage() {
           icon={<BarChart3 size={17} />}
           tone="violet"
           progress={data.mastery}
+          to="/subjects"
         />
         <MetricCard
           label="Study Time"
@@ -855,23 +1045,30 @@ export function DashboardPage() {
           change={`${formatStudyMinutes(data.weeklyStudyMinutes)} this week`}
           icon={<Clock3 size={17} />}
           tone="blue"
+          to="/planner"
         />
         <MetricCard
           label="Questions Solved"
           value={`${data.attempts}`}
           detail={`${data.correct} correct answers`}
-          change="Recorded chapter practice"
+          change={`${data.mockSummary.attemptCount} evaluated mock test${data.mockSummary.attemptCount === 1 ? "" : "s"}`}
           icon={<CircleCheckBig size={17} />}
           tone="pink"
+          to="/mock-tests"
         />
         <MetricCard
           label="Accuracy"
           value={`${data.accuracy}%`}
-          detail={data.attempts > 0 ? "Across recorded attempts" : "No attempts yet"}
-          change="Calculated from real answers"
+          detail={
+            data.attempts > 0
+              ? "Across evaluated mock tests"
+              : "No evaluated tests yet"
+          }
+          change="Calculated from real test answers"
           icon={<Target size={17} />}
           tone="green"
           progress={data.accuracy}
+          to="/mock-tests"
         />
       </section>
 
@@ -1127,8 +1324,18 @@ export function DashboardPage() {
 
             <Panel
               title="Weak Topics"
-              eyebrow="Mastery signals"
-              action={<span className="ref-tag">Live</span>}
+              eyebrow={
+                data.mockWeakTopicCount > 0
+                  ? "Mock-test + mastery signals"
+                  : "Mastery signals"
+              }
+              action={
+                <span className="ref-tag">
+                  {data.mockWeakTopicCount > 0
+                    ? "Tests connected"
+                    : "Live"}
+                </span>
+              }
             >
               <div className="ref-weak-list">
                 {data.weakTopics.map((item) => (
@@ -1136,7 +1343,7 @@ export function DashboardPage() {
                     <span className={item.tone}><Zap size={13} /></span>
                     <div>
                       <strong>{item.topic}</strong>
-                      <small>{item.subject}</small>
+                      <small>{item.detail}</small>
                     </div>
                     <b className={item.tone}>
                       {item.assessed ? `${item.score}%` : "Not assessed"}
@@ -1145,24 +1352,111 @@ export function DashboardPage() {
                 ))}
               </div>
 
-              <Link className="ref-panel-link" to="/subjects">
-                Review all weak topics
+              <Link className="ref-panel-link" to={data.weakTopicLink}>
+                Review weak-topic evidence
               </Link>
             </Panel>
 
             <Panel
               title="Predicted Performance"
-              eyebrow="Mock-test engine"
-              action={<span className="ref-tag">Awaiting tests</span>}
+              eyebrow="Observed mock-test evidence"
+              action={
+                <span
+                  className={
+                    data.mockSummary.predictionReady
+                      ? "ref-tag ready"
+                      : "ref-tag"
+                  }
+                >
+                  {data.mockSummary.predictionReady
+                    ? "Baseline ready"
+                    : `${data.mockSummary.attemptCount}/3 tests`}
+                </span>
+              }
             >
-              <div className="ref-prediction">
-                <Target size={28} />
-                <strong>No valid forecast yet</strong>
-                <p>Real mock-test history is required before showing a score or rank.</p>
-              </div>
+              {data.mockSummary.attemptCount === 0 ? (
+                <div className="ref-prediction">
+                  <Target size={28} />
+                  <strong>No valid forecast yet</strong>
+                  <p>
+                    Real mock-test history is required before showing
+                    performance evidence.
+                  </p>
+                </div>
+              ) : (
+                <div className="ref-prediction has-data">
+                  <div className="ref-prediction-head">
+                    <span>
+                      <Target size={18} />
+                    </span>
 
-              <Link className="ref-panel-link" to="/prediction">
-                Open prediction module
+                    <div>
+                      <small>LATEST OBSERVED SCORE</small>
+                      <strong>{data.latestMockScore}%</strong>
+                    </div>
+                  </div>
+
+                  <div className="ref-prediction-stats">
+                    <span>
+                      Average
+                      <strong>
+                        {data.mockSummary.averagePercentage}%
+                      </strong>
+                    </span>
+
+                    <span>
+                      Best
+                      <strong>
+                        {data.mockSummary.bestPercentage}%
+                      </strong>
+                    </span>
+
+                    <span>
+                      Movement
+                      <strong
+                        className={
+                          data.scoreMovement === null
+                            ? ""
+                            : data.scoreMovement >= 0
+                              ? "positive"
+                              : "negative"
+                        }
+                      >
+                        {data.scoreMovement === null
+                          ? "—"
+                          : `${data.scoreMovement > 0 ? "+" : ""}${data.scoreMovement}%`}
+                      </strong>
+                    </span>
+                  </div>
+
+                  {data.mockTrendCount > 1 && (
+                    <div className="ref-prediction-trend">
+                      <svg
+                        viewBox="0 0 420 120"
+                        preserveAspectRatio="none"
+                        role="img"
+                        aria-label="Observed mock-test score movement"
+                      >
+                        <polyline
+                          points={data.predictionPoints}
+                          fill="none"
+                          strokeWidth="4"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      </svg>
+                    </div>
+                  )}
+
+                  <p>
+                    {data.mockSummary.predictionReady
+                      ? "Assessment baseline ready. No rank prediction is generated until a validated prediction model is added."
+                      : `${Math.max(0, 3 - data.mockSummary.attemptCount)} more evaluated test${3 - data.mockSummary.attemptCount === 1 ? "" : "s"} required before enabling prediction readiness.`}
+                  </p>
+                </div>
+              )}
+
+              <Link className="ref-panel-link" to="/mock-tests">
+                Open mock-test analytics
               </Link>
             </Panel>
           </section>
@@ -1292,7 +1586,7 @@ export function DashboardPage() {
           <i />
           {data.activeStudySession
             ? "Study session active"
-            : "Academic and planner data connected"}
+            : "Academic, planner and mock-test data connected"}
         </span>
         <button disabled={refreshing} type="button" onClick={() => void load(true)}>
           <RefreshCw className={refreshing ? "ref-spin" : ""} size={14} />
