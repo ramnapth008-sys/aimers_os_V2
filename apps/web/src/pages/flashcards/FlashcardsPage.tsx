@@ -394,16 +394,29 @@ export function FlashcardsPage() {
 
         <aside className="fc-due-card">
           <BrainCircuit size={38} />
-          <span>DUE NOW</span>
+          <span>
+            {summary.dueNow > 0
+              ? "DUE NOW"
+              : "QUEUE CLEAR"}
+          </span>
+
           <strong>{summary.dueNow}</strong>
+
           <p>
             {summary.dueNow > 0
               ? "Cards are ready for active recall."
               : "Your immediate queue is clear."}
           </p>
+
           <footer>
             <CalendarClock size={15} />
-            {formatDate(summary.nextDueAt)}
+
+            <span>
+              {summary.dueNow > 0
+                ? "Oldest due: "
+                : "Next review: "}
+              {formatDate(summary.nextDueAt)}
+            </span>
           </footer>
         </aside>
       </header>

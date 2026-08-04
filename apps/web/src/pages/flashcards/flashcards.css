@@ -1100,3 +1100,330 @@ kbd {
     padding: 27px 17px;
   }
 }
+
+/* Flashcards premium visual polish */
+
+.fc-hero-copy,
+.fc-due-card,
+.fc-deck,
+.fc-rate button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.fc-hero-copy {
+  background:
+    radial-gradient(
+      circle at 86% 18%,
+      rgba(111, 77, 255, 0.24),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 70% 78%,
+      rgba(50, 139, 255, 0.2),
+      transparent 38%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(18, 24, 42, 0.98),
+      rgba(13, 17, 29, 0.96) 48%,
+      rgba(22, 17, 46, 0.96)
+    );
+  border-color: rgba(126, 153, 255, 0.16);
+}
+
+.fc-hero-copy::before {
+  position: absolute;
+  inset: -35% -10% auto auto;
+  z-index: -1;
+  width: 390px;
+  height: 390px;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle,
+      rgba(142, 101, 255, 0.18),
+      transparent 68%
+    );
+  content: "";
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.fc-hero-copy::after {
+  position: absolute;
+  inset: auto auto -2px 14%;
+  z-index: -1;
+  width: 62%;
+  height: 1px;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(97, 183, 255, 0.75),
+      rgba(151, 103, 255, 0.65),
+      transparent
+    );
+  box-shadow:
+    0 0 20px rgba(89, 168, 255, 0.42);
+  content: "";
+  pointer-events: none;
+}
+
+.fc-due-card {
+  background:
+    radial-gradient(
+      circle at 50% 18%,
+      rgba(66, 163, 255, 0.16),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 82% 86%,
+      rgba(133, 88, 255, 0.14),
+      transparent 38%
+    ),
+    linear-gradient(
+      160deg,
+      rgba(15, 22, 38, 0.98),
+      rgba(11, 16, 28, 0.98)
+    );
+  border-color: rgba(91, 186, 255, 0.18);
+  box-shadow:
+    0 22px 64px rgba(0, 0, 0, 0.24),
+    inset 0 0 0 1px rgba(104, 174, 255, 0.035),
+    0 0 34px rgba(66, 143, 255, 0.08);
+}
+
+.fc-due-card::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    linear-gradient(
+      130deg,
+      rgba(109, 190, 255, 0.12),
+      transparent 24%,
+      transparent 76%,
+      rgba(139, 91, 255, 0.1)
+    );
+  content: "";
+  pointer-events: none;
+}
+
+.fc-due-card > svg {
+  filter:
+    drop-shadow(
+      0 0 16px rgba(102, 173, 255, 0.34)
+    );
+}
+
+.fc-due-card footer {
+  max-width: 100%;
+  justify-content: center;
+  text-align: center;
+}
+
+.fc-actions .primary {
+  background:
+    linear-gradient(
+      135deg,
+      #eef4ff,
+      #d9e6ff 54%,
+      #d8d0ff
+    );
+  border-color: rgba(158, 181, 255, 0.54);
+  box-shadow:
+    0 10px 26px rgba(80, 122, 235, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.fc-actions .primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 14px 32px rgba(83, 123, 235, 0.26),
+    0 0 22px rgba(124, 95, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  filter: brightness(1.02);
+}
+
+.fc-deck {
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.fc-deck::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    radial-gradient(
+      circle at 82% 12%,
+      rgba(91, 137, 255, 0.11),
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.018),
+      transparent 58%
+    );
+  content: "";
+  opacity: 0.72;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.fc-deck:hover {
+  transform: translateY(-3px);
+  border-color: rgba(118, 157, 255, 0.24);
+  background: rgba(73, 103, 185, 0.045);
+  box-shadow:
+    0 18px 36px rgba(0, 0, 0, 0.22),
+    0 0 26px rgba(72, 133, 255, 0.07);
+}
+
+.fc-deck:hover::before {
+  opacity: 1;
+}
+
+.fc-deck button {
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.fc-deck button:hover:not(:disabled) {
+  border-color: rgba(120, 161, 255, 0.38);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(74, 116, 233, 0.18),
+      rgba(111, 78, 218, 0.12)
+    );
+  box-shadow:
+    0 9px 22px rgba(62, 107, 223, 0.13);
+}
+
+.fc-rate button {
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.fc-rate button:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.fc-rate .again {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(132, 31, 58, 0.12),
+      rgba(255, 255, 255, 0.018)
+    );
+}
+
+.fc-rate .hard {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(151, 82, 23, 0.12),
+      rgba(255, 255, 255, 0.018)
+    );
+}
+
+.fc-rate .good {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(31, 96, 162, 0.14),
+      rgba(255, 255, 255, 0.018)
+    );
+}
+
+.fc-rate .easy {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(26, 119, 78, 0.13),
+      rgba(255, 255, 255, 0.018)
+    );
+}
+
+.fc-rate .again:hover:not(:disabled) {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(188, 44, 76, 0.2),
+      rgba(104, 23, 47, 0.08)
+    );
+  box-shadow:
+    0 12px 28px rgba(199, 53, 81, 0.12);
+}
+
+.fc-rate .hard:hover:not(:disabled) {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(195, 111, 36, 0.2),
+      rgba(113, 60, 20, 0.08)
+    );
+  box-shadow:
+    0 12px 28px rgba(218, 132, 48, 0.12);
+}
+
+.fc-rate .good:hover:not(:disabled) {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(46, 127, 214, 0.2),
+      rgba(25, 72, 132, 0.08)
+    );
+  box-shadow:
+    0 12px 28px rgba(64, 145, 233, 0.12);
+}
+
+.fc-rate .easy:hover:not(:disabled) {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(34, 159, 100, 0.2),
+      rgba(20, 92, 62, 0.08)
+    );
+  box-shadow:
+    0 12px 28px rgba(54, 185, 123, 0.12);
+}
+
+.fc-card {
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(89, 132, 255, 0.08),
+      transparent 38%
+    ),
+    rgba(255, 255, 255, 0.022);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.022);
+}
+
+.fc-card.flipped {
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(64, 181, 125, 0.08),
+      transparent 38%
+    ),
+    rgba(47, 113, 78, 0.045);
+}
