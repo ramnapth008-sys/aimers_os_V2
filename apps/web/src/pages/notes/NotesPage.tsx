@@ -17,8 +17,11 @@ import {
   FolderOpen,
   FolderPlus,
   Heading2,
+  History,
+  Eye,
   Italic,
   List,
+  PencilLine,
   LoaderCircle,
   Pin,
   PinOff,
@@ -40,18 +43,24 @@ import {
   useState,
 } from "react";
 
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
 import {
   createNote,
   createNoteFolder,
   getNote,
+  getNoteRevisions,
   getNotesWorkspace,
   permanentlyDeleteNote,
+  restoreNoteRevision,
   updateNote,
   updateNoteStatus,
 } from "./notes.service";
 
 import type {
   NoteRecord,
+  NoteRevision,
   NotesWorkspace,
   NoteStatus,
 } from "./notes.types";
@@ -261,6 +270,40 @@ export function NotesPage() {
       isPinned: false,
     });
 
+  const [
+    editorMode,
+    setEditorMode,
+  ] =
+    useState<
+      "write" | "preview"
+    >("write");
+
+  const [
+    revisions,
+    setRevisions,
+  ] =
+    useState<NoteRevision[]>(
+      [],
+    );
+
+  const [
+    revisionsOpen,
+    setRevisionsOpen,
+  ] =
+    useState(false);
+
+  const [
+    loadingRevisions,
+    setLoadingRevisions,
+  ] =
+    useState(false);
+
+  const [
+    restoringRevision,
+    setRestoringRevision,
+  ] =
+    useState("");
+
   const dirty =
     selectedNote !== null &&
     (
@@ -311,6 +354,15 @@ export function NotesPage() {
         );
         setSavedSnapshot(
           next,
+        );
+        setEditorMode(
+          "write",
+        );
+        setRevisions(
+          [],
+        );
+        setRevisionsOpen(
+          false,
         );
       },
       [],
@@ -610,6 +662,104 @@ export function NotesPage() {
       setSaving(false);
     }
   }
+
+  const loadRevisions =
+    async () => {
+      if (!selectedNote) {
+        return;
+      }
+
+      setLoadingRevisions(
+        true,
+      );
+      setError("");
+
+      try {
+        setRevisions(
+          await getNoteRevisions(
+            apiFetch,
+            selectedNote.id,
+          ),
+        );
+        setRevisionsOpen(
+          true,
+        );
+      } catch (
+        requestError
+      ) {
+        setError(
+          messageFrom(
+            requestError,
+          ),
+        );
+      } finally {
+        setLoadingRevisions(
+          false,
+        );
+      }
+    };
+
+  const handleRestoreRevision =
+    async (
+      revisionId: string,
+    ) => {
+      if (!selectedNote) {
+        return;
+      }
+
+      if (
+        !window.confirm(
+          "Restore this revision? The current version will be saved in history first.",
+        )
+      ) {
+        return;
+      }
+
+      setRestoringRevision(
+        revisionId,
+      );
+      setError("");
+
+      try {
+        const restored =
+          await restoreNoteRevision(
+            apiFetch,
+            selectedNote.id,
+            revisionId,
+          );
+
+        applyNote(
+          restored,
+        );
+
+        setRevisions(
+          await getNoteRevisions(
+            apiFetch,
+            restored.id,
+          ),
+        );
+
+        setRevisionsOpen(
+          true,
+        );
+
+        await loadWorkspace(
+          true,
+        );
+      } catch (
+        requestError
+      ) {
+        setError(
+          messageFrom(
+            requestError,
+          ),
+        );
+      } finally {
+        setRestoringRevision(
+          "",
+        );
+      }
+    };
 
   const moveStatus =
     async (
@@ -1407,6 +1557,28 @@ export function NotesPage() {
                 <div>
                   <button
                     type="button"
+                    title="Revision history"
+                    disabled={
+                      loadingRevisions
+                    }
+                    onClick={() => {
+                      void loadRevisions();
+                    }}
+                  >
+                    {loadingRevisions ? (
+                      <LoaderCircle
+                        className="notes-spin"
+                        size={16}
+                      />
+                    ) : (
+                      <History
+                        size={16}
+                      />
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
                     title={
                       isPinned
                         ? "Unpin"
@@ -1675,26 +1847,201 @@ export function NotesPage() {
                   />
                 </button>
 
-                <span>
-                  MARKDOWN
-                </span>
+                <div className="notes-view-switch">
+                  <button
+                    type="button"
+                    className={
+                      editorMode ===
+                      "write"
+                        ? "active"
+                        : ""
+                    }
+                    onClick={() => {
+                      setEditorMode(
+                        "write",
+                      );
+                    }}
+                  >
+                    <PencilLine
+                      size={14}
+                    />
+                    Write
+                  </button>
+
+                  <button
+                    type="button"
+                    className={
+                      editorMode ===
+                      "preview"
+                        ? "active"
+                        : ""
+                    }
+                    onClick={() => {
+                      setEditorMode(
+                        "preview",
+                      );
+                    }}
+                  >
+                    <Eye
+                      size={14}
+                    />
+                    Preview
+                  </button>
+                </div>
               </div>
 
-              <textarea
-                ref={textareaRef}
-                className="notes-editor"
-                value={content}
-                placeholder="Start writing your note…"
-                spellCheck
-                onChange={(
-                  event,
-                ) => {
-                  setContent(
-                    event.target
-                      .value,
-                  );
-                }}
-              />
+              {editorMode ===
+              "write" ? (
+                <textarea
+                  ref={textareaRef}
+                  className="notes-editor"
+                  value={content}
+                  placeholder="Start writing your note…"
+                  spellCheck
+                  onChange={(
+                    event,
+                  ) => {
+                    setContent(
+                      event.target
+                        .value,
+                    );
+                  }}
+                />
+              ) : (
+                <div className="notes-preview">
+                  <ReactMarkdown
+                    remarkPlugins={[
+                      remarkGfm,
+                    ]}
+                  >
+                    {content ||
+                      "*Nothing to preview yet.*"}
+                  </ReactMarkdown>
+                </div>
+              )}
+
+              {revisionsOpen && (
+                <aside className="notes-revisions">
+                  <header>
+                    <div>
+                      <History
+                        size={17}
+                      />
+
+                      <span>
+                        REVISION HISTORY
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRevisionsOpen(
+                          false,
+                        );
+                      }}
+                    >
+                      <X size={15} />
+                    </button>
+                  </header>
+
+                  <div>
+                    {revisions.length ===
+                    0 ? (
+                      <section className="notes-revisions-empty">
+                        <History
+                          size={24}
+                        />
+
+                        <strong>
+                          No previous revisions
+                        </strong>
+
+                        <p>
+                          A revision is captured
+                          before saved content is
+                          changed.
+                        </p>
+                      </section>
+                    ) : (
+                      revisions.map(
+                        (
+                          revision,
+                        ) => (
+                          <article
+                            key={
+                              revision.id
+                            }
+                          >
+                            <div>
+                              <strong>
+                                {
+                                  revision.title
+                                }
+                              </strong>
+
+                              <span>
+                                {formatDate(
+                                  revision.createdAt,
+                                )}
+                              </span>
+                            </div>
+
+                            <p>
+                              {revision.content
+                                .replace(
+                                  /\s+/gu,
+                                  " ",
+                                )
+                                .trim()
+                                .slice(
+                                  0,
+                                  140,
+                                ) ||
+                                "Empty revision"}
+                            </p>
+
+                            <footer>
+                              <span>
+                                {
+                                  revision.wordCount
+                                }
+                                {" "}words
+                              </span>
+
+                              <button
+                                type="button"
+                                disabled={
+                                  restoringRevision ===
+                                  revision.id
+                                }
+                                onClick={() => {
+                                  void handleRestoreRevision(
+                                    revision.id,
+                                  );
+                                }}
+                              >
+                                {restoringRevision ===
+                                revision.id ? (
+                                  <LoaderCircle
+                                    className="notes-spin"
+                                    size={13}
+                                  />
+                                ) : (
+                                  <RotateCcw
+                                    size={13}
+                                  />
+                                )}
+                                Restore
+                              </button>
+                            </footer>
+                          </article>
+                        ),
+                      )
+                    )}
+                  </div>
+                </aside>
+              )}
 
               <footer className="notes-editor-footer">
                 <span>
