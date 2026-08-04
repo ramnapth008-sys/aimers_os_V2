@@ -483,6 +483,154 @@ export function ResearchAIPage() {
   ] = useState<string | null>(null);
 
   const [
+    selectedSourceId,
+    setSelectedSourceId,
+  ] = useState<string | null>(null);
+
+  const [
+    sourceViewerTab,
+    setSourceViewerTab,
+  ] = useState<
+    | "summary"
+    | "excerpts"
+    | "full-text"
+  >("summary");
+
+  const [
+    copiedSourceField,
+    setCopiedSourceField,
+  ] = useState<string | null>(null);
+
+  const selectedSource =
+    useMemo(
+      () =>
+        project?.sources.find(
+          (source) =>
+            source.id ===
+            selectedSourceId,
+        ) ??
+        null,
+      [
+        project,
+        selectedSourceId,
+      ],
+    );
+
+  const selectedSourceWordCount =
+    useMemo(
+      () => {
+        const content =
+          selectedSource
+            ?.rawContent
+            ?.trim();
+
+        if (!content) {
+          return 0;
+        }
+
+        return content
+          .split(/\s+/)
+          .filter(Boolean)
+          .length;
+      },
+      [
+        selectedSource
+          ?.rawContent,
+      ],
+    );
+
+  const selectedSourceCitationText =
+    useMemo(
+      () => {
+        if (!selectedSource) {
+          return "";
+        }
+
+        const stored =
+          selectedSource
+            .citationText
+            ?.trim();
+
+        if (stored) {
+          return stored;
+        }
+
+        return [
+          selectedSource.title,
+          selectedSource.author,
+          selectedSource.publisher,
+          selectedSource.accessedAt
+            ? `Accessed ${formatDate(
+                selectedSource.accessedAt,
+              )}`
+            : null,
+          selectedSource.url,
+        ]
+          .filter(Boolean)
+          .join(". ");
+      },
+      [
+        selectedSource,
+      ],
+    );
+
+  useEffect(
+    () => {
+      if (!selectedSource) {
+        if (selectedSourceId) {
+          setSelectedSourceId(
+            null,
+          );
+        }
+
+        return;
+      }
+
+      const previousOverflow =
+        document.body.style
+          .overflow;
+
+      document.body.style
+        .overflow = "hidden";
+
+      const closeOnEscape =
+        (
+          event:
+            KeyboardEvent,
+        ) => {
+          if (
+            event.key ===
+            "Escape"
+          ) {
+            setSelectedSourceId(
+              null,
+            );
+          }
+        };
+
+      window.addEventListener(
+        "keydown",
+        closeOnEscape,
+      );
+
+      return () => {
+        document.body.style
+          .overflow =
+          previousOverflow;
+
+        window.removeEventListener(
+          "keydown",
+          closeOnEscape,
+        );
+      };
+    },
+    [
+      selectedSource,
+      selectedSourceId,
+    ],
+  );
+
+  const [
     threadTitle,
     setThreadTitle,
   ] = useState("");
@@ -1146,6 +1294,122 @@ export function ResearchAIPage() {
       setError(messageFrom(requestError));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openSourceViewer = (
+    source:
+      ResearchSourceRecord,
+  ) => {
+    setCopiedSourceField(
+      null,
+    );
+
+    setSourceViewerTab(
+      source.excerpts?.length
+        ? "excerpts"
+        : "summary",
+    );
+
+    setSelectedSourceId(
+      source.id,
+    );
+  };
+
+  const closeSourceViewer = () => {
+    setSelectedSourceId(
+      null,
+    );
+
+    setCopiedSourceField(
+      null,
+    );
+  };
+
+  const copySourceText = async (
+    value: string,
+    field: string,
+  ) => {
+    const normalized =
+      value.trim();
+
+    if (!normalized) {
+      return;
+    }
+
+    try {
+      if (
+        navigator.clipboard
+          ?.writeText
+      ) {
+        await navigator
+          .clipboard
+          .writeText(
+            normalized,
+          );
+      } else {
+        const textarea =
+          document
+            .createElement(
+              "textarea",
+            );
+
+        textarea.value =
+          normalized;
+
+        textarea.setAttribute(
+          "readonly",
+          "",
+        );
+
+        textarea.style
+          .position =
+          "fixed";
+
+        textarea.style
+          .opacity =
+          "0";
+
+        document.body
+          .appendChild(
+            textarea,
+          );
+
+        textarea.select();
+
+        const copied =
+          document.execCommand(
+            "copy",
+          );
+
+        textarea.remove();
+
+        if (!copied) {
+          throw new Error(
+            "Copy command failed.",
+          );
+        }
+      }
+
+      setCopiedSourceField(
+        field,
+      );
+
+      window.setTimeout(
+        () => {
+          setCopiedSourceField(
+            (current) =>
+              current === field
+                ? null
+                : current,
+          );
+        },
+        1800,
+      );
+    } catch {
+      setError(
+        "AIMERS could not copy that evidence to the clipboard.",
+      );
     }
   };
 
@@ -2082,6 +2346,24 @@ export function ResearchAIPage() {
                               <span>
                                 {source._count?.citations ?? 0} citations
                               </span>
+
+                              <span>
+                                {source.excerpts?.length ?? 0} excerpts
+                              </span>
+
+                              <button
+                                className="research-source-view-button"
+                                type="button"
+                                onClick={() =>
+                                  openSourceViewer(
+                                    source,
+                                  )
+                                }
+                              >
+                                <Quote size={13} />
+                                View evidence
+                              </button>
+
                               {source.url && (
                                 <a
                                   href={source.url}
@@ -2591,6 +2873,450 @@ export function ResearchAIPage() {
               >
                 {saving ? <LoaderCircle className="research-spin" size={16} /> : <Plus size={16} />}
                 Create project
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
+
+      {selectedSource && (
+        <div
+          className="research-source-viewer-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              closeSourceViewer();
+            }
+          }}
+        >
+          <section
+            className="research-source-viewer"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="research-source-viewer-title"
+            onMouseDown={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <header className="research-source-viewer-header">
+              <div className="research-source-viewer-heading">
+                <span>
+                  {sourceIcon(
+                    selectedSource,
+                  )}
+                </span>
+
+                <div>
+                  <small>
+                    {selectedSource.type.replaceAll(
+                      "_",
+                      " ",
+                    )}
+                    {" · "}
+                    {selectedSource.status}
+                  </small>
+
+                  <h2 id="research-source-viewer-title">
+                    {selectedSource.title}
+                  </h2>
+                </div>
+              </div>
+
+              <div className="research-source-viewer-header-actions">
+                {selectedSource.url && (
+                  <a
+                    href={selectedSource.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open original
+                    <ArrowUpRight size={14} />
+                  </a>
+                )}
+
+                <button
+                  type="button"
+                  aria-label="Close source evidence viewer"
+                  title="Close source viewer"
+                  onClick={closeSourceViewer}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </header>
+
+            <div className="research-source-viewer-meta">
+              <span
+                className={`research-source-status ${selectedSource.status.toLowerCase()}`}
+              >
+                {selectedSource.status}
+              </span>
+
+              {selectedSource.publisher && (
+                <span>
+                  Publisher
+                  <strong>
+                    {selectedSource.publisher}
+                  </strong>
+                </span>
+              )}
+
+              {selectedSource.author && (
+                <span>
+                  Author
+                  <strong>
+                    {selectedSource.author}
+                  </strong>
+                </span>
+              )}
+
+              {selectedSource.accessedAt && (
+                <span>
+                  Accessed
+                  <strong>
+                    {formatDate(
+                      selectedSource.accessedAt,
+                    )}
+                  </strong>
+                </span>
+              )}
+
+              <span>
+                Words
+                <strong>
+                  {selectedSourceWordCount.toLocaleString(
+                    "en-IN",
+                  )}
+                </strong>
+              </span>
+
+              <span>
+                Excerpts
+                <strong>
+                  {selectedSource.excerpts?.length ?? 0}
+                </strong>
+              </span>
+            </div>
+
+            <nav
+              className="research-source-viewer-tabs"
+              aria-label="Source evidence sections"
+            >
+              <button
+                type="button"
+                className={
+                  sourceViewerTab === "summary"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setSourceViewerTab(
+                    "summary",
+                  )
+                }
+              >
+                Summary
+              </button>
+
+              <button
+                type="button"
+                className={
+                  sourceViewerTab === "excerpts"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setSourceViewerTab(
+                    "excerpts",
+                  )
+                }
+              >
+                Extracted passages
+                <b>
+                  {selectedSource.excerpts?.length ?? 0}
+                </b>
+              </button>
+
+              <button
+                type="button"
+                className={
+                  sourceViewerTab === "full-text"
+                    ? "active"
+                    : ""
+                }
+                disabled={
+                  !selectedSource.rawContent
+                }
+                onClick={() =>
+                  setSourceViewerTab(
+                    "full-text",
+                  )
+                }
+              >
+                Full readable text
+              </button>
+            </nav>
+
+            <div className="research-source-viewer-content">
+              {sourceViewerTab === "summary" && (
+                <div className="research-source-summary-panel">
+                  <section>
+                    <header>
+                      <div>
+                        <span>EVIDENCE SUMMARY</span>
+                        <h3>
+                          What AIMERS extracted
+                        </h3>
+                      </div>
+
+                      {selectedSource.summary && (
+                        <button
+                          className="research-source-copy-button"
+                          type="button"
+                          onClick={() =>
+                            void copySourceText(
+                              selectedSource.summary ??
+                              "",
+                              `summary:${selectedSource.id}`,
+                            )
+                          }
+                        >
+                          <Quote size={13} />
+                          {copiedSourceField ===
+                          `summary:${selectedSource.id}`
+                            ? "Copied"
+                            : "Copy summary"}
+                        </button>
+                      )}
+                    </header>
+
+                    <p>
+                      {selectedSource.summary ||
+                        "This source has no extracted summary yet."}
+                    </p>
+                  </section>
+
+                  <section>
+                    <header>
+                      <div>
+                        <span>CITATION-READY TEXT</span>
+                        <h3>
+                          Reference this source
+                        </h3>
+                      </div>
+
+                      <button
+                        className="research-source-copy-button"
+                        type="button"
+                        disabled={!selectedSourceCitationText}
+                        onClick={() =>
+                          void copySourceText(
+                            selectedSourceCitationText,
+                            `citation:${selectedSource.id}`,
+                          )
+                        }
+                      >
+                        <Quote size={13} />
+                        {copiedSourceField ===
+                        `citation:${selectedSource.id}`
+                          ? "Copied"
+                          : "Copy citation"}
+                      </button>
+                    </header>
+
+                    <blockquote>
+                      {selectedSourceCitationText ||
+                        "No citation text is available."}
+                    </blockquote>
+                  </section>
+
+                  {selectedSource.processingError && (
+                    <section className="research-source-viewer-error">
+                      <span>PROCESSING ERROR</span>
+                      <p>
+                        {selectedSource.processingError}
+                      </p>
+                    </section>
+                  )}
+                </div>
+              )}
+
+              {sourceViewerTab === "excerpts" && (
+                <div className="research-source-excerpt-list">
+                  {!selectedSource.excerpts?.length ? (
+                    <div className="research-source-viewer-empty">
+                      <Quote size={28} />
+                      <h3>
+                        No extracted passages
+                      </h3>
+                      <p>
+                        Refresh this source after it reaches READY to create evidence excerpts.
+                      </p>
+                    </div>
+                  ) : (
+                    selectedSource.excerpts.map(
+                      (
+                        excerpt,
+                        index,
+                      ) => {
+                        const excerptCitation = [
+                          `"${excerpt.quote}"`,
+                          selectedSourceCitationText,
+                        ]
+                          .filter(Boolean)
+                          .join("\n\n");
+
+                        const copyKey =
+                          `excerpt:${excerpt.id}`;
+
+                        const citationKey =
+                          `excerpt-citation:${excerpt.id}`;
+
+                        return (
+                          <article
+                            key={excerpt.id}
+                          >
+                            <header>
+                              <div>
+                                <span>
+                                  PASSAGE {index + 1}
+                                </span>
+
+                                <small>
+                                  {excerpt.locator ||
+                                    (
+                                      excerpt.pageNumber
+                                        ? `Page ${excerpt.pageNumber}`
+                                        : "Extracted evidence"
+                                    )}
+                                </small>
+                              </div>
+
+                              <div>
+                                <button
+                                  className="research-source-copy-button"
+                                  type="button"
+                                  onClick={() =>
+                                    void copySourceText(
+                                      excerpt.quote,
+                                      copyKey,
+                                    )
+                                  }
+                                >
+                                  {copiedSourceField ===
+                                  copyKey
+                                    ? "Copied"
+                                    : "Copy quote"}
+                                </button>
+
+                                <button
+                                  className="research-source-copy-button"
+                                  type="button"
+                                  onClick={() =>
+                                    void copySourceText(
+                                      excerptCitation,
+                                      citationKey,
+                                    )
+                                  }
+                                >
+                                  {copiedSourceField ===
+                                  citationKey
+                                    ? "Copied"
+                                    : "Quote + citation"}
+                                </button>
+                              </div>
+                            </header>
+
+                            <blockquote>
+                              {excerpt.quote}
+                            </blockquote>
+
+                            {(excerpt.note ||
+                              excerpt.startOffset !== null ||
+                              excerpt.endOffset !== null) && (
+                              <footer>
+                                {excerpt.note && (
+                                  <span>
+                                    {excerpt.note}
+                                  </span>
+                                )}
+
+                                {excerpt.startOffset !== null &&
+                                  excerpt.endOffset !== null && (
+                                    <small>
+                                      Characters
+                                      {" "}
+                                      {excerpt.startOffset.toLocaleString(
+                                        "en-IN",
+                                      )}
+                                      {"–"}
+                                      {excerpt.endOffset.toLocaleString(
+                                        "en-IN",
+                                      )}
+                                    </small>
+                                  )}
+                              </footer>
+                            )}
+                          </article>
+                        );
+                      },
+                    )
+                  )}
+                </div>
+              )}
+
+              {sourceViewerTab === "full-text" && (
+                <div className="research-source-full-text">
+                  <header>
+                    <div>
+                      <span>READABLE SOURCE TEXT</span>
+                      <h3>
+                        Content provided to Research AI
+                      </h3>
+                    </div>
+
+                    <button
+                      className="research-source-copy-button"
+                      type="button"
+                      disabled={!selectedSource.rawContent}
+                      onClick={() =>
+                        void copySourceText(
+                          selectedSource.rawContent ??
+                          "",
+                          `full-text:${selectedSource.id}`,
+                        )
+                      }
+                    >
+                      <Quote size={13} />
+                      {copiedSourceField ===
+                      `full-text:${selectedSource.id}`
+                        ? "Copied"
+                        : "Copy full text"}
+                    </button>
+                  </header>
+
+                  <pre>
+                    {selectedSource.rawContent ||
+                      "No readable text has been extracted."}
+                  </pre>
+                </div>
+              )}
+            </div>
+
+            <footer className="research-source-viewer-footer">
+              <span>
+                Press Esc or click outside to close
+              </span>
+
+              <button
+                className="research-secondary-button"
+                type="button"
+                onClick={closeSourceViewer}
+              >
+                Close
               </button>
             </footer>
           </section>
