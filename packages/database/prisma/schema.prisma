@@ -455,6 +455,10 @@ model StudentProfile {
   notes       Note[]
   noteTags    NoteTag[]
 
+  researchProjects ResearchProject[]
+  researchSources  ResearchSource[]
+  researchThreads  ResearchThread[]
+
   @@unique([userId, organizationId])
   @@unique([organizationId, admissionNumber])
   @@index([organizationId, status])
@@ -607,7 +611,8 @@ model Subject {
   flashcardDecks   FlashcardDeck[]
   flashcards       Flashcard[]
 
-  notes Note[]
+  notes            Note[]
+  researchProjects ResearchProject[]
 
   @@index([status])
   @@map("subjects")
@@ -676,7 +681,8 @@ model Chapter {
   flashcardDecks FlashcardDeck[]
   flashcards     Flashcard[]
 
-  notes Note[]
+  notes            Note[]
+  researchProjects ResearchProject[]
 
   @@unique([unitId, code])
   @@unique([unitId, sequenceNumber])
@@ -706,7 +712,8 @@ model Topic {
   flashcardDecks     FlashcardDeck[]
   flashcards         Flashcard[]
 
-  notes Note[]
+  notes            Note[]
+  researchProjects ResearchProject[]
 
   @@unique([chapterId, code])
   @@unique([chapterId, sequenceNumber])
@@ -1505,6 +1512,9 @@ model Note {
   outgoingLinks  NoteLink[]          @relation("NoteOutgoingLinks")
   incomingLinks  NoteLink[]          @relation("NoteIncomingLinks")
 
+  researchSources      ResearchSource[]      @relation("ResearchSourceNote")
+  researchMindMapNodes ResearchMindMapNode[] @relation("ResearchMindMapNodeNote")
+
   @@index([studentProfileId, status, isPinned, updatedAt])
   @@index([folderId, status, updatedAt])
   @@index([subjectId])
@@ -1571,4 +1581,240 @@ model NoteLink {
   @@unique([sourceNoteId, targetNoteId])
   @@index([targetNoteId])
   @@map("note_links")
+}
+
+enum ResearchProjectStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum ResearchSourceType {
+  WEB_PAGE
+  PDF
+  BOOK
+  VIDEO
+  NOTE
+  MANUAL
+  OTHER
+}
+
+enum ResearchSourceStatus {
+  SAVED
+  PROCESSING
+  READY
+  FAILED
+  ARCHIVED
+}
+
+enum ResearchMessageRole {
+  SYSTEM
+  USER
+  ASSISTANT
+}
+
+enum ResearchMindMapNodeType {
+  ROOT
+  QUESTION
+  CONCEPT
+  EVIDENCE
+  SOURCE
+  NOTE
+  CONCLUSION
+}
+
+model ResearchProject {
+  id               String                @id @default(uuid()) @db.Uuid
+  studentProfileId String                @map("student_profile_id") @db.Uuid
+  subjectId        String?               @map("subject_id") @db.Uuid
+  chapterId        String?               @map("chapter_id") @db.Uuid
+  topicId          String?               @map("topic_id") @db.Uuid
+  title            String                @db.VarChar(240)
+  description      String?               @db.Text
+  researchQuestion String?               @map("research_question") @db.Text
+  status           ResearchProjectStatus @default(ACTIVE)
+  color            String?               @db.VarChar(32)
+  icon             String?               @db.VarChar(64)
+  isPinned         Boolean               @default(false) @map("is_pinned")
+  lastOpenedAt     DateTime?             @map("last_opened_at") @db.Timestamptz(6)
+  completedAt      DateTime?             @map("completed_at") @db.Timestamptz(6)
+  archivedAt       DateTime?             @map("archived_at") @db.Timestamptz(6)
+  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  subject        Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  chapter        Chapter?       @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+  topic          Topic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  sources      ResearchSource[]
+  threads      ResearchThread[]
+  mindMapNodes ResearchMindMapNode[]
+  mindMapEdges ResearchMindMapEdge[]
+
+  @@index([studentProfileId, status, isPinned, updatedAt])
+  @@index([subjectId])
+  @@index([chapterId])
+  @@index([topicId])
+  @@map("research_projects")
+}
+
+model ResearchSource {
+  id                String               @id @default(uuid()) @db.Uuid
+  studentProfileId  String               @map("student_profile_id") @db.Uuid
+  researchProjectId String               @map("research_project_id") @db.Uuid
+  sourceNoteId      String?              @map("source_note_id") @db.Uuid
+  type              ResearchSourceType
+  status            ResearchSourceStatus @default(SAVED)
+  title             String               @db.VarChar(300)
+  url               String?              @db.Text
+  author            String?              @db.VarChar(240)
+  publisher         String?              @db.VarChar(240)
+  publishedAt       DateTime?            @map("published_at") @db.Timestamptz(6)
+  accessedAt        DateTime?            @map("accessed_at") @db.Timestamptz(6)
+  rawContent        String?              @map("raw_content") @db.Text
+  summary           String?              @db.Text
+  citationText      String?              @map("citation_text") @db.Text
+  citationKey       String?              @map("citation_key") @db.VarChar(120)
+  reliabilityScore  Int?                 @map("reliability_score")
+  isPinned          Boolean              @default(false) @map("is_pinned")
+  metadata          Json?
+  processingError   String?              @map("processing_error") @db.Text
+  createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile  StudentProfile  @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  researchProject ResearchProject @relation(fields: [researchProjectId], references: [id], onDelete: Cascade)
+  sourceNote      Note?           @relation("ResearchSourceNote", fields: [sourceNoteId], references: [id], onDelete: SetNull)
+
+  excerpts     ResearchSourceExcerpt[]
+  citations    ResearchCitation[]
+  mindMapNodes ResearchMindMapNode[]
+
+  @@unique([researchProjectId, citationKey])
+  @@index([studentProfileId, status, updatedAt])
+  @@index([researchProjectId, status, isPinned, updatedAt])
+  @@index([sourceNoteId])
+  @@index([type, status])
+  @@map("research_sources")
+}
+
+model ResearchSourceExcerpt {
+  id               String   @id @default(uuid()) @db.Uuid
+  researchSourceId String   @map("research_source_id") @db.Uuid
+  quote            String   @db.Text
+  note             String?  @db.Text
+  locator          String?  @db.VarChar(160)
+  pageNumber       Int?     @map("page_number")
+  startOffset      Int?     @map("start_offset")
+  endOffset        Int?     @map("end_offset")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  researchSource ResearchSource     @relation(fields: [researchSourceId], references: [id], onDelete: Cascade)
+  citations      ResearchCitation[]
+
+  @@index([researchSourceId, createdAt])
+  @@index([pageNumber])
+  @@map("research_source_excerpts")
+}
+
+model ResearchThread {
+  id                String   @id @default(uuid()) @db.Uuid
+  studentProfileId  String   @map("student_profile_id") @db.Uuid
+  researchProjectId String   @map("research_project_id") @db.Uuid
+  title             String   @db.VarChar(240)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile  StudentProfile  @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  researchProject ResearchProject @relation(fields: [researchProjectId], references: [id], onDelete: Cascade)
+
+  messages ResearchMessage[]
+
+  @@index([studentProfileId, updatedAt])
+  @@index([researchProjectId, updatedAt])
+  @@map("research_threads")
+}
+
+model ResearchMessage {
+  id               String              @id @default(uuid()) @db.Uuid
+  researchThreadId String              @map("research_thread_id") @db.Uuid
+  role             ResearchMessageRole
+  content          String              @db.Text
+  model            String?             @db.VarChar(120)
+  promptTokens     Int?                @map("prompt_tokens")
+  completionTokens Int?                @map("completion_tokens")
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  researchThread ResearchThread     @relation(fields: [researchThreadId], references: [id], onDelete: Cascade)
+  citations      ResearchCitation[]
+
+  @@index([researchThreadId, createdAt])
+  @@map("research_messages")
+}
+
+model ResearchCitation {
+  id                      String   @id @default(uuid()) @db.Uuid
+  researchMessageId       String   @map("research_message_id") @db.Uuid
+  researchSourceId        String   @map("research_source_id") @db.Uuid
+  researchSourceExcerptId String?  @map("research_source_excerpt_id") @db.Uuid
+  label                   String?  @db.VarChar(120)
+  quote                   String?  @db.Text
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  researchMessage       ResearchMessage        @relation(fields: [researchMessageId], references: [id], onDelete: Cascade)
+  researchSource        ResearchSource         @relation(fields: [researchSourceId], references: [id], onDelete: Cascade)
+  researchSourceExcerpt ResearchSourceExcerpt? @relation(fields: [researchSourceExcerptId], references: [id], onDelete: SetNull)
+
+  @@index([researchMessageId])
+  @@index([researchSourceId])
+  @@index([researchSourceExcerptId])
+  @@map("research_citations")
+}
+
+model ResearchMindMapNode {
+  id                String                  @id @default(uuid()) @db.Uuid
+  researchProjectId String                  @map("research_project_id") @db.Uuid
+  researchSourceId  String?                 @map("research_source_id") @db.Uuid
+  noteId            String?                 @map("note_id") @db.Uuid
+  type              ResearchMindMapNodeType @default(CONCEPT)
+  title             String                  @db.VarChar(240)
+  content           String?                 @db.Text
+  positionX         Float                   @default(0) @map("position_x")
+  positionY         Float                   @default(0) @map("position_y")
+  color             String?                 @db.VarChar(32)
+  sequenceNumber    Int                     @default(0) @map("sequence_number")
+  createdAt         DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  researchProject ResearchProject @relation(fields: [researchProjectId], references: [id], onDelete: Cascade)
+  researchSource  ResearchSource? @relation(fields: [researchSourceId], references: [id], onDelete: SetNull)
+  note            Note?           @relation("ResearchMindMapNodeNote", fields: [noteId], references: [id], onDelete: SetNull)
+
+  outgoingEdges ResearchMindMapEdge[] @relation("ResearchMindMapOutgoing")
+  incomingEdges ResearchMindMapEdge[] @relation("ResearchMindMapIncoming")
+
+  @@index([researchProjectId, sequenceNumber])
+  @@index([researchSourceId])
+  @@index([noteId])
+  @@map("research_mind_map_nodes")
+}
+
+model ResearchMindMapEdge {
+  id                String   @id @default(uuid()) @db.Uuid
+  researchProjectId String   @map("research_project_id") @db.Uuid
+  sourceNodeId      String   @map("source_node_id") @db.Uuid
+  targetNodeId      String   @map("target_node_id") @db.Uuid
+  label             String?  @db.VarChar(160)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  researchProject ResearchProject     @relation(fields: [researchProjectId], references: [id], onDelete: Cascade)
+  sourceNode      ResearchMindMapNode @relation("ResearchMindMapOutgoing", fields: [sourceNodeId], references: [id], onDelete: Cascade)
+  targetNode      ResearchMindMapNode @relation("ResearchMindMapIncoming", fields: [targetNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceNodeId, targetNodeId])
+  @@index([researchProjectId])
+  @@index([targetNodeId])
+  @@map("research_mind_map_edges")
 }
