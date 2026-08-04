@@ -20,6 +20,7 @@ import {
   History,
   Eye,
   Italic,
+  Link2,
   List,
   PencilLine,
   LoaderCircle,
@@ -32,6 +33,7 @@ import {
   Sparkles,
   Tags,
   Trash2,
+  Unlink2,
   X,
 } from "lucide-react";
 
@@ -49,7 +51,9 @@ import remarkGfm from "remark-gfm";
 import {
   createNote,
   createNoteFolder,
+  createNoteLink,
   createNoteTag,
+  deleteNoteLink,
   getNote,
   getNoteRevisions,
   getNotesWorkspace,
@@ -254,6 +258,24 @@ export function NotesPage() {
     setCreatingTag,
   ] =
     useState(false);
+
+  const [
+    linkTargetId,
+    setLinkTargetId,
+  ] =
+    useState("");
+
+  const [
+    creatingLink,
+    setCreatingLink,
+  ] =
+    useState(false);
+
+  const [
+    deletingLinkId,
+    setDeletingLinkId,
+  ] =
+    useState("");
 
   const [
     loading,
@@ -463,6 +485,9 @@ export function NotesPage() {
         );
         setRevisionsOpen(
           false,
+        );
+        setLinkTargetId(
+          "",
         );
       },
       [],
@@ -742,6 +767,56 @@ export function NotesPage() {
         ),
       [
         selectedTagIds,
+        workspace,
+      ],
+    );
+
+  const linkedTargetIds =
+    useMemo(
+      () =>
+        new Set(
+          selectedNote
+            ?.outgoingLinks
+            .map(
+              (
+                link,
+              ) =>
+                link.targetNote
+                  ?.id,
+            )
+            .filter(
+              (
+                id,
+              ): id is string =>
+                Boolean(id),
+            ) ??
+          [],
+        ),
+      [selectedNote],
+    );
+
+  const availableLinkTargets =
+    useMemo(
+      () =>
+        (
+          workspace
+            ?.notes ??
+          []
+        ).filter(
+          (
+            note,
+          ) =>
+            note.status ===
+              "ACTIVE" &&
+            note.id !==
+              selectedNote?.id &&
+            !linkedTargetIds.has(
+              note.id,
+            ),
+        ),
+      [
+        linkedTargetIds,
+        selectedNote,
         workspace,
       ],
     );
@@ -1153,6 +1228,115 @@ export function NotesPage() {
       } finally {
         setCreatingTag(
           false,
+        );
+      }
+    };
+
+  const refreshSelectedNote =
+    async () => {
+      if (!selectedNote) {
+        return;
+      }
+
+      applyNote(
+        await getNote(
+          apiFetch,
+          selectedNote.id,
+        ),
+      );
+
+      await loadWorkspace(
+        true,
+      );
+    };
+
+  const handleCreateLink =
+    async () => {
+      if (
+        !selectedNote ||
+        !linkTargetId
+      ) {
+        return;
+      }
+
+      if (dirty) {
+        setError(
+          "Save the note before changing its connections.",
+        );
+        return;
+      }
+
+      setCreatingLink(
+        true,
+      );
+      setError("");
+
+      try {
+        await createNoteLink(
+          apiFetch,
+          selectedNote.id,
+          linkTargetId,
+        );
+
+        setLinkTargetId(
+          "",
+        );
+
+        await refreshSelectedNote();
+      } catch (
+        requestError
+      ) {
+        setError(
+          messageFrom(
+            requestError,
+          ),
+        );
+      } finally {
+        setCreatingLink(
+          false,
+        );
+      }
+    };
+
+  const handleDeleteLink =
+    async (
+      linkId: string,
+    ) => {
+      if (!selectedNote) {
+        return;
+      }
+
+      if (dirty) {
+        setError(
+          "Save the note before changing its connections.",
+        );
+        return;
+      }
+
+      setDeletingLinkId(
+        linkId,
+      );
+      setError("");
+
+      try {
+        await deleteNoteLink(
+          apiFetch,
+          selectedNote.id,
+          linkId,
+        );
+
+        await refreshSelectedNote();
+      } catch (
+        requestError
+      ) {
+        setError(
+          messageFrom(
+            requestError,
+          ),
+        );
+      } finally {
+        setDeletingLinkId(
+          "",
         );
       }
     };
@@ -2356,6 +2540,255 @@ export function NotesPage() {
                       </button>
                     </div>
                   )}
+                </div>
+
+                <div className="notes-connections">
+                  <header>
+                    <span>
+                      <Link2
+                        size={13}
+                      />
+                      Connected notes
+                    </span>
+
+                    <small>
+                      {
+                        selectedNote
+                          .outgoingLinks
+                          .length
+                      }
+                      {" "}outgoing ·{" "}
+                      {
+                        selectedNote
+                          .incomingLinks
+                          .length
+                      }
+                      {" "}backlinks
+                    </small>
+                  </header>
+
+                  <div className="notes-link-create">
+                    <select
+                      value={
+                        linkTargetId
+                      }
+                      disabled={
+                        creatingLink ||
+                        availableLinkTargets
+                          .length ===
+                          0
+                      }
+                      onChange={(
+                        event,
+                      ) => {
+                        setLinkTargetId(
+                          event.target
+                            .value,
+                        );
+                      }}
+                    >
+                      <option value="">
+                        {availableLinkTargets
+                          .length ===
+                        0
+                          ? "No visible notes available"
+                          : "Connect another visible note…"}
+                      </option>
+
+                      {availableLinkTargets.map(
+                        (
+                          note,
+                        ) => (
+                          <option
+                            key={
+                              note.id
+                            }
+                            value={
+                              note.id
+                            }
+                          >
+                            {
+                              note.title
+                            }
+                          </option>
+                        ),
+                      )}
+                    </select>
+
+                    <button
+                      type="button"
+                      disabled={
+                        creatingLink ||
+                        !linkTargetId
+                      }
+                      onClick={() => {
+                        void handleCreateLink();
+                      }}
+                    >
+                      {creatingLink ? (
+                        <LoaderCircle
+                          className="notes-spin"
+                          size={13}
+                        />
+                      ) : (
+                        <Link2
+                          size={13}
+                        />
+                      )}
+                      Connect
+                    </button>
+                  </div>
+
+                  <div className="notes-link-groups">
+                    <section>
+                      <h3>
+                        Links from this note
+                      </h3>
+
+                      {selectedNote
+                        .outgoingLinks
+                        .length ===
+                      0 ? (
+                        <p>
+                          No outgoing links.
+                        </p>
+                      ) : (
+                        selectedNote
+                          .outgoingLinks
+                          .map(
+                            (
+                              link,
+                            ) => (
+                              <article
+                                key={
+                                  link.id
+                                }
+                              >
+                                <button
+                                  type="button"
+                                  className="notes-link-open"
+                                  disabled={
+                                    !link
+                                      .targetNote
+                                  }
+                                  onClick={() => {
+                                    if (
+                                      link
+                                        .targetNote
+                                    ) {
+                                      void openNote(
+                                        link
+                                          .targetNote
+                                          .id,
+                                      );
+                                    }
+                                  }}
+                                >
+                                  <Link2
+                                    size={12}
+                                  />
+
+                                  <span>
+                                    {link
+                                      .targetNote
+                                      ?.title ??
+                                      "Unavailable note"}
+                                  </span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  className="notes-link-remove"
+                                  title="Remove connection"
+                                  disabled={
+                                    deletingLinkId ===
+                                    link.id
+                                  }
+                                  onClick={() => {
+                                    void handleDeleteLink(
+                                      link.id,
+                                    );
+                                  }}
+                                >
+                                  {deletingLinkId ===
+                                  link.id ? (
+                                    <LoaderCircle
+                                      className="notes-spin"
+                                      size={12}
+                                    />
+                                  ) : (
+                                    <Unlink2
+                                      size={12}
+                                    />
+                                  )}
+                                </button>
+                              </article>
+                            ),
+                          )
+                      )}
+                    </section>
+
+                    <section>
+                      <h3>
+                        Backlinks to this note
+                      </h3>
+
+                      {selectedNote
+                        .incomingLinks
+                        .length ===
+                      0 ? (
+                        <p>
+                          No backlinks yet.
+                        </p>
+                      ) : (
+                        selectedNote
+                          .incomingLinks
+                          .map(
+                            (
+                              link,
+                            ) => (
+                              <article
+                                key={
+                                  link.id
+                                }
+                              >
+                                <button
+                                  type="button"
+                                  className="notes-link-open"
+                                  disabled={
+                                    !link
+                                      .sourceNote
+                                  }
+                                  onClick={() => {
+                                    if (
+                                      link
+                                        .sourceNote
+                                    ) {
+                                      void openNote(
+                                        link
+                                          .sourceNote
+                                          .id,
+                                      );
+                                    }
+                                  }}
+                                >
+                                  <Link2
+                                    size={12}
+                                  />
+
+                                  <span>
+                                    {link
+                                      .sourceNote
+                                      ?.title ??
+                                      "Unavailable note"}
+                                  </span>
+                                </button>
+                              </article>
+                            ),
+                          )
+                      )}
+                    </section>
+                  </div>
                 </div>
               </div>
 

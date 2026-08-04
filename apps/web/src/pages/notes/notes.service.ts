@@ -4,6 +4,7 @@ import type {
   CreateNoteInput,
   CreateNoteTagInput,
   NoteFolder,
+  NoteLinkSummary,
   NoteRecord,
   NoteTag,
   NoteRevision,
@@ -170,6 +171,41 @@ export function createNoteTag(
     {
       method: "POST",
       body: JSON.stringify(input),
+    },
+  );
+}
+
+export function createNoteLink(
+  apiFetch: ApiFetch,
+  noteId: string,
+  targetNoteId: string,
+): Promise<NoteLinkSummary> {
+  return apiFetch<NoteLinkSummary>(
+    `/notes/${noteId}/links`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        targetNoteId,
+      }),
+    },
+  );
+}
+
+export function deleteNoteLink(
+  apiFetch: ApiFetch,
+  noteId: string,
+  linkId: string,
+): Promise<{
+  deleted: true;
+  linkId: string;
+}> {
+  return apiFetch<{
+    deleted: true;
+    linkId: string;
+  }>(
+    `/notes/${noteId}/links/${linkId}`,
+    {
+      method: "DELETE",
     },
   );
 }

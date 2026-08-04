@@ -5,7 +5,9 @@ export {
 export {
   createNote,
   createNoteFolder,
+  createNoteLink,
   createNoteTag,
+  deleteNoteLink,
   getNote,
   getNoteRevisions,
   getNotesWorkspace,
