@@ -160,6 +160,35 @@ enum StudySessionStatus {
   CANCELLED
 }
 
+enum MockTestStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum MockTestSourceType {
+  PLATFORM
+  INSTITUTION
+  CUSTOM
+  EXTERNAL
+}
+
+enum MockTestScope {
+  FULL_LENGTH
+  SUBJECT
+  CHAPTER
+  TOPIC
+  CUSTOM
+}
+
+enum MockTestAttemptStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  EVALUATED
+  ABANDONED
+}
+
 model User {
   id              String     @id @default(uuid()) @db.Uuid
   email           String     @unique @db.VarChar(320)
@@ -224,6 +253,7 @@ model Organization {
   staffProfiles      StaffProfile[]
   mentorAssignments  StudentMentorAssignment[]
   academicProgrammes AcademicProgramme[]
+  mockTests          MockTest[]
 
   @@index([type, status])
   @@map("organizations")
@@ -334,6 +364,7 @@ model StudentProfile {
   studyPlans          StudyPlan[]
   studyTasks          StudyTask[]
   studySessions       StudySession[]
+  mockTestAttempts    MockTestAttempt[]
 
   @@unique([userId, organizationId])
   @@unique([organizationId, admissionNumber])
@@ -463,6 +494,7 @@ model SyllabusVersion {
 
   subjects    SyllabusSubject[]
   enrollments StudentEnrollment[]
+  mockTests   MockTest[]
 
   @@unique([programmeId, versionCode])
   @@index([programmeId, status])
@@ -479,8 +511,9 @@ model Subject {
   createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  syllabi    SyllabusSubject[]
-  studyTasks StudyTask[]
+  syllabi          SyllabusSubject[]
+  studyTasks       StudyTask[]
+  mockTestSections MockTestSection[]
 
   @@index([status])
   @@map("subjects")
@@ -565,9 +598,11 @@ model Topic {
 
   chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
-  masteryRecords TopicMastery[]
-  studyTasks     StudyTask[]
-  studySessions  StudySession[]
+  masteryRecords     TopicMastery[]
+  studyTasks         StudyTask[]
+  studySessions      StudySession[]
+  mockTestBlueprints MockTestTopicBlueprint[]
+  mockTestResults    MockTestTopicResult[]
 
   @@unique([chapterId, code])
   @@unique([chapterId, sequenceNumber])
@@ -745,4 +780,165 @@ model StudySession {
   @@index([chapterId])
   @@index([topicId])
   @@map("study_sessions")
+}
+
+model MockTest {
+  id                  String             @id @default(uuid()) @db.Uuid
+  ownerOrganizationId String?            @map("owner_organization_id") @db.Uuid
+  syllabusVersionId   String?            @map("syllabus_version_id") @db.Uuid
+  code                String?            @db.VarChar(100)
+  title               String             @db.VarChar(250)
+  description         String?            @db.Text
+  instructions        String?            @db.Text
+  sourceType          MockTestSourceType @default(PLATFORM) @map("source_type")
+  scope               MockTestScope      @default(FULL_LENGTH)
+  status              MockTestStatus     @default(DRAFT)
+  totalQuestions      Int                @default(0) @map("total_questions")
+  totalMarks          Int                @default(0) @map("total_marks")
+  durationMinutes     Int                @default(180) @map("duration_minutes")
+  publishedAt         DateTime?          @map("published_at") @db.Timestamptz(6)
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  ownerOrganization Organization? @relation(fields: [ownerOrganizationId], references: [id], onDelete: SetNull)
+
+  syllabusVersion SyllabusVersion? @relation(fields: [syllabusVersionId], references: [id], onDelete: SetNull)
+
+  sections MockTestSection[]
+  attempts MockTestAttempt[]
+
+  @@unique([ownerOrganizationId, code])
+  @@index([syllabusVersionId, status])
+  @@index([ownerOrganizationId, status])
+  @@index([scope, status])
+  @@map("mock_tests")
+}
+
+model MockTestSection {
+  id                    String   @id @default(uuid()) @db.Uuid
+  mockTestId            String   @map("mock_test_id") @db.Uuid
+  subjectId             String?  @map("subject_id") @db.Uuid
+  name                  String   @db.VarChar(200)
+  sequenceNumber        Int      @default(1) @map("sequence_number")
+  totalQuestions        Int      @default(0) @map("total_questions")
+  totalMarks            Int      @default(0) @map("total_marks")
+  marksPerCorrect       Int      @default(4) @map("marks_per_correct")
+  negativeMarksPerWrong Int      @default(1) @map("negative_marks_per_wrong")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  mockTest MockTest @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+
+  subject Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  topicBlueprints MockTestTopicBlueprint[]
+  results         MockTestSectionResult[]
+
+  @@unique([mockTestId, sequenceNumber])
+  @@index([mockTestId])
+  @@index([subjectId])
+  @@map("mock_test_sections")
+}
+
+model MockTestTopicBlueprint {
+  id                String   @id @default(uuid()) @db.Uuid
+  mockTestSectionId String   @map("mock_test_section_id") @db.Uuid
+  topicId           String   @map("topic_id") @db.Uuid
+  plannedQuestions  Int      @default(0) @map("planned_questions")
+  weightagePercent  Int      @default(0) @map("weightage_percent")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  mockTestSection MockTestSection @relation(fields: [mockTestSectionId], references: [id], onDelete: Cascade)
+
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([mockTestSectionId, topicId])
+  @@index([topicId])
+  @@map("mock_test_topic_blueprints")
+}
+
+model MockTestAttempt {
+  id                  String                @id @default(uuid()) @db.Uuid
+  studentProfileId    String                @map("student_profile_id") @db.Uuid
+  mockTestId          String                @map("mock_test_id") @db.Uuid
+  attemptNumber       Int                   @default(1) @map("attempt_number")
+  status              MockTestAttemptStatus @default(NOT_STARTED)
+  startedAt           DateTime?             @map("started_at") @db.Timestamptz(6)
+  submittedAt         DateTime?             @map("submitted_at") @db.Timestamptz(6)
+  evaluatedAt         DateTime?             @map("evaluated_at") @db.Timestamptz(6)
+  durationSeconds     Int                   @default(0) @map("duration_seconds")
+  attemptedQuestions  Int                   @default(0) @map("attempted_questions")
+  correctAnswers      Int                   @default(0) @map("correct_answers")
+  incorrectAnswers    Int                   @default(0) @map("incorrect_answers")
+  unansweredQuestions Int                   @default(0) @map("unanswered_questions")
+  rawScore            Int                   @default(0) @map("raw_score")
+  percentage          Int                   @default(0)
+  accuracyPercent     Int                   @default(0) @map("accuracy_percent")
+  percentile          Int?
+  rank                Int?
+  rankOutOf           Int?                  @map("rank_out_of")
+  notes               String?               @db.Text
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  mockTest MockTest @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+
+  sectionResults MockTestSectionResult[]
+  topicResults   MockTestTopicResult[]
+
+  @@unique([studentProfileId, mockTestId, attemptNumber])
+  @@index([studentProfileId, status, submittedAt])
+  @@index([mockTestId, status])
+  @@index([evaluatedAt])
+  @@map("mock_test_attempts")
+}
+
+model MockTestSectionResult {
+  id                  String   @id @default(uuid()) @db.Uuid
+  mockTestAttemptId   String   @map("mock_test_attempt_id") @db.Uuid
+  mockTestSectionId   String   @map("mock_test_section_id") @db.Uuid
+  attemptedQuestions  Int      @default(0) @map("attempted_questions")
+  correctAnswers      Int      @default(0) @map("correct_answers")
+  incorrectAnswers    Int      @default(0) @map("incorrect_answers")
+  unansweredQuestions Int      @default(0) @map("unanswered_questions")
+  score               Int      @default(0)
+  maxScore            Int      @default(0) @map("max_score")
+  accuracyPercent     Int      @default(0) @map("accuracy_percent")
+  timeSpentSeconds    Int      @default(0) @map("time_spent_seconds")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  mockTestAttempt MockTestAttempt @relation(fields: [mockTestAttemptId], references: [id], onDelete: Cascade)
+
+  mockTestSection MockTestSection @relation(fields: [mockTestSectionId], references: [id], onDelete: Cascade)
+
+  @@unique([mockTestAttemptId, mockTestSectionId])
+  @@index([mockTestSectionId])
+  @@map("mock_test_section_results")
+}
+
+model MockTestTopicResult {
+  id                  String   @id @default(uuid()) @db.Uuid
+  mockTestAttemptId   String   @map("mock_test_attempt_id") @db.Uuid
+  topicId             String   @map("topic_id") @db.Uuid
+  attemptedQuestions  Int      @default(0) @map("attempted_questions")
+  correctAnswers      Int      @default(0) @map("correct_answers")
+  incorrectAnswers    Int      @default(0) @map("incorrect_answers")
+  unansweredQuestions Int      @default(0) @map("unanswered_questions")
+  score               Int      @default(0)
+  accuracyPercent     Int      @default(0) @map("accuracy_percent")
+  isWeak              Boolean  @default(false) @map("is_weak")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  mockTestAttempt MockTestAttempt @relation(fields: [mockTestAttemptId], references: [id], onDelete: Cascade)
+
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([mockTestAttemptId, topicId])
+  @@index([topicId, isWeak])
+  @@map("mock_test_topic_results")
 }
