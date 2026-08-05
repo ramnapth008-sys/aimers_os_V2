@@ -356,3 +356,6 @@ export interface CreateResearchMindMapEdgeInput {
   targetNodeId: string;
   label?: string | null;
 }
+
+export interface UpdateResearchMindMapEdgeInput
+  extends CreateResearchMindMapEdgeInput {}

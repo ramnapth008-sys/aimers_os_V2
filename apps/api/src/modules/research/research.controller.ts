@@ -446,6 +446,28 @@ export class ResearchController {
       );
   }
 
+  @Patch(
+    "projects/:projectId/edges/:edgeId",
+  )
+  updateMindMapEdge(
+    @CurrentUser()
+    user: AuthenticatedUser,
+    @Param("projectId")
+    projectId: string,
+    @Param("edgeId")
+    edgeId: string,
+    @Body()
+    dto: CreateResearchMindMapEdgeDto,
+  ) {
+    return this.researchService
+      .updateMindMapEdge(
+        user.userId,
+        projectId,
+        edgeId,
+        dto,
+      );
+  }
+
   @Delete(
     "projects/:projectId/edges/:edgeId",
   )

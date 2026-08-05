@@ -20,6 +20,7 @@ import type {
   ResearchThreadRecord,
   ResearchWorkspace,
   ResearchWorkspaceFilters,
+  UpdateResearchMindMapEdgeInput,
   UpdateResearchMindMapNodeInput,
   UpdateResearchProjectInput,
   UpdateResearchSourceInput,
@@ -307,6 +308,21 @@ export function createResearchMindMapEdge(
     `/research/projects/${projectId}/edges`,
     {
       method: "POST",
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function updateResearchMindMapEdge(
+  apiFetch: ApiFetch,
+  projectId: string,
+  edgeId: string,
+  input: UpdateResearchMindMapEdgeInput,
+): Promise<ResearchMindMapEdgeRecord> {
+  return apiFetch<ResearchMindMapEdgeRecord>(
+    `/research/projects/${projectId}/edges/${edgeId}`,
+    {
+      method: "PATCH",
       body: JSON.stringify(input),
     },
   );

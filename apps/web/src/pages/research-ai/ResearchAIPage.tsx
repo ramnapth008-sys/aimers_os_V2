@@ -10,6 +10,8 @@ import {
   Bot,
   Brain,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   CircleDot,
   FileText,
   Globe2,
@@ -20,6 +22,7 @@ import {
   Network,
   Pin,
   PinOff,
+  Pencil,
   Plus,
   Quote,
   RefreshCw,
@@ -54,12 +57,16 @@ import {
   getResearchWorkspace,
   generateResearchAssistantReply,
   ingestResearchSource,
+  updateResearchMindMapEdge,
+  updateResearchMindMapNode,
   updateResearchProject,
   updateResearchSource,
 } from "./research-ai.service";
 
 import type {
   ResearchAssistantProviderInfo,
+  ResearchMindMapEdgeRecord,
+  ResearchMindMapNodeRecord,
   ResearchMindMapNodeType,
   ResearchProjectStatus,
   ResearchProjectWorkspace,
@@ -82,6 +89,47 @@ type WorkspaceTab =
   | "sources"
   | "assistant"
   | "mind-map";
+
+/* AIMERS RESEARCH AI — ACTIVE TAB PERSISTENCE V1 */
+const researchActiveTabStorageKey =
+  "aimers.research-ai.active-tab";
+
+const workspaceTabs:
+  readonly WorkspaceTab[] = [
+    "overview",
+    "sources",
+    "assistant",
+    "mind-map",
+  ];
+
+function storedResearchActiveTab():
+  WorkspaceTab {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return "overview";
+  }
+
+  try {
+    const stored =
+      window.localStorage
+        .getItem(
+          researchActiveTabStorageKey,
+        );
+
+    return workspaceTabs.includes(
+      stored as WorkspaceTab,
+    )
+      ? (
+          stored as
+            WorkspaceTab
+        )
+      : "overview";
+  } catch {
+    return "overview";
+  }
+}
 
 const projectStatuses: Array<{
   value: ResearchProjectStatus;
@@ -168,6 +216,171 @@ const nodeTypes: Array<{
     label: "Conclusion",
   },
 ];
+
+const relationshipPresets = [
+  "supports",
+  "contradicts",
+  "explains",
+  "leads to",
+  "depends on",
+  "is evidence for",
+  "challenges",
+] as const;
+
+const hiddenMindMapProvenancePrefixes = [
+  "Research source ID:",
+  "Research excerpt ID:",
+] as const;
+
+type ResearchMapNodeConnection = {
+  edge:
+    ResearchMindMapEdgeRecord;
+
+  direction:
+    | "incoming"
+    | "outgoing";
+
+  otherNode:
+    ResearchMindMapNodeRecord;
+};
+
+function isHiddenMindMapProvenanceLine(
+  line: string,
+): boolean {
+  const normalized =
+    line.trim();
+
+  return hiddenMindMapProvenancePrefixes.some(
+    (prefix) =>
+      normalized.startsWith(
+        prefix,
+      ),
+  );
+}
+
+function visibleMindMapNodeContent(
+  value:
+    | string
+    | null
+    | undefined,
+): string {
+  return (
+    value
+      ?.split("\n")
+      .filter(
+        (line) =>
+          !isHiddenMindMapProvenanceLine(
+            line,
+          ),
+      )
+      .join("\n")
+      .trim() ??
+    ""
+  );
+}
+
+function hiddenMindMapNodeProvenance(
+  value:
+    | string
+    | null
+    | undefined,
+): string {
+  return (
+    value
+      ?.split("\n")
+      .filter(
+        isHiddenMindMapProvenanceLine,
+      )
+      .join("\n")
+      .trim() ??
+    ""
+  );
+}
+
+function mergeMindMapNodeContent(
+  visibleContent: string,
+  hiddenProvenance: string,
+): string {
+  return [
+    visibleContent.trim(),
+    hiddenProvenance.trim(),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function relationshipTone(
+  label:
+    | string
+    | null
+    | undefined,
+):
+  | "support"
+  | "challenge"
+  | "explain"
+  | "sequence"
+  | "neutral" {
+  const normalized =
+    label
+      ?.trim()
+      .toLowerCase() ??
+    "";
+
+  if (
+    normalized.includes(
+      "support",
+    ) ||
+    normalized.includes(
+      "evidence",
+    ) ||
+    normalized.includes(
+      "validate",
+    )
+  ) {
+    return "support";
+  }
+
+  if (
+    normalized.includes(
+      "contradict",
+    ) ||
+    normalized.includes(
+      "challenge",
+    ) ||
+    normalized.includes(
+      "weaken",
+    )
+  ) {
+    return "challenge";
+  }
+
+  if (
+    normalized.includes(
+      "explain",
+    ) ||
+    normalized.includes(
+      "cause",
+    )
+  ) {
+    return "explain";
+  }
+
+  if (
+    normalized.includes(
+      "lead",
+    ) ||
+    normalized.includes(
+      "depend",
+    ) ||
+    normalized.includes(
+      "precede",
+    )
+  ) {
+    return "sequence";
+  }
+
+  return "neutral";
+}
 
 function messageFrom(
   error: unknown,
@@ -339,6 +552,17 @@ export function ResearchAIPage() {
     setSelectedProjectId,
   ] = useState<string | null>(null);
 
+  const selectedProjectIdRef =
+    useRef<string | null>(
+      null,
+    );
+
+  const workspaceLoadRequestRef =
+    useRef(0);
+
+  const projectLoadRequestRef =
+    useRef(0);
+
   const [
     selectedThreadId,
     setSelectedThreadId,
@@ -357,7 +581,24 @@ export function ResearchAIPage() {
   const [
     activeTab,
     setActiveTab,
-  ] = useState<WorkspaceTab>("overview");
+  ] = useState<WorkspaceTab>(
+    storedResearchActiveTab,
+  );
+
+  useEffect(
+    () => {
+      try {
+        window.localStorage
+          .setItem(
+            researchActiveTabStorageKey,
+            activeTab,
+          );
+      } catch {
+        // Storage can be unavailable in restrictive browser modes.
+      }
+    },
+    [activeTab],
+  );
 
   const [
     loading,
@@ -441,6 +682,35 @@ export function ResearchAIPage() {
     edgeFormOpen,
     setEdgeFormOpen,
   ] = useState(false);
+
+  const [
+    editingEdgeId,
+    setEditingEdgeId,
+  ] = useState<string | null>(
+    null,
+  );
+
+  const [
+    selectedMapNodeId,
+    setSelectedMapNodeId,
+  ] = useState<string | null>(null);
+
+  const [
+    mapNodeEditorTitle,
+    setMapNodeEditorTitle,
+  ] = useState("");
+
+  const [
+    mapNodeEditorContent,
+    setMapNodeEditorContent,
+  ] = useState("");
+
+  const [
+    mapNodeEditorType,
+    setMapNodeEditorType,
+  ] = useState<ResearchMindMapNodeType>(
+    "CONCEPT",
+  );
 
   const [
     projectTitle,
@@ -679,6 +949,152 @@ export function ResearchAIPage() {
     edgeLabel,
     setEdgeLabel,
   ] = useState("");
+
+  const selectedMapNode =
+    useMemo(
+      () =>
+        project?.mindMapNodes.find(
+          (node) =>
+            node.id ===
+            selectedMapNodeId,
+        ) ??
+        null,
+      [
+        project,
+        selectedMapNodeId,
+      ],
+    );
+
+  const selectedMapNodeConnections =
+    useMemo<
+      ResearchMapNodeConnection[]
+    >(
+      () => {
+        if (
+          !project ||
+          !selectedMapNode
+        ) {
+          return [];
+        }
+
+        return project.mindMapEdges
+          .reduce<
+            ResearchMapNodeConnection[]
+          >(
+            (
+              connections,
+              edge,
+            ) => {
+              if (
+                edge.sourceNodeId ===
+                selectedMapNode.id
+              ) {
+                const otherNode =
+                  project.mindMapNodes.find(
+                    (node) =>
+                      node.id ===
+                      edge.targetNodeId,
+                  );
+
+                if (otherNode) {
+                  connections.push({
+                    edge,
+                    direction:
+                      "outgoing",
+                    otherNode,
+                  });
+                }
+
+                return connections;
+              }
+
+              if (
+                edge.targetNodeId ===
+                selectedMapNode.id
+              ) {
+                const otherNode =
+                  project.mindMapNodes.find(
+                    (node) =>
+                      node.id ===
+                      edge.sourceNodeId,
+                  );
+
+                if (otherNode) {
+                  connections.push({
+                    edge,
+                    direction:
+                      "incoming",
+                    otherNode,
+                  });
+                }
+              }
+
+              return connections;
+            },
+            [],
+          );
+      },
+      [
+        project,
+        selectedMapNode,
+      ],
+    );
+
+  useEffect(
+    () => {
+      if (!selectedMapNode) {
+        if (selectedMapNodeId) {
+          setSelectedMapNodeId(
+            null,
+          );
+        }
+
+        return;
+      }
+
+      const previousOverflow =
+        document.body.style
+          .overflow;
+
+      document.body.style
+        .overflow = "hidden";
+
+      const closeOnEscape =
+        (
+          event:
+            KeyboardEvent,
+        ) => {
+          if (
+            event.key ===
+            "Escape"
+          ) {
+            setSelectedMapNodeId(
+              null,
+            );
+          }
+        };
+
+      window.addEventListener(
+        "keydown",
+        closeOnEscape,
+      );
+
+      return () => {
+        document.body.style
+          .overflow =
+          previousOverflow;
+
+        window.removeEventListener(
+          "keydown",
+          closeOnEscape,
+        );
+      };
+    },
+    [
+      selectedMapNode,
+      selectedMapNodeId,
+    ],
+  );
 
   const activeThread = useMemo(
     () =>
@@ -997,6 +1413,14 @@ export function ResearchAIPage() {
     async (
       quiet = false,
     ) => {
+      const requestId =
+        workspaceLoadRequestRef
+          .current +
+        1;
+
+      workspaceLoadRequestRef.current =
+        requestId;
+
       quiet
         ? setRefreshing(true)
         : setLoading(true);
@@ -1004,41 +1428,80 @@ export function ResearchAIPage() {
       setError("");
 
       try {
-        const next = await getResearchWorkspace(
-          apiFetch,
-          {
-            status,
-            search,
-          },
-        );
-
-        setWorkspace(next);
+        const next =
+          await getResearchWorkspace(
+            apiFetch,
+            {
+              status,
+              search,
+            },
+          );
 
         if (
-          selectedProjectId &&
-          !next.projects.some(
-            (item) => item.id === selectedProjectId,
-          )
+          requestId !==
+          workspaceLoadRequestRef
+            .current
         ) {
-          setSelectedProjectId(
-            next.projects[0]?.id ?? null,
-          );
+          return;
         }
 
-        if (!selectedProjectId && next.projects[0]) {
-          setSelectedProjectId(next.projects[0].id);
-        }
+        setWorkspace(
+          next,
+        );
+
+        const currentSelection =
+          selectedProjectIdRef
+            .current;
+
+        const nextSelection =
+          currentSelection &&
+          next.projects.some(
+            (item) =>
+              item.id ===
+              currentSelection,
+          )
+            ? currentSelection
+            : next.projects[0]
+                ?.id ??
+              null;
+
+        selectedProjectIdRef.current =
+          nextSelection;
+
+        setSelectedProjectId(
+          nextSelection,
+        );
       } catch (requestError) {
-        setError(messageFrom(requestError));
+        if (
+          requestId ===
+          workspaceLoadRequestRef
+            .current
+        ) {
+          setError(
+            messageFrom(
+              requestError,
+            ),
+          );
+        }
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (
+          requestId ===
+          workspaceLoadRequestRef
+            .current
+        ) {
+          setLoading(
+            false,
+          );
+
+          setRefreshing(
+            false,
+          );
+        }
       }
     },
     [
       apiFetch,
       search,
-      selectedProjectId,
       status,
     ],
   );
@@ -1048,17 +1511,39 @@ export function ResearchAIPage() {
       projectId: string,
       quiet = false,
     ) => {
+      const requestId =
+        projectLoadRequestRef
+          .current +
+        1;
+
+      projectLoadRequestRef.current =
+        requestId;
+
       if (!quiet) {
-        setOpening(true);
+        setOpening(
+          true,
+        );
       }
 
       setError("");
 
       try {
-        const next = await getResearchProject(
-          apiFetch,
-          projectId,
-        );
+        const next =
+          await getResearchProject(
+            apiFetch,
+            projectId,
+          );
+
+        if (
+          requestId !==
+            projectLoadRequestRef
+              .current ||
+          selectedProjectIdRef
+            .current !==
+            projectId
+        ) {
+          return;
+        }
 
         const nextDraft =
           projectDraftFrom(
@@ -1079,21 +1564,51 @@ export function ResearchAIPage() {
           "saved",
         );
 
-        setProject(next);
+        setProject(
+          next,
+        );
 
         setSelectedThreadId(
           (current) =>
             next.threads.some(
-              (thread) => thread.id === current,
+              (thread) =>
+                thread.id ===
+                current,
             )
               ? current
-              : next.threads[0]?.id ?? null,
+              : next.threads[0]
+                  ?.id ??
+                null,
         );
       } catch (requestError) {
-        setError(messageFrom(requestError));
-        setProject(null);
+        if (
+          requestId ===
+            projectLoadRequestRef
+              .current &&
+          selectedProjectIdRef
+            .current ===
+            projectId
+        ) {
+          setError(
+            messageFrom(
+              requestError,
+            ),
+          );
+
+          setProject(
+            null,
+          );
+        }
       } finally {
-        setOpening(false);
+        if (
+          requestId ===
+          projectLoadRequestRef
+            .current
+        ) {
+          setOpening(
+            false,
+          );
+        }
       }
     },
     [apiFetch],
@@ -1117,7 +1632,13 @@ export function ResearchAIPage() {
 
   useEffect(
     () => {
+      selectedProjectIdRef.current =
+        selectedProjectId;
+
       if (!selectedProjectId) {
+        projectLoadRequestRef.current +=
+          1;
+
         setProject(null);
         setAssistantProvider(null);
         lastSavedProjectRef.current =
@@ -1134,11 +1655,59 @@ export function ResearchAIPage() {
     [loadProject, selectedProjectId],
   );
 
-  const refreshAll = async () => {
-    await loadWorkspace(true);
+  useEffect(
+    () => {
+      if (!selectedProjectId) {
+        return;
+      }
 
-    if (selectedProjectId) {
-      await loadProject(selectedProjectId, true);
+      const frame =
+        window.requestAnimationFrame(
+          () => {
+            const selectedCard =
+              document.querySelector<
+                HTMLElement
+              >(
+                `[data-research-project-id="${selectedProjectId}"]`,
+              );
+
+            selectedCard
+              ?.scrollIntoView({
+                block:
+                  "nearest",
+              });
+          },
+        );
+
+      return () => {
+        window.cancelAnimationFrame(
+          frame,
+        );
+      };
+    },
+    [
+      selectedProjectId,
+      workspace?.projects,
+    ],
+  );
+
+  const refreshAll = async () => {
+    const currentProjectId =
+      selectedProjectIdRef.current;
+
+    await loadWorkspace(
+      true,
+    );
+
+    if (
+      currentProjectId &&
+      selectedProjectIdRef.current ===
+        currentProjectId
+    ) {
+      await loadProject(
+        currentProjectId,
+        true,
+      );
     }
   };
 
@@ -1170,8 +1739,20 @@ export function ResearchAIPage() {
       setProjectQuestion("");
       setProjectDescription("");
       setStatus("ACTIVE");
-      setSelectedProjectId(created.id);
-      setProject(created);
+
+      selectedProjectIdRef.current =
+        created.id;
+
+      projectLoadRequestRef.current +=
+        1;
+
+      setSelectedProjectId(
+        created.id,
+      );
+
+      setProject(
+        created,
+      );
       await loadWorkspace(true);
     } catch (requestError) {
       setError(messageFrom(requestError));
@@ -1222,6 +1803,12 @@ export function ResearchAIPage() {
       return;
     }
 
+    selectedProjectIdRef.current =
+      nextProjectId;
+
+    projectLoadRequestRef.current +=
+      1;
+
     setSelectedProjectId(
       nextProjectId,
     );
@@ -1246,9 +1833,23 @@ export function ResearchAIPage() {
         },
       );
 
-      setProject(null);
-      setSelectedProjectId(null);
-      setStatus(nextStatus);
+      setProject(
+        null,
+      );
+
+      selectedProjectIdRef.current =
+        null;
+
+      projectLoadRequestRef.current +=
+        1;
+
+      setSelectedProjectId(
+        null,
+      );
+
+      setStatus(
+        nextStatus,
+      );
       await loadWorkspace(true);
     } catch (requestError) {
       setError(messageFrom(requestError));
@@ -1297,9 +1898,23 @@ export function ResearchAIPage() {
 
     try {
       await deleteResearchProject(apiFetch, project.id);
-      setProject(null);
-      setSelectedProjectId(null);
-      await loadWorkspace(true);
+      setProject(
+        null,
+      );
+
+      selectedProjectIdRef.current =
+        null;
+
+      projectLoadRequestRef.current +=
+        1;
+
+      setSelectedProjectId(
+        null,
+      );
+
+      await loadWorkspace(
+        true,
+      );
     } catch (requestError) {
       setError(messageFrom(requestError));
     } finally {
@@ -2040,6 +2655,312 @@ export function ResearchAIPage() {
     }
   };
 
+  const openMapNodeDetails = (
+    node:
+      ResearchMindMapNodeRecord,
+  ) => {
+    setMapNodeEditorTitle(
+      node.title,
+    );
+
+    setMapNodeEditorContent(
+      visibleMindMapNodeContent(
+        node.content,
+      ),
+    );
+
+    setMapNodeEditorType(
+      node.type,
+    );
+
+    setSelectedMapNodeId(
+      node.id,
+    );
+  };
+
+  const closeMapNodeDetails = () => {
+    setSelectedMapNodeId(
+      null,
+    );
+  };
+
+  const openEdgeBuilder = (
+    sourceNodeId = "",
+    edge:
+      ResearchMindMapEdgeRecord
+      | null = null,
+  ) => {
+    setEditingEdgeId(
+      edge?.id ??
+      null,
+    );
+
+    setEdgeSourceId(
+      edge?.sourceNodeId ??
+      sourceNodeId,
+    );
+
+    setEdgeTargetId(
+      edge?.targetNodeId ??
+      "",
+    );
+
+    setEdgeLabel(
+      edge?.label ??
+      "supports",
+    );
+
+    setEdgeFormOpen(
+      true,
+    );
+  };
+
+  const closeEdgeBuilder = () => {
+    setEdgeFormOpen(
+      false,
+    );
+
+    setEditingEdgeId(
+      null,
+    );
+
+    setEdgeSourceId(
+      "",
+    );
+
+    setEdgeTargetId(
+      "",
+    );
+
+    setEdgeLabel(
+      "",
+    );
+  };
+
+  const openLinkedSourceFromNode = () => {
+    if (
+      !project ||
+      !selectedMapNode
+        ?.researchSourceId
+    ) {
+      return;
+    }
+
+    const source =
+      project.sources.find(
+        (item) =>
+          item.id ===
+          selectedMapNode
+            .researchSourceId,
+      );
+
+    if (!source) {
+      setError(
+        "The source linked to this node is no longer available.",
+      );
+
+      return;
+    }
+
+    setSelectedMapNodeId(
+      null,
+    );
+
+    setSourceViewerTab(
+      source.excerpts?.length
+        ? "excerpts"
+        : "summary",
+    );
+
+    setSelectedSourceId(
+      source.id,
+    );
+  };
+
+  const handleUpdateNode = async () => {
+    if (
+      !project ||
+      !selectedMapNode ||
+      !mapNodeEditorTitle.trim() ||
+      saving
+    ) {
+      return;
+    }
+
+    setSaving(
+      true,
+    );
+
+    setError(
+      "",
+    );
+
+    try {
+      const hiddenProvenance =
+        hiddenMindMapNodeProvenance(
+          selectedMapNode.content,
+        );
+
+      const mergedContent =
+        mergeMindMapNodeContent(
+          mapNodeEditorContent,
+          hiddenProvenance,
+        );
+
+      await updateResearchMindMapNode(
+        apiFetch,
+        project.id,
+        selectedMapNode.id,
+        {
+          title:
+            mapNodeEditorTitle.trim(),
+
+          content:
+            mergedContent ||
+            null,
+
+          type:
+            mapNodeEditorType,
+        },
+      );
+
+      await loadProject(
+        project.id,
+        true,
+      );
+
+      setEvidenceActionNotice(
+        "Knowledge node changes were saved.",
+      );
+
+      setSelectedMapNodeId(
+        null,
+      );
+    } catch (requestError) {
+      setError(
+        messageFrom(
+          requestError,
+        ),
+      );
+    } finally {
+      setSaving(
+        false,
+      );
+    }
+  };
+
+  const handleMoveNode = async (
+    nodeId: string,
+    direction:
+      | "up"
+      | "down",
+  ) => {
+    if (
+      !project ||
+      saving
+    ) {
+      return;
+    }
+
+    const currentIndex =
+      project.mindMapNodes
+        .findIndex(
+          (node) =>
+            node.id ===
+            nodeId,
+        );
+
+    const targetIndex =
+      direction === "up"
+        ? currentIndex - 1
+        : currentIndex + 1;
+
+    if (
+      currentIndex < 0 ||
+      targetIndex < 0 ||
+      targetIndex >=
+        project.mindMapNodes
+          .length
+    ) {
+      return;
+    }
+
+    const reordered = [
+      ...project.mindMapNodes,
+    ];
+
+    [
+      reordered[currentIndex],
+      reordered[targetIndex],
+    ] = [
+      reordered[targetIndex],
+      reordered[currentIndex],
+    ];
+
+    setSaving(
+      true,
+    );
+
+    setError(
+      "",
+    );
+
+    try {
+      await Promise.all(
+        reordered.map(
+          (
+            node,
+            index,
+          ) =>
+            updateResearchMindMapNode(
+              apiFetch,
+              project.id,
+              node.id,
+              {
+                sequenceNumber:
+                  index,
+
+                positionX:
+                  (
+                    index %
+                    3
+                  ) *
+                  260,
+
+                positionY:
+                  Math.floor(
+                    index /
+                    3,
+                  ) *
+                  170,
+              },
+            ),
+        ),
+      );
+
+      await loadProject(
+        project.id,
+        true,
+      );
+
+      setEvidenceActionNotice(
+        direction === "up"
+          ? "The knowledge node was moved up."
+          : "The knowledge node was moved down.",
+      );
+    } catch (requestError) {
+      setError(
+        messageFrom(
+          requestError,
+        ),
+      );
+    } finally {
+      setSaving(
+        false,
+      );
+    }
+  };
+
   const handleCreateNode = async () => {
     if (!project || !nodeTitle.trim()) {
       return;
@@ -2082,7 +3003,27 @@ export function ResearchAIPage() {
       return;
     }
 
-    setSaving(true);
+    const node =
+      project.mindMapNodes.find(
+        (item) =>
+          item.id === nodeId,
+      );
+
+    if (
+      !window.confirm(
+        `Delete "${node?.title ?? "this node"}" and all of its relationships?`,
+      )
+    ) {
+      return;
+    }
+
+    setSaving(
+      true,
+    );
+
+    setError(
+      "",
+    );
 
     try {
       await deleteResearchMindMapNode(
@@ -2090,11 +3031,40 @@ export function ResearchAIPage() {
         project.id,
         nodeId,
       );
-      await loadProject(project.id, true);
+
+      if (
+        selectedMapNodeId ===
+        nodeId
+      ) {
+        setSelectedMapNodeId(
+          null,
+        );
+      }
+
+      await Promise.all([
+        loadProject(
+          project.id,
+          true,
+        ),
+
+        loadWorkspace(
+          true,
+        ),
+      ]);
+
+      setEvidenceActionNotice(
+        "The knowledge node and its attached relationships were deleted.",
+      );
     } catch (requestError) {
-      setError(messageFrom(requestError));
+      setError(
+        messageFrom(
+          requestError,
+        ),
+      );
     } finally {
-      setSaving(false);
+      setSaving(
+        false,
+      );
     }
   };
 
@@ -2103,33 +3073,78 @@ export function ResearchAIPage() {
       !project ||
       !edgeSourceId ||
       !edgeTargetId ||
-      edgeSourceId === edgeTargetId
+      edgeSourceId ===
+        edgeTargetId
     ) {
       return;
     }
 
-    setSaving(true);
+    const relationshipLabel =
+      edgeLabel.trim() ||
+      "related to";
+
+    setSaving(
+      true,
+    );
+
+    setError(
+      "",
+    );
 
     try {
-      await createResearchMindMapEdge(
-        apiFetch,
+      const input = {
+        sourceNodeId:
+          edgeSourceId,
+
+        targetNodeId:
+          edgeTargetId,
+
+        label:
+          relationshipLabel,
+      };
+
+      if (editingEdgeId) {
+        await updateResearchMindMapEdge(
+          apiFetch,
+          project.id,
+          editingEdgeId,
+          input,
+        );
+      } else {
+        await createResearchMindMapEdge(
+          apiFetch,
+          project.id,
+          input,
+        );
+      }
+
+      const edited =
+        Boolean(
+          editingEdgeId,
+        );
+
+      closeEdgeBuilder();
+
+      await loadProject(
         project.id,
-        {
-          sourceNodeId: edgeSourceId,
-          targetNodeId: edgeTargetId,
-          label: edgeLabel.trim() || null,
-        },
+        true,
       );
 
-      setEdgeFormOpen(false);
-      setEdgeSourceId("");
-      setEdgeTargetId("");
-      setEdgeLabel("");
-      await loadProject(project.id, true);
+      setEvidenceActionNotice(
+        edited
+          ? `Knowledge relationship "${relationshipLabel}" was updated.`
+          : `Knowledge relationship "${relationshipLabel}" was created.`,
+      );
     } catch (requestError) {
-      setError(messageFrom(requestError));
+      setError(
+        messageFrom(
+          requestError,
+        ),
+      );
     } finally {
-      setSaving(false);
+      setSaving(
+        false,
+      );
     }
   };
 
@@ -2140,7 +3155,13 @@ export function ResearchAIPage() {
       return;
     }
 
-    setSaving(true);
+    setSaving(
+      true,
+    );
+
+    setError(
+      "",
+    );
 
     try {
       await deleteResearchMindMapEdge(
@@ -2148,11 +3169,25 @@ export function ResearchAIPage() {
         project.id,
         edgeId,
       );
-      await loadProject(project.id, true);
+
+      await loadProject(
+        project.id,
+        true,
+      );
+
+      setEvidenceActionNotice(
+        "The knowledge relationship was removed.",
+      );
     } catch (requestError) {
-      setError(messageFrom(requestError));
+      setError(
+        messageFrom(
+          requestError,
+        ),
+      );
     } finally {
-      setSaving(false);
+      setSaving(
+        false,
+      );
     }
   };
 
@@ -2335,8 +3370,19 @@ export function ResearchAIPage() {
                 type="button"
                 className={status === item.value ? "active" : ""}
                 onClick={() => {
-                  setStatus(item.value);
-                  setSelectedProjectId(null);
+                  selectedProjectIdRef.current =
+                    null;
+
+                  projectLoadRequestRef.current +=
+                    1;
+
+                  setStatus(
+                    item.value,
+                  );
+
+                  setSelectedProjectId(
+                    null,
+                  );
                 }}
               >
                 {item.value === "ACTIVE" && <CircleDot size={14} />}
@@ -2361,6 +3407,7 @@ export function ResearchAIPage() {
               <button
                 key={item.id}
                 type="button"
+                data-research-project-id={item.id}
                 className={selectedProjectId === item.id ? "active" : ""}
                 onClick={() => void handleSelectProject(item.id)}
               >
@@ -3031,20 +4078,28 @@ export function ResearchAIPage() {
                         <span>KNOWLEDGE MAP</span>
                         <h2>Connect questions, evidence and conclusions</h2>
                       </div>
+
                       <div>
                         <button
                           className="research-secondary-button compact"
                           type="button"
                           disabled={project.mindMapNodes.length < 2}
-                          onClick={() => setEdgeFormOpen(true)}
+                          onClick={() =>
+                            openEdgeBuilder()
+                          }
                         >
                           <Link2 size={15} />
                           Connect
                         </button>
+
                         <button
                           className="research-primary-button compact"
                           type="button"
-                          onClick={() => setNodeFormOpen(true)}
+                          onClick={() =>
+                            setNodeFormOpen(
+                              true,
+                            )
+                          }
                         >
                           <Plus size={15} />
                           Add node
@@ -3063,62 +4118,359 @@ export function ResearchAIPage() {
                     ) : (
                       <>
                         <div className="research-map-grid">
-                          {project.mindMapNodes.map((node) => (
-                            <article
-                              key={node.id}
-                              data-node-type={node.type}
-                            >
-                              <header>
-                                <span>{node.type}</span>
-                                <button
-                                  type="button"
-                                  aria-label="Delete node"
-                                  onClick={() => void handleDeleteNode(node.id)}
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                              </header>
-                              <strong>{node.title}</strong>
-                              <p>{node.content || "No supporting detail."}</p>
-                              {(node.researchSource || node.note) && (
-                                <footer>
-                                  <Link2 size={12} />
-                                  {node.researchSource?.title ?? node.note?.title}
-                                </footer>
-                              )}
-                            </article>
-                          ))}
-                        </div>
+                          {project.mindMapNodes.map(
+                            (
+                              node,
+                              nodeIndex,
+                            ) => {
+                              const relationshipCount =
+                                project.mindMapEdges.filter(
+                                  (edge) =>
+                                    edge.sourceNodeId ===
+                                      node.id ||
+                                    edge.targetNodeId ===
+                                      node.id,
+                                ).length;
 
-                        {!!project.mindMapEdges.length && (
-                          <div className="research-edge-list">
-                            <span>CONNECTIONS</span>
-                            {project.mindMapEdges.map((edge) => {
-                              const sourceNode = project.mindMapNodes.find(
-                                (node) => node.id === edge.sourceNodeId,
-                              );
-                              const targetNode = project.mindMapNodes.find(
-                                (node) => node.id === edge.targetNodeId,
-                              );
+                              const displayContent =
+                                visibleMindMapNodeContent(
+                                  node.content,
+                                );
+
+                              const typeLabel =
+                                nodeTypes.find(
+                                  (item) =>
+                                    item.value ===
+                                    node.type,
+                                )?.label ??
+                                node.type;
 
                               return (
-                                <article key={edge.id}>
-                                  <strong>{sourceNode?.title ?? "Unknown node"}</strong>
-                                  <Link2 size={13} />
-                                  <strong>{targetNode?.title ?? "Unknown node"}</strong>
-                                  <span>{edge.label || "related to"}</span>
-                                  <button
-                                    type="button"
-                                    aria-label="Delete connection"
-                                    onClick={() => void handleDeleteEdge(edge.id)}
-                                  >
-                                    <Trash2 size={13} />
-                                  </button>
+                                <article
+                                  key={node.id}
+                                  className="research-map-node-card"
+                                  data-node-type={node.type}
+                                  role="button"
+                                  tabIndex={0}
+                                  aria-label={`Open ${node.title}`}
+                                  onClick={() =>
+                                    openMapNodeDetails(
+                                      node,
+                                    )
+                                  }
+                                  onKeyDown={(event) => {
+                                    if (
+                                      event.key ===
+                                        "Enter" ||
+                                      event.key ===
+                                        " "
+                                    ) {
+                                      event.preventDefault();
+
+                                      openMapNodeDetails(
+                                        node,
+                                      );
+                                    }
+                                  }}
+                                >
+                                  <header>
+                                    <span>
+                                      {typeLabel}
+                                    </span>
+
+                                    <div className="research-map-card-actions">
+                                      <small>
+                                        {relationshipCount}
+                                        {" "}
+                                        {relationshipCount === 1
+                                          ? "link"
+                                          : "links"}
+                                      </small>
+
+                                      <button
+                                        className="move"
+                                        type="button"
+                                        title="Move node up"
+                                        aria-label={`Move ${node.title} up`}
+                                        disabled={
+                                          saving ||
+                                          nodeIndex ===
+                                            0
+                                        }
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+
+                                          void handleMoveNode(
+                                            node.id,
+                                            "up",
+                                          );
+                                        }}
+                                      >
+                                        <ChevronUp size={13} />
+                                      </button>
+
+                                      <button
+                                        className="move"
+                                        type="button"
+                                        title="Move node down"
+                                        aria-label={`Move ${node.title} down`}
+                                        disabled={
+                                          saving ||
+                                          nodeIndex ===
+                                            project
+                                              .mindMapNodes
+                                              .length -
+                                              1
+                                        }
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+
+                                          void handleMoveNode(
+                                            node.id,
+                                            "down",
+                                          );
+                                        }}
+                                      >
+                                        <ChevronDown size={13} />
+                                      </button>
+
+                                      <button
+                                        className="connect"
+                                        type="button"
+                                        title="Connect from this node"
+                                        aria-label={`Connect from ${node.title}`}
+                                        disabled={
+                                          project.mindMapNodes.length <
+                                          2
+                                        }
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+
+                                          openEdgeBuilder(
+                                            node.id,
+                                          );
+                                        }}
+                                      >
+                                        <Link2 size={13} />
+                                      </button>
+
+                                      <button
+                                        className="delete"
+                                        type="button"
+                                        title="Delete node"
+                                        aria-label={`Delete ${node.title}`}
+                                        disabled={saving}
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+
+                                          void handleDeleteNode(
+                                            node.id,
+                                          );
+                                        }}
+                                      >
+                                        <Trash2 size={13} />
+                                      </button>
+                                    </div>
+                                  </header>
+
+                                  <strong>
+                                    {node.title}
+                                  </strong>
+
+                                  <p>
+                                    {displayContent ||
+                                      "No supporting detail."}
+                                  </p>
+
+                                  {(node.researchSource ||
+                                    node.note) && (
+                                    <footer>
+                                      <Link2 size={12} />
+                                      {node.researchSource
+                                        ?.title ??
+                                        node.note?.title}
+                                    </footer>
+                                  )}
+
+                                  <div className="research-map-node-open-hint">
+                                    Open details
+                                    <ArrowUpRight
+                                      size={12}
+                                    />
+                                  </div>
                                 </article>
                               );
-                            })}
-                          </div>
-                        )}
+                            },
+                          )}
+                        </div>
+
+                        {!!project.mindMapEdges.length ? (
+                          <section className="research-relationship-board">
+                            <header>
+                              <div>
+                                <span>RELATIONSHIPS</span>
+                                <small>
+                                  How ideas in this project affect one another
+                                </small>
+                              </div>
+
+                              <strong>
+                                {project.mindMapEdges.length}
+                              </strong>
+                            </header>
+
+                            <div className="research-relationship-list">
+                              {project.mindMapEdges.map(
+                                (edge) => {
+                                  const sourceNode =
+                                    project.mindMapNodes.find(
+                                      (node) =>
+                                        node.id ===
+                                        edge.sourceNodeId,
+                                    );
+
+                                  const targetNode =
+                                    project.mindMapNodes.find(
+                                      (node) =>
+                                        node.id ===
+                                        edge.targetNodeId,
+                                    );
+
+                                  const label =
+                                    edge.label ||
+                                    "related to";
+
+                                  return (
+                                    <article
+                                      key={edge.id}
+                                      data-relation-tone={relationshipTone(
+                                        label,
+                                      )}
+                                    >
+                                      <button
+                                        className="research-relationship-node"
+                                        type="button"
+                                        disabled={!sourceNode}
+                                        onClick={() => {
+                                          if (
+                                            sourceNode
+                                          ) {
+                                            openMapNodeDetails(
+                                              sourceNode,
+                                            );
+                                          }
+                                        }}
+                                      >
+                                        <small>
+                                          {sourceNode?.type ??
+                                            "NODE"}
+                                        </small>
+
+                                        <strong>
+                                          {sourceNode?.title ??
+                                            "Unknown node"}
+                                        </strong>
+                                      </button>
+
+                                      <span className="research-relationship-label">
+                                        <Link2
+                                          size={13}
+                                        />
+                                        {label}
+                                      </span>
+
+                                      <button
+                                        className="research-relationship-node"
+                                        type="button"
+                                        disabled={!targetNode}
+                                        onClick={() => {
+                                          if (
+                                            targetNode
+                                          ) {
+                                            openMapNodeDetails(
+                                              targetNode,
+                                            );
+                                          }
+                                        }}
+                                      >
+                                        <small>
+                                          {targetNode?.type ??
+                                            "NODE"}
+                                        </small>
+
+                                        <strong>
+                                          {targetNode?.title ??
+                                            "Unknown node"}
+                                        </strong>
+                                      </button>
+
+                                      <div className="research-relationship-actions">
+                                        <button
+                                          className="research-relationship-edit"
+                                          type="button"
+                                          title="Edit relationship"
+                                          aria-label={`Edit ${label} relationship`}
+                                          disabled={saving}
+                                          onClick={() =>
+                                            openEdgeBuilder(
+                                              "",
+                                              edge,
+                                            )
+                                          }
+                                        >
+                                          <Pencil
+                                            size={13}
+                                          />
+                                        </button>
+
+                                        <button
+                                          className="research-relationship-delete"
+                                          type="button"
+                                          title="Delete relationship"
+                                          aria-label={`Delete ${label} relationship`}
+                                          disabled={saving}
+                                          onClick={() =>
+                                            void handleDeleteEdge(
+                                              edge.id,
+                                            )
+                                          }
+                                        >
+                                          <Trash2
+                                            size={13}
+                                          />
+                                        </button>
+                                      </div>
+                                    </article>
+                                  );
+                                },
+                              )}
+                            </div>
+                          </section>
+                        ) : project.mindMapNodes.length >= 2 ? (
+                          <section className="research-relationship-empty">
+                            <Link2 size={22} />
+
+                            <div>
+                              <strong>
+                                No relationships yet
+                              </strong>
+
+                              <span>
+                                Connect nodes to show what supports, contradicts or explains an idea.
+                              </span>
+                            </div>
+
+                            <button
+                              className="research-secondary-button compact"
+                              type="button"
+                              onClick={() =>
+                                openEdgeBuilder()
+                              }
+                            >
+                              Connect nodes
+                            </button>
+                          </section>
+                        ) : null}
                       </>
                     )}
                   </section>
@@ -3186,6 +4538,368 @@ export function ResearchAIPage() {
                 {saving ? <LoaderCircle className="research-spin" size={16} /> : <Plus size={16} />}
                 Create project
               </button>
+            </footer>
+          </section>
+        </div>
+      )}
+
+      {selectedMapNode && (
+        <div
+          className="research-map-node-viewer-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              closeMapNodeDetails();
+            }
+          }}
+        >
+          <section
+            className="research-map-node-viewer"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="research-map-node-viewer-title"
+            onMouseDown={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <header className="research-map-node-viewer-header">
+              <div>
+                <span>
+                  <Network size={18} />
+                </span>
+
+                <div>
+                  <small>
+                    {nodeTypes.find(
+                      (item) =>
+                        item.value ===
+                        selectedMapNode.type,
+                    )?.label ??
+                      selectedMapNode.type}
+                  </small>
+
+                  <h2 id="research-map-node-viewer-title">
+                    {selectedMapNode.title}
+                  </h2>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                title="Close node details"
+                aria-label="Close node details"
+                onClick={closeMapNodeDetails}
+              >
+                <X size={18} />
+              </button>
+            </header>
+
+            <div className="research-map-node-viewer-meta">
+              <span>
+                Relationships
+                <strong>
+                  {selectedMapNodeConnections.length}
+                </strong>
+              </span>
+
+              <span>
+                Linked source
+                <strong>
+                  {selectedMapNode.researchSource
+                    ? "Yes"
+                    : "No"}
+                </strong>
+              </span>
+
+              <span>
+                Updated
+                <strong>
+                  {formatDate(
+                    selectedMapNode.updatedAt,
+                  )}
+                </strong>
+              </span>
+            </div>
+
+            <div className="research-map-node-viewer-content">
+              <section className="research-map-node-editor">
+                <header>
+                  <div>
+                    <span>NODE DETAILS</span>
+                    <h3>
+                      Edit this knowledge node
+                    </h3>
+                  </div>
+
+                  <button
+                    className="research-secondary-button compact"
+                    type="button"
+                    disabled={
+                      (
+                        project
+                          ?.mindMapNodes
+                          .length ??
+                        0
+                      ) <
+                      2
+                    }
+                    onClick={() => {
+                      const sourceNodeId =
+                        selectedMapNode.id;
+
+                      closeMapNodeDetails();
+
+                      openEdgeBuilder(
+                        sourceNodeId,
+                      );
+                    }}
+                  >
+                    <Link2 size={14} />
+                    Connect
+                  </button>
+                </header>
+
+                <label>
+                  Node type
+                  <select
+                    value={mapNodeEditorType}
+                    onChange={(event: ValueChangeEvent) =>
+                      setMapNodeEditorType(
+                        event.target.value as
+                          ResearchMindMapNodeType,
+                      )
+                    }
+                  >
+                    {nodeTypes.map(
+                      (item) => (
+                        <option
+                          key={item.value}
+                          value={item.value}
+                        >
+                          {item.label}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+
+                <label>
+                  Title
+                  <input
+                    value={mapNodeEditorTitle}
+                    maxLength={240}
+                    placeholder="Knowledge node title"
+                    onChange={(event: ValueChangeEvent) =>
+                      setMapNodeEditorTitle(
+                        event.target.value,
+                      )
+                    }
+                  />
+                </label>
+
+                <label>
+                  Supporting detail
+                  <textarea
+                    value={mapNodeEditorContent}
+                    placeholder="Explain what this node means and how it contributes to the research."
+                    onChange={(event: ValueChangeEvent) =>
+                      setMapNodeEditorContent(
+                        event.target.value,
+                      )
+                    }
+                  />
+                </label>
+
+                {!!hiddenMindMapNodeProvenance(
+                  selectedMapNode.content,
+                ) && (
+                  <small className="research-map-provenance-note">
+                    Internal evidence provenance is retained securely when you save and is not shown in this editor.
+                  </small>
+                )}
+              </section>
+
+              {selectedMapNode.researchSource && (
+                <section className="research-map-linked-source">
+                  <div>
+                    <span>LINKED EVIDENCE</span>
+                    <h3>
+                      {selectedMapNode.researchSource.title}
+                    </h3>
+                    <small>
+                      {selectedMapNode.researchSource.type.replaceAll(
+                        "_",
+                        " ",
+                      )}
+                    </small>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={openLinkedSourceFromNode}
+                  >
+                    Inspect evidence
+                    <ArrowUpRight size={14} />
+                  </button>
+                </section>
+              )}
+
+              <section className="research-map-node-connections">
+                <header>
+                  <div>
+                    <span>RELATIONSHIPS</span>
+                    <h3>
+                      Connected ideas
+                    </h3>
+                  </div>
+
+                  <strong>
+                    {selectedMapNodeConnections.length}
+                  </strong>
+                </header>
+
+                {!selectedMapNodeConnections.length ? (
+                  <div className="research-map-node-connections-empty">
+                    <Link2 size={20} />
+                    <span>
+                      This node has no relationships yet.
+                    </span>
+                  </div>
+                ) : (
+                  <div>
+                    {selectedMapNodeConnections.map(
+                      (connection) => {
+                        const label =
+                          connection.edge.label ||
+                          "related to";
+
+                        return (
+                          <article
+                            key={connection.edge.id}
+                            data-relation-tone={relationshipTone(
+                              label,
+                            )}
+                          >
+                            <small>
+                              {connection.direction ===
+                              "outgoing"
+                                ? "THIS NODE →"
+                                : "→ THIS NODE"}
+                            </small>
+
+                            <span>
+                              {label}
+                            </span>
+
+                            <button
+                              className="research-map-connected-node"
+                              type="button"
+                              onClick={() =>
+                                openMapNodeDetails(
+                                  connection.otherNode,
+                                )
+                              }
+                            >
+                              {connection.otherNode.title}
+                              <ArrowUpRight size={12} />
+                            </button>
+
+                            <div className="research-map-connected-actions">
+                              <button
+                                className="research-map-connected-edit"
+                                type="button"
+                                title="Edit relationship"
+                                aria-label={`Edit ${label} relationship`}
+                                disabled={saving}
+                                onClick={() => {
+                                  const edge =
+                                    connection.edge;
+
+                                  closeMapNodeDetails();
+
+                                  openEdgeBuilder(
+                                    "",
+                                    edge,
+                                  );
+                                }}
+                              >
+                                <Pencil size={13} />
+                              </button>
+
+                              <button
+                                className="research-map-connected-delete"
+                                type="button"
+                                title="Delete relationship"
+                                aria-label={`Delete ${label} relationship`}
+                                disabled={saving}
+                                onClick={() =>
+                                  void handleDeleteEdge(
+                                    connection.edge.id,
+                                  )
+                                }
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </article>
+                        );
+                      },
+                    )}
+                  </div>
+                )}
+              </section>
+            </div>
+
+            <footer className="research-map-node-viewer-footer">
+              <button
+                className="research-map-node-delete-button"
+                type="button"
+                disabled={saving}
+                onClick={() =>
+                  void handleDeleteNode(
+                    selectedMapNode.id,
+                  )
+                }
+              >
+                <Trash2 size={14} />
+                Delete node
+              </button>
+
+              <div>
+                <button
+                  className="research-secondary-button"
+                  type="button"
+                  onClick={closeMapNodeDetails}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  className="research-primary-button"
+                  type="button"
+                  disabled={
+                    !mapNodeEditorTitle.trim() ||
+                    saving
+                  }
+                  onClick={() =>
+                    void handleUpdateNode()
+                  }
+                >
+                  {saving ? (
+                    <LoaderCircle
+                      className="research-spin"
+                      size={15}
+                    />
+                  ) : (
+                    <Save size={15} />
+                  )}
+
+                  Save changes
+                </button>
+              </div>
             </footer>
           </section>
         </div>
@@ -3918,73 +5632,211 @@ export function ResearchAIPage() {
 
       {edgeFormOpen && project && (
         <div className="research-modal-backdrop">
-          <section className="research-modal">
+          <section className="research-modal research-edge-builder-modal">
             <header>
               <div>
-                <span>CONNECT NODES</span>
-                <h2>Define a knowledge relationship</h2>
+                <span>
+                    {editingEdgeId
+                      ? "EDIT RELATIONSHIP"
+                      : "CONNECT NODES"}
+                  </span>
+                  <h2>
+                    {editingEdgeId
+                      ? "Update this knowledge relationship"
+                      : "Define a knowledge relationship"}
+                  </h2>
               </div>
+
               <button
                 type="button"
-                onClick={() => setEdgeFormOpen(false)}
+                onClick={closeEdgeBuilder}
               >
                 <X size={17} />
               </button>
             </header>
+
             <label>
               From
               <select
                 value={edgeSourceId}
-                onChange={(event: ValueChangeEvent) => setEdgeSourceId(event.target.value)}
+                onChange={(event: ValueChangeEvent) => {
+                  const value =
+                    event.target.value;
+
+                  setEdgeSourceId(
+                    value,
+                  );
+
+                  if (
+                    value ===
+                    edgeTargetId
+                  ) {
+                    setEdgeTargetId(
+                      "",
+                    );
+                  }
+                }}
               >
-                <option value="">Select source node</option>
-                {project.mindMapNodes.map((node) => (
-                  <option key={node.id} value={node.id}>
-                    {node.title}
-                  </option>
-                ))}
+                <option value="">
+                  Select source node
+                </option>
+
+                {project.mindMapNodes.map(
+                  (node) => (
+                    <option
+                      key={node.id}
+                      value={node.id}
+                    >
+                      {node.title}
+                    </option>
+                  ),
+                )}
               </select>
             </label>
+
             <label>
               To
               <select
                 value={edgeTargetId}
-                onChange={(event: ValueChangeEvent) => setEdgeTargetId(event.target.value)}
+                onChange={(event: ValueChangeEvent) =>
+                  setEdgeTargetId(
+                    event.target.value,
+                  )
+                }
               >
-                <option value="">Select target node</option>
+                <option value="">
+                  Select target node
+                </option>
+
                 {project.mindMapNodes
-                  .filter((node) => node.id !== edgeSourceId)
-                  .map((node) => (
-                    <option key={node.id} value={node.id}>
-                      {node.title}
-                    </option>
-                  ))}
+                  .filter(
+                    (node) =>
+                      node.id !==
+                      edgeSourceId,
+                  )
+                  .map(
+                    (node) => (
+                      <option
+                        key={node.id}
+                        value={node.id}
+                      >
+                        {node.title}
+                      </option>
+                    ),
+                  )}
               </select>
             </label>
+
+            <div className="research-relationship-presets">
+              <span>
+                QUICK RELATIONSHIPS
+              </span>
+
+              <div>
+                {relationshipPresets.map(
+                  (preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      className={
+                        edgeLabel ===
+                        preset
+                          ? "active"
+                          : ""
+                      }
+                      onClick={() =>
+                        setEdgeLabel(
+                          preset,
+                        )
+                      }
+                    >
+                      {preset}
+                    </button>
+                  ),
+                )}
+              </div>
+            </div>
+
             <label>
               Relationship label
               <input
                 value={edgeLabel}
+                maxLength={160}
                 placeholder="supports, contradicts, explains..."
-                onChange={(event: ValueChangeEvent) => setEdgeLabel(event.target.value)}
+                onChange={(event: ValueChangeEvent) =>
+                  setEdgeLabel(
+                    event.target.value,
+                  )
+                }
               />
             </label>
+
+            {edgeSourceId &&
+              edgeTargetId && (
+                <div className="research-edge-preview">
+                  <strong>
+                    {project.mindMapNodes.find(
+                      (node) =>
+                        node.id ===
+                        edgeSourceId,
+                    )?.title ??
+                      "Source node"}
+                  </strong>
+
+                  <span
+                    data-relation-tone={relationshipTone(
+                      edgeLabel,
+                    )}
+                  >
+                    <Link2 size={13} />
+                    {edgeLabel.trim() ||
+                      "related to"}
+                  </span>
+
+                  <strong>
+                    {project.mindMapNodes.find(
+                      (node) =>
+                        node.id ===
+                        edgeTargetId,
+                    )?.title ??
+                      "Target node"}
+                  </strong>
+                </div>
+              )}
+
             <footer>
               <button
                 className="research-secondary-button"
                 type="button"
-                onClick={() => setEdgeFormOpen(false)}
+                onClick={closeEdgeBuilder}
               >
                 Cancel
               </button>
+
               <button
                 className="research-primary-button"
                 type="button"
-                disabled={!edgeSourceId || !edgeTargetId || saving}
-                onClick={() => void handleCreateEdge()}
+                disabled={
+                  !edgeSourceId ||
+                  !edgeTargetId ||
+                  saving
+                }
+                onClick={() =>
+                  void handleCreateEdge()
+                }
               >
-                <Link2 size={16} />
-                Connect nodes
+                {saving ? (
+                  <LoaderCircle
+                    className="research-spin"
+                    size={15}
+                  />
+                ) : (
+                  <Link2 size={16} />
+                )}
+
+                {editingEdgeId
+                  ? "Save relationship"
+                  : "Connect nodes"}
               </button>
             </footer>
           </section>

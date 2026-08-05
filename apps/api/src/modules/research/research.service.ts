@@ -782,7 +782,7 @@ export class ResearchService {
               isPinned: "desc",
             },
             {
-              updatedAt: "desc",
+              createdAt: "desc",
             },
           ],
 
@@ -2765,6 +2765,97 @@ export class ResearchService {
             targetNode.id,
           label:
             dto.label ?? null,
+        },
+      });
+  }
+
+  async updateMindMapEdge(
+    userId: string,
+    projectId: string,
+    edgeId: string,
+    dto:
+      CreateResearchMindMapEdgeDto,
+  ) {
+    const {
+      profile,
+    } =
+      await this.getStudentContext(
+        userId,
+      );
+
+    await this.getOwnedProjectRecord(
+      profile.id,
+      projectId,
+    );
+
+    if (
+      dto.sourceNodeId ===
+      dto.targetNodeId
+    ) {
+      throw new BadRequestException(
+        "A research mind-map node cannot link to itself.",
+      );
+    }
+
+    const edge =
+      await this.database
+        .researchMindMapEdge
+        .findFirst({
+          where: {
+            id:
+              edgeId,
+
+            researchProjectId:
+              projectId,
+
+            researchProject: {
+              studentProfileId:
+                profile.id,
+            },
+          },
+        });
+
+    if (!edge) {
+      throw new NotFoundException(
+        "The requested research mind-map edge was not found.",
+      );
+    }
+
+    const [
+      sourceNode,
+      targetNode,
+    ] = await Promise.all([
+      this.getOwnedNode(
+        profile.id,
+        projectId,
+        dto.sourceNodeId,
+      ),
+
+      this.getOwnedNode(
+        profile.id,
+        projectId,
+        dto.targetNodeId,
+      ),
+    ]);
+
+    return this.database
+      .researchMindMapEdge
+      .update({
+        where: {
+          id:
+            edge.id,
+        },
+
+        data: {
+          sourceNodeId:
+            sourceNode.id,
+
+          targetNodeId:
+            targetNode.id,
+
+          label:
+            dto.label?.trim() ||
+            null,
         },
       });
   }
