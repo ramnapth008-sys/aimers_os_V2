@@ -19,6 +19,10 @@ import {
 } from "../devices/devices.module";
 
 import {
+  InterventionsModule,
+} from "../interventions/interventions.module";
+
+import {
   PrivacyModule,
 } from "../privacy/privacy.module";
 
@@ -29,6 +33,7 @@ import {
     DevicesModule,
     ActivityModule,
     BehaviorModule,
+    InterventionsModule,
   ],
 
   exports: [
@@ -37,6 +42,7 @@ import {
     DevicesModule,
     ActivityModule,
     BehaviorModule,
+    InterventionsModule,
   ],
 })
 export class DigitalIntelligenceModule {}
