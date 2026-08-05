@@ -27,6 +27,10 @@ import {
 } from "../privacy/privacy.module";
 
 import {
+  PrivacyAgreementModule,
+} from "../privacy-agreement/privacy-agreement.module";
+
+import {
   IntelligenceController,
 } from "./intelligence.controller";
 
@@ -38,6 +42,7 @@ import {
   imports: [
     ConsentModule,
     PrivacyModule,
+    PrivacyAgreementModule,
     DevicesModule,
     ActivityModule,
     BehaviorModule,
@@ -55,6 +60,7 @@ import {
   exports: [
     ConsentModule,
     PrivacyModule,
+    PrivacyAgreementModule,
     DevicesModule,
     ActivityModule,
     BehaviorModule,

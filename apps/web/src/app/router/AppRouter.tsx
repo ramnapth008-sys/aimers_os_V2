@@ -15,6 +15,10 @@ import {
   StudentOnboardingGate,
   StudentOnboardingPage,
 } from "../../pages/onboarding";
+
+import {
+  PrivacyAgreementGate,
+} from "../../pages/privacy-agreement";
 import {
   SubjectsPage,
 } from "../../pages/subjects";
@@ -161,6 +165,12 @@ export function AppRouter() {
               <StudentOnboardingGate />
             }
           >
+            {/* AIMERS_PRIVACY_AGREEMENT_GATE_V1 */}
+            <Route
+              element={
+                <PrivacyAgreementGate />
+              }
+            >
           <Route
             index
             element={
@@ -279,6 +289,7 @@ export function AppRouter() {
               />
             }
           />
+            </Route>
         </Route>
         </Route>
       </Routes>

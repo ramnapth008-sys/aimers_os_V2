@@ -459,8 +459,9 @@ model StudentProfile {
   researchSources  ResearchSource[]
   researchThreads  ResearchThread[]
 
-  consentGrants          ConsentGrant[]
-  privacyPreference      PrivacyPreference?
+  consentGrants               ConsentGrant[]
+  privacyAgreementAcceptances PrivacyAgreementAcceptance[]
+  privacyPreference           PrivacyPreference?
   connectedDevices       ConnectedDevice[]
   dataConnectors         DataConnector[]
   activityEvents         ActivityEvent[]
@@ -2025,6 +2026,25 @@ model ConsentGrant {
   @@index([scope, status])
   @@index([expiresAt])
   @@map("consent_grants")
+}
+
+model PrivacyAgreementAcceptance {
+  id               String   @id @default(uuid()) @db.Uuid
+  studentProfileId String   @map("student_profile_id") @db.Uuid
+  acceptedByUserId String?  @map("accepted_by_user_id") @db.Uuid
+  policyVersion    String   @map("policy_version") @db.VarChar(40)
+  activationSource String   @default("PRIVACY_GATE") @map("activation_source") @db.VarChar(80)
+  acceptedAt       DateTime @default(now()) @map("accepted_at") @db.Timestamptz(6)
+  metadata         Json?
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([studentProfileId, policyVersion])
+  @@index([studentProfileId, acceptedAt])
+  @@index([policyVersion, acceptedAt])
+  @@map("privacy_agreement_acceptances")
 }
 
 model PrivacyPreference {
