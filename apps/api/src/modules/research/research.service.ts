@@ -1353,6 +1353,54 @@ export class ResearchService {
         sourceId,
       );
 
+    const projectContext =
+      await this.database
+        .researchProject
+        .findUnique({
+          where: {
+            id:
+              projectId,
+          },
+
+          select: {
+            title:
+              true,
+            description:
+              true,
+            researchQuestion:
+              true,
+
+            subject: {
+              select: {
+                name:
+                  true,
+              },
+            },
+
+            chapter: {
+              select: {
+                name:
+                  true,
+              },
+            },
+
+            topic: {
+              select: {
+                name:
+                  true,
+              },
+            },
+          },
+        });
+
+    if (
+      !projectContext
+    ) {
+      throw new NotFoundException(
+        "The requested research project was not found.",
+      );
+    }
+
     if (
       source.type !==
       ResearchSourceType.WEB_PAGE
@@ -1393,6 +1441,33 @@ export class ResearchService {
         await this.sourceIngestion
           .ingestWebpage(
             source.url,
+            {
+              sourceTitle:
+                source.title,
+              projectTitle:
+                projectContext.title,
+              researchQuestion:
+                projectContext
+                  .researchQuestion,
+              description:
+                projectContext
+                  .description,
+              subjectName:
+                projectContext
+                  .subject
+                  ?.name ??
+                null,
+              chapterName:
+                projectContext
+                  .chapter
+                  ?.name ??
+                null,
+              topicName:
+                projectContext
+                  .topic
+                  ?.name ??
+                null,
+            },
           );
 
       const existingMetadata =
@@ -1505,7 +1580,7 @@ export class ResearchService {
 
                     ingestion: {
                       version:
-                        1,
+                        2,
 
                       fetchedAt:
                         accessedAt
@@ -1532,6 +1607,18 @@ export class ResearchService {
                       characterCount:
                         ingested.rawContent
                           .length,
+
+                      excerptStrategy:
+                        ingested
+                          .excerptStrategy,
+
+                      candidateCount:
+                        ingested
+                          .candidateCount,
+
+                      contextTermCount:
+                        ingested
+                          .contextTermCount,
                     },
                   } as any,
                 },
