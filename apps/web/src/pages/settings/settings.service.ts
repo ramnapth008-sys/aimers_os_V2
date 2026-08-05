@@ -103,6 +103,23 @@ export function updatePrivacyPreferences(
   );
 }
 
+export function updateMonitoringState(
+  apiFetch: ApiFetch,
+  paused: boolean,
+) {
+  return apiFetch<PrivacyPreference>(
+    "/privacy/monitoring",
+    {
+      method: "PATCH",
+
+      body:
+        JSON.stringify({
+          paused,
+        }),
+    },
+  );
+}
+
 export function registerDevice(
   apiFetch: ApiFetch,
   input: RegisterDeviceInput,

@@ -16,6 +16,10 @@ import {
 import { Sidebar } from "../../components/navigation/Sidebar";
 import { Topbar } from "../../components/navigation/Topbar";
 
+import {
+  AimersWebCollector,
+} from "../../features/digital-intelligence";
+
 export function AppShell() {
   const location = useLocation();
 
@@ -28,6 +32,8 @@ export function AppShell() {
 
   return (
     <div className="aimers-app-shell">
+      <AimersWebCollector />
+
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() =>

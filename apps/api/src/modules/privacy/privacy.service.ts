@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Inject,
   Injectable,
 } from "@nestjs/common";
@@ -14,6 +15,10 @@ import {
 import {
   ConsentService,
 } from "../consent/consent.service";
+
+import type {
+  UpdateMonitoringStateDto,
+} from "./dto/update-monitoring-state.dto";
 
 import type {
   UpdatePrivacyPreferencesDto,
@@ -239,13 +244,9 @@ export class PrivacyService {
             ...dto,
 
             pausedAt:
-              dto.monitoringEnabled ===
-              true
+              monitoringChanged
                 ? null
-                : dto.monitoringEnabled ===
-                    false
-                  ? new Date()
-                  : undefined,
+                : undefined,
           },
 
           update: {
@@ -254,9 +255,7 @@ export class PrivacyService {
             ...(monitoringChanged
               ? {
                   pausedAt:
-                    dto.monitoringEnabled
-                      ? null
-                      : new Date(),
+                    null,
                 }
               : {}),
           },
@@ -265,6 +264,75 @@ export class PrivacyService {
     return this.reconcileWithConsent(
       profile.id,
       preference,
+    );
+  }
+
+  async updateMonitoringState(
+    userId: string,
+    dto:
+      UpdateMonitoringStateDto,
+  ) {
+    const profile =
+      await this.consentService
+        .resolveStudentProfile(
+          userId,
+        );
+
+    await this.consentService
+      .assertScopeActiveForProfile(
+        profile.id,
+        ConsentScope
+          .DIGITAL_ACTIVITY_MONITORING,
+      );
+
+    const preference =
+      await this.database
+        .privacyPreference
+        .upsert({
+          where: {
+            studentProfileId:
+              profile.id,
+          },
+
+          update: {},
+
+          create: {
+            studentProfileId:
+              profile.id,
+          },
+        });
+
+    if (
+      !preference
+        .monitoringEnabled
+    ) {
+      throw new BadRequestException(
+        dto.paused
+          ? "Enable monitoring before pausing it."
+          : "Monitoring is disabled. Enable it before resuming.",
+      );
+    }
+
+    const updated =
+      await this.database
+        .privacyPreference
+        .update({
+          where: {
+            studentProfileId:
+              profile.id,
+          },
+
+          data: {
+            pausedAt:
+              dto.paused
+                ? new Date()
+                : null,
+          },
+        });
+
+    return this.reconcileWithConsent(
+      profile.id,
+      updated,
     );
   }
 

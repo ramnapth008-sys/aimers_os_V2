@@ -23,6 +23,10 @@ import {
 } from "../../auth/decorators/roles.decorator";
 
 import {
+  UpdateMonitoringStateDto,
+} from "./dto/update-monitoring-state.dto";
+
+import {
   UpdatePrivacyPreferencesDto,
 } from "./dto/update-privacy-preferences.dto";
 
@@ -47,6 +51,23 @@ export class PrivacyController {
     return this.privacyService
       .get(
         user.userId,
+      );
+  }
+
+  // AIMERS_NONDESTRUCTIVE_MONITORING_PAUSE_V1
+  @Patch("monitoring")
+  updateMonitoringState(
+    @CurrentUser()
+    user: AuthenticatedUser,
+
+    @Body()
+    dto:
+      UpdateMonitoringStateDto,
+  ) {
+    return this.privacyService
+      .updateMonitoringState(
+        user.userId,
+        dto,
       );
   }
 

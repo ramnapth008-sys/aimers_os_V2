@@ -50,6 +50,7 @@ import {
   revokeConsent,
   updateConnectorStatus,
   updateDeviceStatus,
+  updateMonitoringState,
   updatePrivacyPreferences,
 } from "./settings.service";
 
@@ -725,6 +726,12 @@ export function SettingsPage() {
 
           setWorkspace(next);
 
+          window.dispatchEvent(
+            new CustomEvent(
+              "aimers:intelligence-settings-updated",
+            ),
+          );
+
           setRawRetentionDays(
             next
               .privacy
@@ -941,6 +948,55 @@ export function SettingsPage() {
 
           setNotice(
             `${preference.title} ${next ? "enabled" : "disabled"}.`,
+          );
+
+          await load(true);
+        },
+      );
+    };
+
+  const handleMonitoringState =
+    () => {
+      if (!workspace) {
+        return;
+      }
+
+      if (
+        !workspace
+          .privacy
+          .monitoringEnabled
+      ) {
+        const preference =
+          PREFERENCES[0];
+
+        if (preference) {
+          handlePreference(
+            preference,
+          );
+        }
+
+        return;
+      }
+
+      const pause =
+        !Boolean(
+          workspace
+            .privacy
+            .pausedAt,
+        );
+
+      void run(
+        "monitoring-state",
+        async () => {
+          await updateMonitoringState(
+            apiFetch,
+            pause,
+          );
+
+          setNotice(
+            pause
+              ? "Monitoring paused. Permissions and privacy choices were preserved."
+              : "Monitoring resumed with your saved privacy choices.",
           );
 
           await load(true);
@@ -1227,6 +1283,13 @@ export function SettingsPage() {
       )
       .length;
 
+  const monitoringPaused =
+    Boolean(
+      workspace
+        .privacy
+        .pausedAt,
+    );
+
   const monitoringActive =
     workspace
       .privacy
@@ -1234,9 +1297,7 @@ export function SettingsPage() {
     activeScopes.has(
       "DIGITAL_ACTIVITY_MONITORING",
     ) &&
-    !workspace
-      .privacy
-      .pausedAt;
+    !monitoringPaused;
 
   const selectedConnectorScope =
     CONNECTOR_SCOPE[
@@ -1271,20 +1332,15 @@ export function SettingsPage() {
               className="settings-primary-button"
               disabled={
                 busyKey ===
+                  "monitoring-state" ||
+                busyKey ===
                   "preference-monitoringEnabled" ||
                 refreshing
               }
               type="button"
-              onClick={() => {
-                const preference =
-                  PREFERENCES[0];
-
-                if (preference) {
-                  handlePreference(
-                    preference,
-                  );
-                }
-              }}
+              onClick={
+                handleMonitoringState
+              }
             >
               {monitoringActive
                 ? <Pause size={16} />
@@ -1292,7 +1348,9 @@ export function SettingsPage() {
 
               {monitoringActive
                 ? "Pause monitoring"
-                : "Enable monitoring"}
+                : monitoringPaused
+                  ? "Resume monitoring"
+                  : "Enable monitoring"}
             </button>
 
             <button
@@ -1320,7 +1378,9 @@ export function SettingsPage() {
           className={`settings-status-card ${
             monitoringActive
               ? "active"
-              : "disabled"
+              : monitoringPaused
+                ? "paused"
+                : "disabled"
           }`}
         >
           <span>
@@ -1336,9 +1396,7 @@ export function SettingsPage() {
           <strong>
             {monitoringActive
               ? "Active"
-              : workspace
-                    .privacy
-                    .pausedAt
+              : monitoringPaused
                 ? "Paused"
                 : "Disabled"}
           </strong>
@@ -1347,9 +1405,14 @@ export function SettingsPage() {
             {activeScopes.size}
             {" permissions · "}
             {activeDeviceCount}
-            {" devices · "}
+            {activeDeviceCount === 1
+              ? " device · "
+              : " devices · "}
             {activeConnectorCount}
-            {" connectors"}
+            {" active "}
+            {activeConnectorCount === 1
+              ? "connector"
+              : "connectors"}
           </p>
 
           <i>
@@ -1374,6 +1437,17 @@ export function SettingsPage() {
         <div className="settings-inline-message success">
           <CheckCircle2 size={16} />
           <span>{notice}</span>
+        </div>
+      )}
+
+      {monitoringPaused && (
+        <div className="settings-inline-message">
+          <Pause size={16} />
+          <span>
+            Monitoring is temporarily paused. Your
+            permissions and privacy choices remain saved.
+            Resume monitoring to restart collectors.
+          </span>
         </div>
       )}
 

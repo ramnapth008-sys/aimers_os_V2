@@ -4,7 +4,7 @@ import {
 } from "@aimers/database";
 
 export const PRIVACY_POLICY_VERSION =
-  "aimers-privacy-data-v1";
+  "aimers-privacy-data-v2";
 
 export const PRIVACY_POLICY_TITLE =
   "AIMERS Privacy & Data Use";
@@ -50,7 +50,7 @@ export const PRIVACY_POLICY = {
     PRIVACY_POLICY_TITLE,
 
   summary:
-    "Agreeing activates the AIMERS data and intelligence features described below. AIMERS-controlled features start immediately. External sources still require their browser, device, extension, operating-system, OAuth, or provider authorization.",
+    "Agreeing grants AIMERS permission for all data sources and intelligence features described below, including the AIMERS Web Collector, approved external website and browser activity, permitted browser-history imports, registered-device and app-usage signals, YouTube and learning-platform accounts, lecture progress, cross-device sync, Behavior AI, AI Mentor context, notifications, and focus-control proposals. AIMERS-controlled features start immediately. AIMERS automatically creates and queues the corresponding external connector setup tasks. When a supported integration is configured, AIMERS starts its authorization sequence; the browser, operating system, extension, OAuth provider, or connected platform still requires its own mandatory approval before external collection begins.",
 
   defaults: {
     rawRetentionDays:
@@ -69,14 +69,15 @@ export const PRIVACY_POLICY = {
         "Data covered by this agreement",
 
       paragraphs: [
-        "AIMERS may process your activity inside AIMERS, registered-device usage signals, approved browser activity, explicitly authorized historical imports, lecture progress, connected learning-account data, academic progress, and generated behavior summaries.",
+        "AIMERS may process activity inside AIMERS; approved external website, domain, page-title, and full-URL activity when enabled; permitted past browser history; registered-device and app-usage signals; YouTube and connected learning-platform account data; lecture progress; historical imports; academic progress; cross-device signals; and generated behavior and AI summaries. The AIMERS Web Collector records internal AIMERS route sessions, active duration, focus and visibility changes, idle periods, and collector health after agreement. Agreeing creates the corresponding AIMERS consent grants automatically. External collection begins when the required browser, operating-system, extension, OAuth, or provider approval has also succeeded.",
       ],
 
       bullets: [
-        "AIMERS page and study-session activity",
+        "AIMERS page, route, and study-session activity collected by the AIMERS Web Collector",
         "Permitted app names, foreground duration, and activity categories",
-        "Approved browser domains, page titles, and full URLs when enabled",
-        "Available past browser or learning history after source authorization",
+        "Approved external websites, domains, page titles, and full URLs when enabled",
+        "Permitted past browser history after browser or extension authorization",
+        "YouTube and learning-platform account activity after OAuth or provider authorization",
         "Lecture watch time and completion evidence from approved sources",
         "Registered device and connector identifiers",
         "Academic, focus, revision, distraction, and workload summaries",
@@ -106,12 +107,12 @@ export const PRIVACY_POLICY = {
         "Automatic activation",
 
       paragraphs: [
-        "After agreement, AIMERS creates separate consent records for each listed permission, enables the related privacy preferences, registers this browser, and activates AIMERS-native connectors.",
-        "External integrations are queued automatically, but their data collection begins only after the required external authorization succeeds.",
+        "After agreement, AIMERS automatically creates separate consent records for every listed AIMERS permission, enables the related privacy preferences, registers this browser, activates AIMERS-native connectors, starts the AIMERS Web Collector, and queues supported external website, browser-history, device, app-usage, YouTube, learning-platform, and historical-import connectors. Each external connector remains pending until its real integration is configured and its mandatory browser, operating-system, extension, OAuth, or provider approval succeeds. AIMERS starts the authorization sequence automatically only where the integration and platform support that behavior.",
+        "Pending external connectors remain visible and individually editable in Settings. Creating the AIMERS consent grant does not bypass a browser, operating-system, extension, OAuth, or provider approval.",
       ],
 
       bullets: [
-        "AIMERS Web and AIMERS lecture features activate immediately",
+        "The AIMERS Web Collector and AIMERS lecture features activate immediately",
         "Browser extensions require extension installation and browser permission",
         "Phone or desktop usage requires device or operating-system permission",
         "YouTube and learning platforms require OAuth or official provider access",
@@ -141,7 +142,7 @@ export const PRIVACY_POLICY = {
         "Important exclusions and safeguards",
 
       paragraphs: [
-        "AIMERS does not use this agreement to collect passwords, banking credentials, authentication tokens, raw keystroke content, clipboard contents, or private message bodies.",
+        "The AIMERS Web Collector itself observes only activity inside AIMERS. Approved external website activity, browser history, app or device usage, YouTube data, learning-platform data, and historical imports are collected only through their dedicated authorized connectors. AIMERS does not collect passwords, banking credentials, authentication tokens, raw keystroke content, clipboard contents, or private message bodies under this agreement.",
         "Focus controls authorize proposals and user-approved actions; they do not silently block applications.",
       ],
 
