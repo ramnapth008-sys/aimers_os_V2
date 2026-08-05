@@ -26,6 +26,14 @@ import {
   PrivacyModule,
 } from "../privacy/privacy.module";
 
+import {
+  IntelligenceController,
+} from "./intelligence.controller";
+
+import {
+  IntelligenceService,
+} from "./intelligence.service";
+
 @Module({
   imports: [
     ConsentModule,
@@ -36,6 +44,14 @@ import {
     InterventionsModule,
   ],
 
+  controllers: [
+    IntelligenceController,
+  ],
+
+  providers: [
+    IntelligenceService,
+  ],
+
   exports: [
     ConsentModule,
     PrivacyModule,
@@ -43,6 +59,7 @@ import {
     ActivityModule,
     BehaviorModule,
     InterventionsModule,
+    IntelligenceService,
   ],
 })
 export class DigitalIntelligenceModule {}
