@@ -459,6 +459,18 @@ model StudentProfile {
   researchSources  ResearchSource[]
   researchThreads  ResearchThread[]
 
+  consentGrants          ConsentGrant[]
+  privacyPreference      PrivacyPreference?
+  connectedDevices       ConnectedDevice[]
+  dataConnectors         DataConnector[]
+  activityEvents         ActivityEvent[]
+  activitySessions       ActivitySession[]
+  lectureSessions        LectureSession[]
+  dailyActivitySummaries DailyActivitySummary[]
+  behaviorSignals        BehaviorSignal[]
+  interventions          Intervention[]
+  intelligenceSnapshots  StudentIntelligenceSnapshot[]
+
   @@unique([userId, organizationId])
   @@unique([organizationId, admissionNumber])
   @@index([organizationId, status])
@@ -1817,4 +1829,515 @@ model ResearchMindMapEdge {
   @@index([researchProjectId])
   @@index([targetNodeId])
   @@map("research_mind_map_edges")
+}
+
+//
+// AIMERS DIGITAL INTELLIGENCE FOUNDATION V1
+//
+
+enum ConsentScope {
+  DIGITAL_ACTIVITY_MONITORING
+  APP_USAGE
+  BROWSER_ACTIVITY
+  BROWSER_HISTORY_IMPORT
+  LECTURE_PROGRESS
+  CROSS_DEVICE_SYNC
+  BEHAVIOR_ANALYSIS
+  AI_CONTEXT_SHARING
+  NOTIFICATIONS
+  FOCUS_CONTROLS
+}
+
+enum ConsentStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum ConsentActorType {
+  STUDENT
+  GUARDIAN
+  ADMIN
+}
+
+enum DevicePlatform {
+  WEB
+  CHROME_EXTENSION
+  EDGE_EXTENSION
+  ANDROID
+  IOS
+  IPADOS
+  MACOS
+  WINDOWS
+  LINUX
+  OTHER
+}
+
+enum DeviceStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  OFFLINE
+  REVOKED
+}
+
+enum DataConnectorType {
+  AIMERS_WEB
+  AIMERS_LECTURE_PLAYER
+  BROWSER_EXTENSION
+  ANDROID_USAGE_ACCESS
+  APPLE_DEVICE_ACTIVITY
+  DESKTOP_AGENT
+  YOUTUBE
+  LEARNING_PLATFORM
+  MANUAL_IMPORT
+}
+
+enum DataConnectorStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  ERROR
+  REVOKED
+}
+
+enum ActivitySource {
+  APP
+  WEBSITE
+  BROWSER
+  LECTURE
+  STUDY_SESSION
+  DEVICE
+  IDLE
+  IMPORTED
+}
+
+enum ActivityEventType {
+  SESSION_STARTED
+  SESSION_ENDED
+  APP_FOREGROUND
+  APP_BACKGROUND
+  WEBSITE_ACTIVE
+  WEBSITE_INACTIVE
+  LECTURE_STARTED
+  LECTURE_PROGRESS
+  LECTURE_PAUSED
+  LECTURE_COMPLETED
+  DEVICE_IDLE
+  DEVICE_ACTIVE
+  DEVICE_LOCKED
+  DEVICE_UNLOCKED
+  DEVICE_OFFLINE
+  DEVICE_ONLINE
+  HISTORY_IMPORTED
+  FOCUS_INTERRUPTION
+}
+
+enum ActivityCategory {
+  STUDY
+  PRODUCTIVITY
+  SOCIAL
+  ENTERTAINMENT
+  COMMUNICATION
+  SYSTEM
+  IDLE
+  UNKNOWN
+}
+
+enum DataConfidenceLevel {
+  EXACT
+  VERIFIED
+  OBSERVED
+  ESTIMATED
+  MISSING
+}
+
+enum BehaviorSignalType {
+  FOCUS_STREAK
+  CONTEXT_SWITCHING
+  PROCRASTINATION
+  LATE_NIGHT_SCROLLING
+  MISSED_STUDY_BLOCK
+  REVISION_GAP
+  DISTRACTION_BURST
+  OVERLOAD_RISK
+  RECOVERY_PATTERN
+  LECTURE_INCOMPLETE
+}
+
+enum BehaviorSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum InterventionType {
+  GENTLE_NUDGE
+  FOCUS_SESSION
+  BLOCK_APP
+  BLOCK_WEBSITE
+  RESCHEDULE_TASK
+  MENTOR_CHECK_IN
+  REVISION_REMINDER
+  RECOVERY_PLAN
+}
+
+enum InterventionStatus {
+  SUGGESTED
+  ACCEPTED
+  DISMISSED
+  ACTIVE
+  COMPLETED
+  EXPIRED
+}
+
+enum InterventionResponseType {
+  ACCEPTED
+  DISMISSED
+  SNOOZED
+  HELPFUL
+  NOT_HELPFUL
+  COMPLETED
+}
+
+model ConsentGrant {
+  id               String           @id @default(uuid()) @db.Uuid
+  studentProfileId String           @map("student_profile_id") @db.Uuid
+  scope            ConsentScope
+  status           ConsentStatus    @default(PENDING)
+  actorType        ConsentActorType @default(STUDENT) @map("actor_type")
+  grantedByUserId  String?          @map("granted_by_user_id") @db.Uuid
+  policyVersion    String           @map("policy_version") @db.VarChar(40)
+  grantedForMinor  Boolean          @default(false) @map("granted_for_minor")
+  grantedAt        DateTime?        @map("granted_at") @db.Timestamptz(6)
+  revokedAt        DateTime?        @map("revoked_at") @db.Timestamptz(6)
+  expiresAt        DateTime?        @map("expires_at") @db.Timestamptz(6)
+  metadata         Json?
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile  @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  activityEvents ActivityEvent[]
+
+  @@index([studentProfileId, status])
+  @@index([scope, status])
+  @@index([expiresAt])
+  @@map("consent_grants")
+}
+
+model PrivacyPreference {
+  id                       String    @id @default(uuid()) @db.Uuid
+  studentProfileId         String    @unique @map("student_profile_id") @db.Uuid
+  monitoringEnabled        Boolean   @default(false) @map("monitoring_enabled")
+  backgroundMonitoring     Boolean   @default(false) @map("background_monitoring")
+  crossDeviceSync          Boolean   @default(false) @map("cross_device_sync")
+  storeRawActivity         Boolean   @default(false) @map("store_raw_activity")
+  storeFullUrls            Boolean   @default(false) @map("store_full_urls")
+  importPastHistory        Boolean   @default(false) @map("import_past_history")
+  allowAiContext           Boolean   @default(false) @map("allow_ai_context")
+  allowBehaviorAnalysis    Boolean   @default(false) @map("allow_behavior_analysis")
+  allowNotifications       Boolean   @default(true) @map("allow_notifications")
+  allowFocusControls       Boolean   @default(false) @map("allow_focus_controls")
+  localProcessingPreferred Boolean   @default(true) @map("local_processing_preferred")
+  minorModeEnabled         Boolean   @default(false) @map("minor_mode_enabled")
+  guardianApprovalRequired Boolean   @default(false) @map("guardian_approval_required")
+  rawRetentionDays         Int       @default(30) @map("raw_retention_days")
+  summaryRetentionDays     Int       @default(365) @map("summary_retention_days")
+  pausedAt                 DateTime? @map("paused_at") @db.Timestamptz(6)
+  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  @@map("privacy_preferences")
+}
+
+model ConnectedDevice {
+  id                  String         @id @default(uuid()) @db.Uuid
+  studentProfileId    String         @map("student_profile_id") @db.Uuid
+  externalDeviceId    String         @map("external_device_id") @db.VarChar(200)
+  name                String         @db.VarChar(160)
+  platform            DevicePlatform
+  status              DeviceStatus   @default(PENDING)
+  appVersion          String?        @map("app_version") @db.VarChar(80)
+  osVersion           String?        @map("os_version") @db.VarChar(120)
+  lastSeenAt          DateTime?      @map("last_seen_at") @db.Timestamptz(6)
+  lastSyncAt          DateTime?      @map("last_sync_at") @db.Timestamptz(6)
+  monitoringStartedAt DateTime?      @map("monitoring_started_at") @db.Timestamptz(6)
+  monitoringPausedAt  DateTime?      @map("monitoring_paused_at") @db.Timestamptz(6)
+  metadata            Json?
+  createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile   StudentProfile    @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  connectors       DataConnector[]
+  activityEvents   ActivityEvent[]
+  activitySessions ActivitySession[]
+  lectureSessions  LectureSession[]
+
+  @@unique([studentProfileId, externalDeviceId])
+  @@index([studentProfileId, status])
+  @@index([status, lastSeenAt])
+  @@map("connected_devices")
+}
+
+model DataConnector {
+  id                   String              @id @default(uuid()) @db.Uuid
+  studentProfileId     String              @map("student_profile_id") @db.Uuid
+  connectedDeviceId    String?             @map("connected_device_id") @db.Uuid
+  type                 DataConnectorType
+  status               DataConnectorStatus @default(PENDING)
+  displayName          String              @map("display_name") @db.VarChar(160)
+  externalAccountId    String?             @map("external_account_id") @db.VarChar(240)
+  permissions          Json?
+  syncCursor           String?             @map("sync_cursor") @db.Text
+  lastSyncAt           DateTime?           @map("last_sync_at") @db.Timestamptz(6)
+  lastSuccessfulSyncAt DateTime?           @map("last_successful_sync_at") @db.Timestamptz(6)
+  errorMessage         String?             @map("error_message") @db.Text
+  metadata             Json?
+  createdAt            DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile  StudentProfile   @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  connectedDevice ConnectedDevice? @relation(fields: [connectedDeviceId], references: [id], onDelete: SetNull)
+  activityEvents  ActivityEvent[]
+  lectureSessions LectureSession[]
+
+  @@index([studentProfileId, status])
+  @@index([connectedDeviceId, status])
+  @@index([type, status])
+  @@index([lastSyncAt])
+  @@map("data_connectors")
+}
+
+model ActivityEvent {
+  id                  String              @id @default(uuid()) @db.Uuid
+  studentProfileId    String              @map("student_profile_id") @db.Uuid
+  connectedDeviceId   String?             @map("connected_device_id") @db.Uuid
+  dataConnectorId     String?             @map("data_connector_id") @db.Uuid
+  consentGrantId      String?             @map("consent_grant_id") @db.Uuid
+  eventKey            String?             @map("event_key") @db.VarChar(240)
+  type                ActivityEventType
+  source              ActivitySource
+  category            ActivityCategory    @default(UNKNOWN)
+  confidence          DataConfidenceLevel @default(OBSERVED)
+  appName             String?             @map("app_name") @db.VarChar(200)
+  domain              String?             @db.VarChar(320)
+  pageTitle           String?             @map("page_title") @db.VarChar(500)
+  externalReferenceId String?             @map("external_reference_id") @db.VarChar(240)
+  subjectId           String?             @map("subject_id") @db.Uuid
+  chapterId           String?             @map("chapter_id") @db.Uuid
+  topicId             String?             @map("topic_id") @db.Uuid
+  startedAt           DateTime            @map("started_at") @db.Timestamptz(6)
+  endedAt             DateTime?           @map("ended_at") @db.Timestamptz(6)
+  durationSeconds     Int?                @map("duration_seconds")
+  foreground          Boolean             @default(true)
+  metadata            Json?
+  ingestedAt          DateTime            @default(now()) @map("ingested_at") @db.Timestamptz(6)
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  studentProfile  StudentProfile   @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  connectedDevice ConnectedDevice? @relation(fields: [connectedDeviceId], references: [id], onDelete: SetNull)
+  dataConnector   DataConnector?   @relation(fields: [dataConnectorId], references: [id], onDelete: SetNull)
+  consentGrant    ConsentGrant?    @relation(fields: [consentGrantId], references: [id], onDelete: SetNull)
+
+  @@unique([studentProfileId, eventKey])
+  @@index([studentProfileId, startedAt])
+  @@index([connectedDeviceId, startedAt])
+  @@index([dataConnectorId, startedAt])
+  @@index([category, startedAt])
+  @@index([subjectId, chapterId, topicId])
+  @@map("activity_events")
+}
+
+model ActivitySession {
+  id                           String              @id @default(uuid()) @db.Uuid
+  studentProfileId             String              @map("student_profile_id") @db.Uuid
+  connectedDeviceId            String?             @map("connected_device_id") @db.Uuid
+  source                       ActivitySource
+  category                     ActivityCategory    @default(UNKNOWN)
+  confidence                   DataConfidenceLevel @default(OBSERVED)
+  appName                      String?             @map("app_name") @db.VarChar(200)
+  domain                       String?             @db.VarChar(320)
+  startedAt                    DateTime            @map("started_at") @db.Timestamptz(6)
+  endedAt                      DateTime?           @map("ended_at") @db.Timestamptz(6)
+  durationSeconds              Int?                @map("duration_seconds")
+  focusedSeconds               Int                 @default(0) @map("focused_seconds")
+  interruptionCount            Int                 @default(0) @map("interruption_count")
+  concurrentDistractionSeconds Int                 @default(0) @map("concurrent_distraction_seconds")
+  metadata                     Json?
+  createdAt                    DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                    DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile  StudentProfile   @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  connectedDevice ConnectedDevice? @relation(fields: [connectedDeviceId], references: [id], onDelete: SetNull)
+
+  @@index([studentProfileId, startedAt])
+  @@index([connectedDeviceId, startedAt])
+  @@index([category, startedAt])
+  @@map("activity_sessions")
+}
+
+model LectureSession {
+  id                      String              @id @default(uuid()) @db.Uuid
+  studentProfileId        String              @map("student_profile_id") @db.Uuid
+  connectedDeviceId       String?             @map("connected_device_id") @db.Uuid
+  dataConnectorId         String?             @map("data_connector_id") @db.Uuid
+  externalLectureId       String?             @map("external_lecture_id") @db.VarChar(240)
+  platformName            String              @map("platform_name") @db.VarChar(160)
+  courseTitle             String?             @map("course_title") @db.VarChar(300)
+  lectureTitle            String              @map("lecture_title") @db.VarChar(300)
+  subjectId               String?             @map("subject_id") @db.Uuid
+  chapterId               String?             @map("chapter_id") @db.Uuid
+  topicId                 String?             @map("topic_id") @db.Uuid
+  totalDurationSeconds    Int?                @map("total_duration_seconds")
+  watchedSeconds          Int                 @default(0) @map("watched_seconds")
+  focusedSeconds          Int                 @default(0) @map("focused_seconds")
+  playbackPositionSeconds Int                 @default(0) @map("playback_position_seconds")
+  completionPercent       Float               @default(0) @map("completion_percent")
+  completed               Boolean             @default(false)
+  confidence              DataConfidenceLevel @default(OBSERVED)
+  startedAt               DateTime            @map("started_at") @db.Timestamptz(6)
+  lastProgressAt          DateTime?           @map("last_progress_at") @db.Timestamptz(6)
+  completedAt             DateTime?           @map("completed_at") @db.Timestamptz(6)
+  metadata                Json?
+  createdAt               DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile  StudentProfile   @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  connectedDevice ConnectedDevice? @relation(fields: [connectedDeviceId], references: [id], onDelete: SetNull)
+  dataConnector   DataConnector?   @relation(fields: [dataConnectorId], references: [id], onDelete: SetNull)
+
+  @@index([studentProfileId, startedAt])
+  @@index([connectedDeviceId, startedAt])
+  @@index([dataConnectorId, startedAt])
+  @@index([subjectId, chapterId, topicId])
+  @@index([completed, lastProgressAt])
+  @@map("lecture_sessions")
+}
+
+model DailyActivitySummary {
+  id                   String              @id @default(uuid()) @db.Uuid
+  studentProfileId     String              @map("student_profile_id") @db.Uuid
+  summaryDate          DateTime            @map("summary_date") @db.Date
+  timezone             String              @db.VarChar(80)
+  monitoredSeconds     Int                 @default(0) @map("monitored_seconds")
+  studySeconds         Int                 @default(0) @map("study_seconds")
+  productiveSeconds    Int                 @default(0) @map("productive_seconds")
+  distractionSeconds   Int                 @default(0) @map("distraction_seconds")
+  idleSeconds          Int                 @default(0) @map("idle_seconds")
+  focusedStudySeconds  Int                 @default(0) @map("focused_study_seconds")
+  lectureSeconds       Int                 @default(0) @map("lecture_seconds")
+  revisionSeconds      Int                 @default(0) @map("revision_seconds")
+  socialSeconds        Int                 @default(0) @map("social_seconds")
+  entertainmentSeconds Int                 @default(0) @map("entertainment_seconds")
+  contextSwitches      Int                 @default(0) @map("context_switches")
+  longestFocusSeconds  Int                 @default(0) @map("longest_focus_seconds")
+  coveragePercent      Float               @default(0) @map("coverage_percent")
+  confidence           DataConfidenceLevel @default(MISSING)
+  metrics              Json?
+  createdAt            DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([studentProfileId, summaryDate, timezone])
+  @@index([studentProfileId, summaryDate])
+  @@index([confidence, summaryDate])
+  @@map("daily_activity_summaries")
+}
+
+model BehaviorSignal {
+  id                String              @id @default(uuid()) @db.Uuid
+  studentProfileId  String              @map("student_profile_id") @db.Uuid
+  type              BehaviorSignalType
+  severity          BehaviorSeverity
+  confidenceScore   Float               @map("confidence_score")
+  dataConfidence    DataConfidenceLevel @default(OBSERVED) @map("data_confidence")
+  title             String              @db.VarChar(240)
+  description       String              @db.Text
+  evidence          Json
+  recommendedAction String?             @map("recommended_action") @db.Text
+  periodStart       DateTime?           @map("period_start") @db.Timestamptz(6)
+  periodEnd         DateTime?           @map("period_end") @db.Timestamptz(6)
+  detectedAt        DateTime            @default(now()) @map("detected_at") @db.Timestamptz(6)
+  resolvedAt        DateTime?           @map("resolved_at") @db.Timestamptz(6)
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  interventions  Intervention[]
+
+  @@index([studentProfileId, detectedAt])
+  @@index([type, severity, detectedAt])
+  @@index([resolvedAt])
+  @@map("behavior_signals")
+}
+
+model Intervention {
+  id               String             @id @default(uuid()) @db.Uuid
+  studentProfileId String             @map("student_profile_id") @db.Uuid
+  behaviorSignalId String?            @map("behavior_signal_id") @db.Uuid
+  type             InterventionType
+  status           InterventionStatus @default(SUGGESTED)
+  title            String             @db.VarChar(240)
+  message          String             @db.Text
+  actionConfig     Json?              @map("action_config")
+  scheduledAt      DateTime?          @map("scheduled_at") @db.Timestamptz(6)
+  deliveredAt      DateTime?          @map("delivered_at") @db.Timestamptz(6)
+  respondedAt      DateTime?          @map("responded_at") @db.Timestamptz(6)
+  completedAt      DateTime?          @map("completed_at") @db.Timestamptz(6)
+  expiresAt        DateTime?          @map("expires_at") @db.Timestamptz(6)
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile         @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  behaviorSignal BehaviorSignal?        @relation(fields: [behaviorSignalId], references: [id], onDelete: SetNull)
+  responses      InterventionResponse[]
+
+  @@index([studentProfileId, status, scheduledAt])
+  @@index([behaviorSignalId])
+  @@index([expiresAt])
+  @@map("interventions")
+}
+
+model InterventionResponse {
+  id             String                   @id @default(uuid()) @db.Uuid
+  interventionId String                   @map("intervention_id") @db.Uuid
+  responseType   InterventionResponseType @map("response_type")
+  note           String?                  @db.Text
+  createdAt      DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  intervention Intervention @relation(fields: [interventionId], references: [id], onDelete: Cascade)
+
+  @@index([interventionId, createdAt])
+  @@index([responseType, createdAt])
+  @@map("intervention_responses")
+}
+
+model StudentIntelligenceSnapshot {
+  id                       String              @id @default(uuid()) @db.Uuid
+  studentProfileId         String              @map("student_profile_id") @db.Uuid
+  periodStart              DateTime            @map("period_start") @db.Timestamptz(6)
+  periodEnd                DateTime            @map("period_end") @db.Timestamptz(6)
+  generatedAt              DateTime            @default(now()) @map("generated_at") @db.Timestamptz(6)
+  coveragePercent          Float               @default(0) @map("coverage_percent")
+  predictionConfidence     DataConfidenceLevel @default(MISSING) @map("prediction_confidence")
+  academicReadinessScore   Float?              @map("academic_readiness_score")
+  focusScore               Float?              @map("focus_score")
+  revisionConsistencyScore Float?              @map("revision_consistency_score")
+  distractionRiskScore     Float?              @map("distraction_risk_score")
+  overloadRiskScore        Float?              @map("overload_risk_score")
+  features                 Json
+  sourceVersion            String              @map("source_version") @db.VarChar(80)
+  createdAt                DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  @@index([studentProfileId, generatedAt])
+  @@index([periodStart, periodEnd])
+  @@index([predictionConfidence, generatedAt])
+  @@map("student_intelligence_snapshots")
 }
