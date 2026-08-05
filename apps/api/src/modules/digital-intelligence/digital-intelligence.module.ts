@@ -7,6 +7,10 @@ import {
 } from "../activity/activity.module";
 
 import {
+  BehaviorModule,
+} from "../behavior/behavior.module";
+
+import {
   ConsentModule,
 } from "../consent/consent.module";
 
@@ -24,6 +28,7 @@ import {
     PrivacyModule,
     DevicesModule,
     ActivityModule,
+    BehaviorModule,
   ],
 
   exports: [
@@ -31,6 +36,7 @@ import {
     PrivacyModule,
     DevicesModule,
     ActivityModule,
+    BehaviorModule,
   ],
 })
 export class DigitalIntelligenceModule {}
