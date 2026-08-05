@@ -63,6 +63,10 @@ import {
 } from "./modules/research/research.module";
 
 import {
+  DigitalIntelligenceModule,
+} from "./modules/digital-intelligence/digital-intelligence.module";
+
+import {
   QuestionBankModule,
 } from "./question-bank/question-bank.module";
 
@@ -89,6 +93,7 @@ import {
     MemoryEngineModule,
     NotesModule,
     ResearchModule,
+    DigitalIntelligenceModule,
     QuestionBankModule,
     ProfileModule,
     OnboardingModule,
