@@ -7,6 +7,10 @@ import {
 } from "../consent/consent.module";
 
 import {
+  DevicesModule,
+} from "../devices/devices.module";
+
+import {
   PrivacyModule,
 } from "../privacy/privacy.module";
 
@@ -14,11 +18,13 @@ import {
   imports: [
     ConsentModule,
     PrivacyModule,
+    DevicesModule,
   ],
 
   exports: [
     ConsentModule,
     PrivacyModule,
+    DevicesModule,
   ],
 })
 export class DigitalIntelligenceModule {}
