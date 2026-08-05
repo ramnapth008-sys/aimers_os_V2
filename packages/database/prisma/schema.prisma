@@ -2038,7 +2038,7 @@ model PrivacyPreference {
   importPastHistory        Boolean   @default(false) @map("import_past_history")
   allowAiContext           Boolean   @default(false) @map("allow_ai_context")
   allowBehaviorAnalysis    Boolean   @default(false) @map("allow_behavior_analysis")
-  allowNotifications       Boolean   @default(true) @map("allow_notifications")
+  allowNotifications       Boolean   @default(false) @map("allow_notifications")
   allowFocusControls       Boolean   @default(false) @map("allow_focus_controls")
   localProcessingPreferred Boolean   @default(true) @map("local_processing_preferred")
   minorModeEnabled         Boolean   @default(false) @map("minor_mode_enabled")

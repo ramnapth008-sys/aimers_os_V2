@@ -67,6 +67,10 @@ import {
   DigitalActivityPage,
 } from "../../pages/digital-activity";
 
+import {
+  SettingsPage,
+} from "../../pages/settings";
+
 
 
 
@@ -95,13 +99,6 @@ const modules = [
     title: "Achievements",
     description:
       "Track streaks, milestones, badges and learning accomplishments.",
-  },
-  {
-    path: "settings",
-    eyebrow: "SYSTEM CONFIGURATION",
-    title: "Settings",
-    description:
-      "Manage account, learning, AI, privacy, devices and billing.",
   },
   {
     path: "subscription",
@@ -249,6 +246,12 @@ export function AppRouter() {
           <Route
             path="digital-activity"
             element={<DigitalActivityPage />}
+          />
+
+          {/* AIMERS_DIGITAL_INTELLIGENCE_SETTINGS_V1 */}
+          <Route
+            path="settings"
+            element={<SettingsPage />}
           />
 
           {modules.map((module) => (

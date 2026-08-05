@@ -98,6 +98,7 @@ export class IntelligenceService {
 
     const [
       privacy,
+      activeScopes,
       snapshots,
       summaries,
       activeSignals,
@@ -116,6 +117,11 @@ export class IntelligenceService {
                 profile.id,
             },
           }),
+
+        this.consentService
+          .activeScopesForProfile(
+            profile.id,
+          ),
 
         this.database
           .studentIntelligenceSnapshot
@@ -337,9 +343,13 @@ export class IntelligenceService {
 
       privacy: {
         monitoringEnabled:
-          privacy
-            ?.monitoringEnabled ??
-          false,
+          Boolean(
+            privacy
+              ?.monitoringEnabled &&
+            activeScopes.has(
+              ConsentScope.DIGITAL_ACTIVITY_MONITORING,
+            ),
+          ),
 
         paused:
           Boolean(
@@ -347,24 +357,40 @@ export class IntelligenceService {
           ),
 
         behaviorAnalysisEnabled:
-          privacy
-            ?.allowBehaviorAnalysis ??
-          false,
+          Boolean(
+            privacy
+              ?.allowBehaviorAnalysis &&
+            activeScopes.has(
+              ConsentScope.BEHAVIOR_ANALYSIS,
+            ),
+          ),
 
         aiContextEnabled:
-          privacy
-            ?.allowAiContext ??
-          false,
+          Boolean(
+            privacy
+              ?.allowAiContext &&
+            activeScopes.has(
+              ConsentScope.AI_CONTEXT_SHARING,
+            ),
+          ),
 
         notificationEnabled:
-          privacy
-            ?.allowNotifications ??
-          false,
+          Boolean(
+            privacy
+              ?.allowNotifications &&
+            activeScopes.has(
+              ConsentScope.NOTIFICATIONS,
+            ),
+          ),
 
         focusControlsEnabled:
-          privacy
-            ?.allowFocusControls ??
-          false,
+          Boolean(
+            privacy
+              ?.allowFocusControls &&
+            activeScopes.has(
+              ConsentScope.FOCUS_CONTROLS,
+            ),
+          ),
       },
 
       connectivity: {

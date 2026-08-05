@@ -242,6 +242,56 @@ export class ConsentService {
     };
   }
 
+  async activeScopesForProfile(
+    studentProfileId: string,
+  ) {
+    const now =
+      new Date();
+
+    const grants =
+      await this.database
+        .consentGrant
+        .findMany({
+          where: {
+            studentProfileId,
+
+            status:
+              ConsentStatus.ACTIVE,
+
+            grantedAt: {
+              not: null,
+            },
+
+            revokedAt:
+              null,
+
+            OR: [
+              {
+                expiresAt:
+                  null,
+              },
+              {
+                expiresAt: {
+                  gt: now,
+                },
+              },
+            ],
+          },
+
+          select: {
+            scope:
+              true,
+          },
+        });
+
+    return new Set<ConsentScope>(
+      grants.map(
+        (grant) =>
+          grant.scope,
+      ),
+    );
+  }
+
   async assertScopeActiveForProfile(
     studentProfileId: string,
     scope: ConsentScope,
