@@ -40,6 +40,101 @@ import {
   InterventionsService,
 } from "./interventions.service";
 
+function normalizeIntegerQuery(
+  value: unknown,
+  fallback: number,
+  minimum: number,
+  maximum: number,
+): number {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : Number.parseInt(
+          String(
+            value ?? "",
+          ),
+          10,
+        );
+
+  if (
+    !Number.isFinite(parsed)
+  ) {
+    return fallback;
+  }
+
+  return Math.min(
+    maximum,
+    Math.max(
+      minimum,
+      Math.trunc(parsed),
+    ),
+  );
+}
+
+function normalizeBooleanQuery(
+  value: unknown,
+  fallback: boolean,
+): boolean {
+  if (
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+
+  if (
+    typeof value !== "string"
+  ) {
+    return fallback;
+  }
+
+  const normalized =
+    value
+      .trim()
+      .toLowerCase();
+
+  if (
+    normalized === "true" ||
+    normalized === "1" ||
+    normalized === "yes"
+  ) {
+    return true;
+  }
+
+  if (
+    normalized === "false" ||
+    normalized === "0" ||
+    normalized === "no"
+  ) {
+    return false;
+  }
+
+  return fallback;
+}
+
+function normalizeListQuery(
+  query:
+    ListInterventionsQueryDto,
+): ListInterventionsQueryDto {
+  return {
+    includeClosed:
+      normalizeBooleanQuery(
+        query.includeClosed,
+        false,
+      ),
+
+    status:
+      query.status,
+
+    limit:
+      normalizeIntegerQuery(
+        query.limit,
+        50,
+        1,
+        200,
+      ),
+  };
+}
+
 @Roles(UserRole.STUDENT)
 @Controller("interventions")
 export class InterventionsController {
@@ -77,7 +172,9 @@ export class InterventionsController {
     return this.interventionsService
       .list(
         user.userId,
-        query,
+        normalizeListQuery(
+          query,
+        ),
       );
   }
 

@@ -29,6 +29,60 @@ import {
   IntelligenceService,
 } from "./intelligence.service";
 
+function normalizeIntegerQuery(
+  value: unknown,
+  fallback: number,
+  minimum: number,
+  maximum: number,
+): number {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : Number.parseInt(
+          String(
+            value ?? "",
+          ),
+          10,
+        );
+
+  if (
+    !Number.isFinite(parsed)
+  ) {
+    return fallback;
+  }
+
+  return Math.min(
+    maximum,
+    Math.max(
+      minimum,
+      Math.trunc(parsed),
+    ),
+  );
+}
+
+function normalizeIntelligenceQuery(
+  query:
+    IntelligenceQueryDto,
+): IntelligenceQueryDto {
+  return {
+    days:
+      normalizeIntegerQuery(
+        query.days,
+        7,
+        1,
+        90,
+      ),
+
+    limit:
+      normalizeIntegerQuery(
+        query.limit,
+        20,
+        1,
+        100,
+      ),
+  };
+}
+
 @Roles(UserRole.STUDENT)
 @Controller("intelligence")
 export class IntelligenceController {
@@ -50,7 +104,9 @@ export class IntelligenceController {
     return this.intelligenceService
       .dashboard(
         user.userId,
-        query,
+        normalizeIntelligenceQuery(
+          query,
+        ),
       );
   }
 
@@ -66,7 +122,9 @@ export class IntelligenceController {
     return this.intelligenceService
       .mentorContext(
         user.userId,
-        query,
+        normalizeIntelligenceQuery(
+          query,
+        ),
       );
   }
 
@@ -82,7 +140,9 @@ export class IntelligenceController {
     return this.intelligenceService
       .subjects(
         user.userId,
-        query,
+        normalizeIntelligenceQuery(
+          query,
+        ),
       );
   }
 
@@ -98,7 +158,9 @@ export class IntelligenceController {
     return this.intelligenceService
       .plannerContext(
         user.userId,
-        query,
+        normalizeIntelligenceQuery(
+          query,
+        ),
       );
   }
 
@@ -114,7 +176,9 @@ export class IntelligenceController {
     return this.intelligenceService
       .predictions(
         user.userId,
-        query,
+        normalizeIntelligenceQuery(
+          query,
+        ),
       );
   }
 }

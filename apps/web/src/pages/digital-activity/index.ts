@@ -1,1 +1,3 @@
-export {};
+export {
+  DigitalActivityPage,
+} from "./DigitalActivityPage";

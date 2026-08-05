@@ -59,6 +59,14 @@ import {
   ResearchAIPage,
 } from "../../pages/research-ai";
 
+import {
+  BehaviorAIPage,
+} from "../../pages/behavior-ai";
+
+import {
+  DigitalActivityPage,
+} from "../../pages/digital-activity";
+
 
 
 
@@ -73,20 +81,6 @@ const modules = [
     title: "AI Mentor",
     description:
       "Ask questions, learn concepts and receive personalised guidance.",
-  },
-  {
-    path: "behavior-ai",
-    eyebrow: "BEHAVIOUR INTELLIGENCE",
-    title: "Behavior AI",
-    description:
-      "Understand focus patterns, distractions and learning behaviour.",
-  },
-  {
-    path: "digital-activity",
-    eyebrow: "CONSENT-BASED MONITORING",
-    title: "Digital Activity",
-    description:
-      "Analyse app, browser, lecture and productive usage patterns.",
   },
   {
     path: "community",
@@ -244,6 +238,17 @@ export function AppRouter() {
           <Route
             path="research-ai"
             element={<ResearchAIPage />}
+          />
+
+          {/* AIMERS_INTELLIGENCE_FRONTEND_V1 */}
+          <Route
+            path="behavior-ai"
+            element={<BehaviorAIPage />}
+          />
+
+          <Route
+            path="digital-activity"
+            element={<DigitalActivityPage />}
           />
 
           {modules.map((module) => (
