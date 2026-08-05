@@ -3,6 +3,10 @@ import {
 } from "@nestjs/common";
 
 import {
+  ActivityModule,
+} from "../activity/activity.module";
+
+import {
   ConsentModule,
 } from "../consent/consent.module";
 
@@ -19,12 +23,14 @@ import {
     ConsentModule,
     PrivacyModule,
     DevicesModule,
+    ActivityModule,
   ],
 
   exports: [
     ConsentModule,
     PrivacyModule,
     DevicesModule,
+    ActivityModule,
   ],
 })
 export class DigitalIntelligenceModule {}
