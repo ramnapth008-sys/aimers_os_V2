@@ -64,6 +64,10 @@ import {
 } from "../../pages/research-ai";
 
 import {
+  AiMentorPage,
+} from "../../pages/ai-mentor";
+
+import {
   BehaviorAIPage,
 } from "../../pages/behavior-ai";
 
@@ -95,13 +99,6 @@ import {
 import { ModulePage } from "../../pages/shared/ModulePage";
 
 const modules = [
-  {
-    path: "ai-mentor",
-    eyebrow: "PERSONAL AI TEACHER",
-    title: "AI Mentor",
-    description:
-      "Ask questions, learn concepts and receive personalised guidance.",
-  },
   {
     path: "community",
     eyebrow: "LEARNING COMMUNITY",
@@ -266,6 +263,12 @@ export function AppRouter() {
           />
 
           {/* AIMERS_INTELLIGENCE_FRONTEND_V1 */}
+          {/* AIMERS_PROACTIVE_AI_MENTOR_FOUNDATION_V1 */}
+          <Route
+            path="ai-mentor"
+            element={<AiMentorPage />}
+          />
+
           <Route
             path="behavior-ai"
             element={<BehaviorAIPage />}

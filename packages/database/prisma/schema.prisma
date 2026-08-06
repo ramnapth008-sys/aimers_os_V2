@@ -462,15 +462,19 @@ model StudentProfile {
   consentGrants               ConsentGrant[]
   privacyAgreementAcceptances PrivacyAgreementAcceptance[]
   privacyPreference           PrivacyPreference?
-  connectedDevices       ConnectedDevice[]
-  dataConnectors         DataConnector[]
-  activityEvents         ActivityEvent[]
-  activitySessions       ActivitySession[]
-  lectureSessions        LectureSession[]
-  dailyActivitySummaries DailyActivitySummary[]
-  behaviorSignals        BehaviorSignal[]
-  interventions          Intervention[]
-  intelligenceSnapshots  StudentIntelligenceSnapshot[]
+  connectedDevices            ConnectedDevice[]
+  dataConnectors              DataConnector[]
+  activityEvents              ActivityEvent[]
+  activitySessions            ActivitySession[]
+  lectureSessions             LectureSession[]
+  dailyActivitySummaries      DailyActivitySummary[]
+  behaviorSignals             BehaviorSignal[]
+  interventions               Intervention[]
+  intelligenceSnapshots       StudentIntelligenceSnapshot[]
+
+  mentorConversations MentorConversation[]
+  mentorDailyBriefs   MentorDailyBrief[]
+  mentorCheckIns      MentorCheckIn[]
 
   @@unique([userId, organizationId])
   @@unique([organizationId, admissionNumber])
@@ -2360,4 +2364,102 @@ model StudentIntelligenceSnapshot {
   @@index([periodStart, periodEnd])
   @@index([predictionConfidence, generatedAt])
   @@map("student_intelligence_snapshots")
+}
+
+// AIMERS_PROACTIVE_AI_MENTOR_FOUNDATION_V1
+
+model MentorConversation {
+  id               String    @id @default(uuid()) @db.Uuid
+  studentProfileId String    @map("student_profile_id") @db.Uuid
+  title            String    @default("Daily Mentor") @db.VarChar(200)
+  status           String    @default("ACTIVE") @db.VarChar(30)
+  lastMessageAt    DateTime? @map("last_message_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile  @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  messages       MentorMessage[]
+  checkIns       MentorCheckIn[]
+
+  @@index([studentProfileId, status, updatedAt])
+  @@map("mentor_conversations")
+}
+
+model MentorMessage {
+  id             String   @id @default(uuid()) @db.Uuid
+  conversationId String   @map("conversation_id") @db.Uuid
+  role           String   @db.VarChar(24)
+  content        String   @db.Text
+  provider       String?  @db.VarChar(40)
+  model          String?  @db.VarChar(120)
+  contextSummary Json?    @map("context_summary")
+  inputTokens    Int?     @map("input_tokens")
+  outputTokens   Int?     @map("output_tokens")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  conversation MentorConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("mentor_messages")
+}
+
+model MentorDailyBrief {
+  id               String   @id @default(uuid()) @db.Uuid
+  studentProfileId String   @map("student_profile_id") @db.Uuid
+  briefDate        DateTime @map("brief_date") @db.Date
+  timezone         String   @db.VarChar(80)
+  kind             String   @default("DAILY") @db.VarChar(30)
+  headline         String   @db.VarChar(240)
+  summary          String   @db.Text
+  priorities       Json
+  risks            Json
+  nextActions      Json     @map("next_actions")
+  contextSnapshot  Json     @map("context_snapshot")
+  generatedBy      String   @map("generated_by") @db.VarChar(40)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([studentProfileId, briefDate, kind])
+  @@index([studentProfileId, createdAt])
+  @@map("mentor_daily_briefs")
+}
+
+model MentorCheckIn {
+  id               String    @id @default(uuid()) @db.Uuid
+  studentProfileId String    @map("student_profile_id") @db.Uuid
+  conversationId   String?   @map("conversation_id") @db.Uuid
+  kind             String    @db.VarChar(50)
+  question         String    @db.Text
+  options          Json?
+  hypothesis       Json?
+  status           String    @default("OPEN") @db.VarChar(30)
+  askedAt          DateTime  @default(now()) @map("asked_at") @db.Timestamptz(6)
+  answeredAt       DateTime? @map("answered_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile         @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  conversation   MentorConversation?    @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  response       MentorCheckInResponse?
+
+  @@index([studentProfileId, status, askedAt])
+  @@index([conversationId, askedAt])
+  @@map("mentor_check_ins")
+}
+
+model MentorCheckInResponse {
+  id             String   @id @default(uuid()) @db.Uuid
+  checkInId      String   @unique @map("check_in_id") @db.Uuid
+  answer         String   @db.Text
+  selectedOption String?  @map("selected_option") @db.VarChar(120)
+  energyScore    Int?     @map("energy_score")
+  focusScore     Int?     @map("focus_score")
+  moodScore      Int?     @map("mood_score")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  checkIn MentorCheckIn @relation(fields: [checkInId], references: [id], onDelete: Cascade)
+
+  @@map("mentor_check_in_responses")
 }

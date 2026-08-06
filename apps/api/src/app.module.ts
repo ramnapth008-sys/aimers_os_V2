@@ -63,6 +63,10 @@ import {
 } from "./modules/research/research.module";
 
 import {
+  AiMentorModule,
+} from "./modules/ai-mentor/ai-mentor.module";
+
+import {
   DigitalIntelligenceModule,
 } from "./modules/digital-intelligence/digital-intelligence.module";
 
@@ -93,6 +97,7 @@ import {
     MemoryEngineModule,
     NotesModule,
     ResearchModule,
+    AiMentorModule,
     DigitalIntelligenceModule,
     QuestionBankModule,
     ProfileModule,
