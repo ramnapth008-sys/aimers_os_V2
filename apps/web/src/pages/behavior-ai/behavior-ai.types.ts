@@ -140,6 +140,33 @@ export interface BehaviorWorkspace {
   interventions: Intervention[];
 }
 
+// AIMERS_BEHAVIOR_INTELLIGENCE_ACTIVATION_V1
+export interface AnalyzeBehaviorResponse {
+  success: boolean;
+  period: {
+    from: string;
+    to: string;
+    days: number;
+    timezone: string;
+  };
+  processed: {
+    rawEvents: number;
+    normalizedSessions: number;
+    dailySummaries: number;
+    lectures: number;
+    behaviorSignals: number;
+  };
+  scores: {
+    academicReadinessScore: number | null;
+    focusScore: number | null;
+    distractionRiskScore: number | null;
+    overloadRiskScore: number | null;
+  };
+  latestDay: DailyActivitySummary;
+  signals: BehaviorSignal[];
+  snapshot: IntelligenceSnapshot;
+}
+
 export interface GenerateInterventionsResponse {
   success: boolean;
   eligibleSignals: number;

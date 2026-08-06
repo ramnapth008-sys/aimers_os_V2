@@ -1,0 +1,344 @@
+.student-login-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.08fr)
+    minmax(420px, 0.92fr);
+  color: #f6f3ff;
+  background:
+    radial-gradient(
+      circle at 15% 18%,
+      rgba(117, 71, 255, 0.25),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      rgba(211, 63, 226, 0.14),
+      transparent 33%
+    ),
+    #060817;
+}
+
+.student-login-visual,
+.student-login-form-panel {
+  min-height: 100vh;
+  padding: clamp(
+    30px,
+    5vw,
+    76px
+  );
+}
+
+.student-login-visual {
+  display: flex;
+  flex-direction: column;
+  justify-content:
+    space-between;
+  overflow: hidden;
+  border-right:
+    1px solid
+      rgba(157, 111, 255, 0.17);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(73, 45, 133, 0.22),
+      rgba(8, 10, 28, 0.82)
+    );
+}
+
+.student-login-brand {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+}
+
+.student-login-brand > span {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border:
+    1px solid
+      rgba(189, 124, 255, 0.35);
+  border-radius: 15px;
+  color: #d08aff;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(126, 70, 232, 0.24),
+      rgba(31, 20, 70, 0.72)
+    );
+  box-shadow:
+    0 0 30px
+      rgba(141, 72, 231, 0.15);
+}
+
+.student-login-brand strong {
+  font-size: 1.03rem;
+  letter-spacing: 0.18em;
+}
+
+.student-login-brand i {
+  color: #d17bff;
+  font-style: normal;
+}
+
+.student-login-brand small {
+  display: block;
+  margin-top: 3px;
+  color: #878197;
+  font-size: 0.71rem;
+}
+
+.student-login-message {
+  max-width: 660px;
+  margin: auto 0;
+}
+
+.student-login-message > span,
+.student-login-card > span {
+  color: #c67fff;
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.17em;
+}
+
+.student-login-message h1 {
+  max-width: 640px;
+  margin: 18px 0 16px;
+  font-size:
+    clamp(
+      3rem,
+      6vw,
+      6.6rem
+    );
+  line-height: 0.93;
+  letter-spacing: -0.065em;
+}
+
+.student-login-message > p {
+  max-width: 580px;
+  color: #a6a0b5;
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.student-login-message article {
+  max-width: 520px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 28px;
+  padding: 16px;
+  border:
+    1px solid
+      rgba(84, 218, 177, 0.2);
+  border-radius: 16px;
+  color: #67ddb6;
+  background:
+    rgba(38, 126, 99, 0.08);
+}
+
+.student-login-message article small {
+  display: block;
+  margin-top: 4px;
+  color: #8f99a2;
+  line-height: 1.55;
+}
+
+.student-login-form-panel {
+  display: grid;
+  place-items: center;
+}
+
+.student-login-card {
+  width: min(
+    470px,
+    100%
+  );
+  display: grid;
+  gap: 18px;
+  padding: clamp(
+    25px,
+    4vw,
+    42px
+  );
+  border:
+    1px solid
+      rgba(149, 105, 239, 0.2);
+  border-radius: 26px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(16, 18, 43, 0.94),
+      rgba(9, 11, 29, 0.96)
+    );
+  box-shadow:
+    0 32px 90px
+      rgba(0, 0, 0, 0.37);
+}
+
+.student-login-card h2 {
+  margin: 0;
+  font-size: 2rem;
+  letter-spacing: -0.04em;
+}
+
+.student-login-card > p {
+  margin-top: -9px;
+  color: #8d879d;
+}
+
+.student-login-card label {
+  display: grid;
+  gap: 8px;
+  color: #aaa4b8;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.student-login-card label > div {
+  min-height: 50px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 0 14px;
+  border:
+    1px solid
+      rgba(137, 111, 199, 0.2);
+  border-radius: 13px;
+  color: #8a75bb;
+  background:
+    rgba(6, 8, 23, 0.8);
+  transition:
+    border-color 170ms ease,
+    box-shadow 170ms ease,
+    transform 170ms ease;
+}
+
+.student-login-card label > div:focus-within {
+  border-color:
+    rgba(186, 115, 255, 0.52);
+  box-shadow:
+    0 0 0 4px
+      rgba(132, 81, 220, 0.11);
+}
+
+.student-login-card input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  color: #f4f0fa;
+  background: transparent;
+  font: inherit;
+}
+
+.student-login-card input::placeholder {
+  color: #5f5a6b;
+}
+
+.student-login-card > button {
+  min-height: 50px;
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 13px;
+  color: #fff;
+  background:
+    linear-gradient(
+      135deg,
+      #704dff,
+      #ce43e3
+    );
+  font: inherit;
+  font-weight: 800;
+  transition:
+    transform 170ms ease,
+    box-shadow 170ms ease,
+    opacity 170ms ease;
+}
+
+.student-login-card > button:hover:not(:disabled) {
+  transform:
+    translateY(-2px);
+  box-shadow:
+    0 14px 34px
+      rgba(143, 65, 224, 0.27);
+}
+
+.student-login-card > button:active:not(:disabled) {
+  transform:
+    scale(0.98);
+}
+
+.student-login-card > button:disabled {
+  opacity: 0.55;
+}
+
+.student-login-error {
+  padding: 12px 13px;
+  border:
+    1px solid
+      rgba(255, 100, 132, 0.24);
+  border-radius: 12px;
+  color: #ff9aac;
+  background:
+    rgba(135, 32, 59, 0.12);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.student-login-security {
+  color: #706b7e;
+  text-align: center;
+  line-height: 1.5;
+}
+
+@media (
+  max-width: 900px
+) {
+  .student-login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .student-login-visual {
+    min-height: auto;
+    gap: 70px;
+    border-right: 0;
+    border-bottom:
+      1px solid
+        rgba(157, 111, 255, 0.17);
+  }
+
+  .student-login-message h1 {
+    font-size:
+      clamp(
+        2.8rem,
+        12vw,
+        5rem
+      );
+  }
+
+  .student-login-form-panel {
+    min-height: auto;
+  }
+}
+
+@media (
+  max-width: 520px
+) {
+  .student-login-visual,
+  .student-login-form-panel {
+    padding: 24px 18px;
+  }
+
+  .student-login-visual {
+    gap: 52px;
+  }
+
+  .student-login-card {
+    border-radius: 20px;
+  }
+}

@@ -1,4 +1,5 @@
 import type {
+  AnalyzeBehaviorResponse,
   ApiFetch,
   BehaviorOverview,
   BehaviorWorkspace,
@@ -7,6 +8,24 @@ import type {
   InterventionResponseType,
   RespondToInterventionResponse,
 } from "./behavior-ai.types";
+
+// AIMERS_BEHAVIOR_INTELLIGENCE_ACTIVATION_V1
+export function analyzeBehavior(
+  apiFetch: ApiFetch,
+  days: number,
+  timezone: string,
+): Promise<AnalyzeBehaviorResponse> {
+  return apiFetch<AnalyzeBehaviorResponse>(
+    "/behavior/analyze",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        days,
+        timezone,
+      }),
+    },
+  );
+}
 
 export async function getBehaviorWorkspace(
   apiFetch: ApiFetch,

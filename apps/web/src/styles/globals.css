@@ -1025,3 +1025,195 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* AIMERS_SHELL_INTERACTION_POLISH_V1 */
+
+button:not(:disabled),
+a[href],
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+:where(
+  button,
+  a[href],
+  input,
+  textarea,
+  select,
+  [role="button"]
+):focus-visible {
+  outline: 2px solid
+    rgba(192, 126, 255, 0.9);
+  outline-offset: 3px;
+  box-shadow:
+    0 0 0 5px
+      rgba(139, 92, 246, 0.14);
+}
+
+.profile-actions button,
+.profile-actions a,
+.sidebar-pro-card a,
+.topbar-icon-button,
+.focus-toggle,
+.ask-aimers-button,
+.module-hero > button,
+.module-main-panel header button,
+.module-side-panel button,
+.module-stat-grid article,
+.module-main-panel,
+.module-side-panel {
+  transition:
+    transform var(--aimers-transition-fast),
+    border-color var(--aimers-transition-fast),
+    background var(--aimers-transition-fast),
+    color var(--aimers-transition-fast),
+    box-shadow var(--aimers-transition-fast),
+    opacity var(--aimers-transition-fast);
+}
+
+.profile-actions .profile-logout-button:hover:not(:disabled) {
+  color: #ff91aa;
+  border-color:
+    rgba(255, 93, 126, 0.38);
+  background:
+    rgba(255, 73, 112, 0.09);
+  box-shadow:
+    0 0 18px
+      rgba(255, 66, 108, 0.12);
+}
+
+.profile-actions button:active:not(:disabled),
+.profile-actions a:active,
+.sidebar-pro-card a:active,
+.topbar-icon-button:active:not(:disabled),
+.focus-toggle:active:not(:disabled),
+.ask-aimers-button:active:not(:disabled),
+.module-hero > button:active:not(:disabled),
+.module-main-panel header button:active:not(:disabled),
+.module-side-panel button:active:not(:disabled) {
+  transform:
+    translateY(0)
+    scale(0.97);
+}
+
+.sidebar-logout-spinner {
+  animation:
+    sidebar-logout-spin
+    0.8s
+    linear
+    infinite;
+}
+
+@keyframes sidebar-logout-spin {
+  to {
+    transform:
+      rotate(360deg);
+  }
+}
+
+@media (
+  hover: hover
+) and (
+  pointer: fine
+) {
+  .profile-actions button:hover:not(:disabled),
+  .profile-actions a:hover,
+  .sidebar-pro-card a:hover,
+  .topbar-icon-button:hover:not(:disabled),
+  .focus-toggle:hover:not(:disabled),
+  .ask-aimers-button:hover:not(:disabled),
+  .module-hero > button:hover:not(:disabled),
+  .module-main-panel header button:hover:not(:disabled),
+  .module-side-panel button:hover:not(:disabled) {
+    transform:
+      translateY(-2px);
+  }
+
+  .sidebar-pro-card a:hover,
+  .ask-aimers-button:hover:not(:disabled),
+  .module-hero > button:hover:not(:disabled),
+  .module-side-panel button:hover:not(:disabled) {
+    box-shadow:
+      0 10px 28px
+        rgba(145, 66, 230, 0.24);
+  }
+
+  .module-stat-grid article:hover,
+  .module-main-panel:hover,
+  .module-side-panel:hover {
+    transform:
+      translateY(-2px);
+    border-color:
+      rgba(150, 104, 246, 0.28);
+    box-shadow:
+      var(--aimers-shadow-panel),
+      0 16px 38px
+        rgba(23, 12, 56, 0.22);
+  }
+}
+
+@media (
+  prefers-reduced-motion: reduce
+) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration:
+      0.01ms !important;
+    animation-iteration-count:
+      1 !important;
+    scroll-behavior:
+      auto !important;
+    transition-duration:
+      0.01ms !important;
+  }
+
+  :where(
+    button,
+    a,
+    article,
+    section
+  ):hover {
+    transform:
+      none !important;
+  }
+}
+
+/* AIMERS_PROFILE_INTERACTION_V1 */
+
+.profile-row {
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform var(--aimers-transition-fast),
+    border-color var(--aimers-transition-fast),
+    background var(--aimers-transition-fast),
+    box-shadow var(--aimers-transition-fast);
+}
+
+@media (
+  hover: hover
+) and (
+  pointer: fine
+) {
+  .profile-row:hover {
+    transform:
+      translateY(-2px);
+    border-color:
+      rgba(168, 108, 255, 0.29);
+    background:
+      rgba(112, 68, 190, 0.11);
+    box-shadow:
+      0 10px 26px
+        rgba(35, 16, 74, 0.16);
+  }
+}

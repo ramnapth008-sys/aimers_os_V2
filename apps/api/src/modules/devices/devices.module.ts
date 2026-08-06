@@ -7,6 +7,14 @@ import {
 } from "../consent/consent.module";
 
 import {
+  ConnectorSetupController,
+} from "./connector-setup.controller";
+
+import {
+  ConnectorSetupService,
+} from "./connector-setup.service";
+
+import {
   DevicesController,
 } from "./devices.controller";
 
@@ -20,14 +28,17 @@ import {
   ],
 
   controllers: [
+    ConnectorSetupController,
     DevicesController,
   ],
 
   providers: [
+    ConnectorSetupService,
     DevicesService,
   ],
 
   exports: [
+    ConnectorSetupService,
     DevicesService,
   ],
 })

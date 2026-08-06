@@ -56,6 +56,13 @@ const USER_MANAGED_CONNECTOR_STATUSES =
     DataConnectorStatus.REVOKED,
   ]);
 
+const AIMERS_NATIVE_CONNECTOR_TYPES =
+  new Set<DataConnectorType>([
+    DataConnectorType.AIMERS_WEB,
+    DataConnectorType
+      .AIMERS_LECTURE_PLAYER,
+  ]);
+
 @Injectable()
 export class DevicesService {
   constructor(
@@ -512,6 +519,11 @@ export class DevicesService {
           },
         });
 
+    const nativeConnector =
+      this.isNativeConnector(
+        dto.type,
+      );
+
     const connectorData = {
       connectedDeviceId:
         dto.connectedDeviceId,
@@ -524,13 +536,29 @@ export class DevicesService {
       externalAccountId,
 
       status:
-        DataConnectorStatus.ACTIVE,
+        nativeConnector
+          ? DataConnectorStatus.ACTIVE
+          : DataConnectorStatus.PENDING,
 
-      permissions:
-        dto.permissions
-          ? dto.permissions as
-            Prisma.InputJsonValue
-          : undefined,
+      permissions: {
+        ...(dto.permissions ??
+          {}),
+        registrationSource:
+          "SETTINGS",
+        authorizationRequired:
+          !nativeConnector,
+      } as
+        Prisma.InputJsonValue,
+
+      metadata: {
+        registrationSource:
+          "SETTINGS",
+        setupState:
+          nativeConnector
+            ? "ACTIVATED"
+            : "AUTHORIZATION_REQUIRED",
+      } as
+        Prisma.InputJsonValue,
 
       errorMessage:
         null,
@@ -604,6 +632,24 @@ export class DevicesService {
       dto.status ===
         DataConnectorStatus.ACTIVE
     ) {
+      const authorizedResume =
+        connector.status ===
+          DataConnectorStatus.PAUSED &&
+        this.connectorAuthorizationComplete(
+          connector.metadata,
+        );
+
+      if (
+        !this.isNativeConnector(
+          connector.type,
+        ) &&
+        !authorizedResume
+      ) {
+        throw new ForbiddenException(
+          "An external connector cannot be activated manually. Complete its real extension, operating-system, OAuth, provider, or import authorization flow.",
+        );
+      }
+
       await this.consentService
         .assertScopeActiveForProfile(
           connector.studentProfileId,
@@ -703,6 +749,45 @@ export class DevicesService {
     }
 
     return connector;
+  }
+
+  private isNativeConnector(
+    type:
+      DataConnectorType,
+  ): boolean {
+    return AIMERS_NATIVE_CONNECTOR_TYPES
+      .has(
+        type,
+      );
+  }
+
+  private connectorAuthorizationComplete(
+    metadata:
+      Prisma.JsonValue | null,
+  ): boolean {
+    if (
+      !metadata ||
+      typeof metadata !==
+        "object" ||
+      Array.isArray(
+        metadata,
+      )
+    ) {
+      return false;
+    }
+
+    const setupState =
+      (
+        metadata as
+          Prisma.JsonObject
+      ).setupState;
+
+    return (
+      setupState ===
+        "ACTIVATED" ||
+      setupState ===
+        "CONNECTED"
+    );
   }
 
   private connectorScope(

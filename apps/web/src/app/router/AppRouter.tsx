@@ -72,6 +72,18 @@ import {
 } from "../../pages/digital-activity";
 
 import {
+  IntegrationSetupPage,
+} from "../../pages/integrations";
+
+import {
+  StudentLoginPage,
+} from "../../pages/login";
+
+import {
+  StudentProfilePage,
+} from "../../pages/profile";
+
+import {
   SettingsPage,
 } from "../../pages/settings";
 
@@ -145,11 +157,17 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* AIMERS_STUDENT_LOCAL_LOGIN_V1 */}
+        <Route
+          path="login"
+          element={<StudentLoginPage />}
+        />
+
         <Route
           element={
             <RequireAuth
               roles={["STUDENT"]}
-              loginUrl="http://localhost:5174/login"
+              loginUrl="/login"
             />
           }
         >
@@ -256,6 +274,18 @@ export function AppRouter() {
           <Route
             path="digital-activity"
             element={<DigitalActivityPage />}
+          />
+
+          {/* AIMERS_EXTERNAL_AUTHORIZATION_ORCHESTRATOR_FOUNDATION_V1 */}
+          <Route
+            path="integrations"
+            element={<IntegrationSetupPage />}
+          />
+
+          {/* AIMERS_STUDENT_PROFILE_V1 */}
+          <Route
+            path="profile"
+            element={<StudentProfilePage />}
           />
 
           {/* AIMERS_DIGITAL_INTELLIGENCE_SETTINGS_V1 */}

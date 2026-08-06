@@ -29,6 +29,7 @@ import {
 } from "react";
 
 import {
+  analyzeBehavior,
   generateInterventions,
   getBehaviorWorkspace,
   respondToIntervention,
@@ -379,10 +380,24 @@ export function BehaviorAIPage() {
     setNotice,
   ] = useState("");
 
+  const timezone =
+    useMemo(
+      () =>
+        Intl
+          .DateTimeFormat()
+          .resolvedOptions()
+          .timeZone ||
+        "Asia/Kolkata",
+      [],
+    );
+
+  // AIMERS_BEHAVIOR_INTELLIGENCE_ACTIVATION_V1
   const load =
     useCallback(
       async (
         refresh = false,
+        runAnalysis = false,
+        silent = false,
       ) => {
         if (refresh) {
           setRefreshing(true);
@@ -392,7 +407,49 @@ export function BehaviorAIPage() {
 
         setError("");
 
+        if (!silent) {
+          setNotice("");
+        }
+
         try {
+          if (runAnalysis) {
+            const analysis =
+              await analyzeBehavior(
+                apiFetch,
+                days,
+                timezone,
+              );
+
+            const interventions =
+              await generateInterventions(
+                apiFetch,
+              );
+
+            if (!silent) {
+              const signalText =
+                `${analysis.processed.behaviorSignals} signal${
+                  analysis.processed.behaviorSignals === 1
+                    ? ""
+                    : "s"
+                }`;
+
+              const actionText =
+                interventions.created > 0
+                  ? ` ${interventions.created} new guidance action${
+                      interventions.created === 1
+                        ? ""
+                        : "s"
+                    } created.`
+                  : interventions.alreadyOpen > 0
+                    ? " Existing guidance remains open."
+                    : " No new intervention was required.";
+
+              setNotice(
+                `Analyzed ${analysis.processed.rawEvents} raw events into ${analysis.processed.normalizedSessions} normalized sessions and ${signalText}.${actionText}`,
+              );
+            }
+          }
+
           setWorkspace(
             await getBehaviorWorkspace(
               apiFetch,
@@ -403,7 +460,7 @@ export function BehaviorAIPage() {
           setError(
             caught instanceof Error
               ? caught.message
-              : "Unable to load Behavior AI.",
+              : "Unable to process Behavior AI.",
           );
         } finally {
           setLoading(false);
@@ -413,11 +470,57 @@ export function BehaviorAIPage() {
       [
         apiFetch,
         days,
+        timezone,
       ],
     );
 
   useEffect(() => {
-    void load();
+    void load(
+      false,
+      true,
+      false,
+    );
+  }, [load]);
+
+  useEffect(() => {
+    let timer:
+      number |
+      undefined;
+
+    const handleActivityIngested =
+      () => {
+        window.clearTimeout(
+          timer,
+        );
+
+        timer =
+          window.setTimeout(
+            () => {
+              void load(
+                true,
+                true,
+                true,
+              );
+            },
+            5000,
+          );
+      };
+
+    window.addEventListener(
+      "aimers:activity-ingested",
+      handleActivityIngested,
+    );
+
+    return () => {
+      window.clearTimeout(
+        timer,
+      );
+
+      window.removeEventListener(
+        "aimers:activity-ingested",
+        handleActivityIngested,
+      );
+    };
   }, [load]);
 
   const aggregate =
@@ -493,7 +596,11 @@ export function BehaviorAIPage() {
               : "No unresolved signal currently needs a new intervention.",
         );
 
-        await load(true);
+        await load(
+          true,
+          false,
+          true,
+        );
       } catch (caught) {
         setError(
           caught instanceof Error
@@ -531,7 +638,11 @@ export function BehaviorAIPage() {
             : `Intervention ${responseType.toLowerCase()}.`,
         );
 
-        await load(true);
+        await load(
+          true,
+          false,
+          true,
+        );
       } catch (caught) {
         setError(
           caught instanceof Error
@@ -557,8 +668,9 @@ export function BehaviorAIPage() {
           </h1>
 
           <p>
-            Loading normalized sessions, daily
-            summaries, confidence and interventions…
+            Processing permitted activity into
+            normalized sessions, signals, scores and
+            guidance...
           </p>
         </section>
       </div>
@@ -669,10 +781,17 @@ export function BehaviorAIPage() {
 
             <button
               className="behavior-action-button secondary"
-              disabled={refreshing}
+              disabled={
+                refreshing ||
+                generating
+              }
               type="button"
               onClick={() => {
-                void load(true);
+                void load(
+                  true,
+                  true,
+                  false,
+                );
               }}
             >
               <RefreshCw
@@ -683,7 +802,9 @@ export function BehaviorAIPage() {
                 }
                 size={15}
               />
-              Refresh
+              {refreshing
+                ? "Analyzing..."
+                : "Analyze now"}
             </button>
           </div>
         </div>

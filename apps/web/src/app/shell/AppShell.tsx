@@ -17,6 +17,10 @@ import { Sidebar } from "../../components/navigation/Sidebar";
 import { Topbar } from "../../components/navigation/Topbar";
 
 import {
+  ConnectorSetupBanner,
+} from "../../features/connector-setup";
+
+import {
   AimersWebCollector,
 } from "../../features/digital-intelligence";
 
@@ -47,6 +51,8 @@ export function AppShell() {
             setSidebarOpen(true)
           }
         />
+
+        <ConnectorSetupBanner />
 
         <main className="aimers-page-content">
           <Outlet />

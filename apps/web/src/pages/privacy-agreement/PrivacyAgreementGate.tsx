@@ -233,7 +233,7 @@ export function PrivacyAgreementGate() {
     } finally {
       window.location
         .assign(
-          "http://localhost:5174/login",
+          "/login",
         );
     }
   }

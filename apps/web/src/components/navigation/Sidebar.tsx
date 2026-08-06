@@ -1,10 +1,19 @@
 import {
   Bell,
   Brain,
+  LoaderCircle,
   Power,
   Settings,
   X,
 } from "lucide-react";
+
+import {
+  useAuth,
+} from "@aimers/auth";
+
+import {
+  useState,
+} from "react";
 
 import {
   NavLink,
@@ -26,6 +35,65 @@ export function Sidebar({
   onClose,
 }: SidebarProps) {
   const location = useLocation();
+
+  const {
+    logout,
+    user,
+  } = useAuth();
+
+  const [
+    loggingOut,
+    setLoggingOut,
+  ] = useState(
+    false,
+  );
+
+  const profileName =
+    user?.displayName
+      ?.trim() ||
+    [
+      user?.firstName,
+      user?.lastName,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .trim() ||
+    user?.email ||
+    "AIMERS Student";
+
+  const profileInitials =
+    profileName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(
+        (part) =>
+          part[0]
+            ?.toUpperCase(),
+      )
+      .join("") ||
+    "AS";
+
+  const handleLogout =
+    async () => {
+      if (loggingOut) {
+        return;
+      }
+
+      setLoggingOut(
+        true,
+      );
+
+      onClose();
+
+      try {
+        await logout();
+      } finally {
+        setLoggingOut(
+          false,
+        );
+      }
+    };
 
   return (
     <>
@@ -140,20 +208,28 @@ export function Sidebar({
         </section>
 
         <footer className="sidebar-profile">
-          <div className="profile-row">
+          <NavLink
+            className="profile-row"
+            to="/profile"
+            aria-label="Open student profile"
+            onClick={onClose}
+          >
             <div className="profile-avatar">
-              RN
+              {profileInitials}
             </div>
 
             <div>
-              <strong>Ram N.</strong>
+              <strong>
+                {profileName}
+              </strong>
+
               <small>
-                NEET 2027 Aspirant
+                Student profile
               </small>
             </div>
 
             <span>PRO</span>
-          </div>
+          </NavLink>
 
           <div className="profile-actions">
             <button
@@ -171,10 +247,28 @@ export function Sidebar({
             </NavLink>
 
             <button
+              className="profile-logout-button"
               type="button"
-              aria-label="Log out"
+              disabled={loggingOut}
+              aria-busy={loggingOut}
+              aria-label={
+                loggingOut
+                  ? "Logging out"
+                  : "Log out"
+              }
+              title="Log out"
+              onClick={() => {
+                void handleLogout();
+              }}
             >
-              <Power size={16} />
+              {loggingOut
+                ? (
+                  <LoaderCircle
+                    className="sidebar-logout-spinner"
+                    size={16}
+                  />
+                )
+                : <Power size={16} />}
             </button>
           </div>
         </footer>

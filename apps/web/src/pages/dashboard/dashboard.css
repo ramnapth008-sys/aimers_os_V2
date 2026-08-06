@@ -3515,3 +3515,161 @@
     justify-items: start;
   }
 }
+
+/* AIMERS_DASHBOARD_BALANCE_AND_INTERACTION_V1 */
+
+@media (min-width: 1251px) {
+  .ref-main {
+    grid-template-areas:
+      "top brain"
+      "analysis insights"
+      "notes notes"
+      "lower lower"
+      "quick quick";
+  }
+
+  .ref-primary,
+  .ref-secondary {
+    display: contents;
+  }
+
+  .ref-top-grid {
+    grid-area: top;
+  }
+
+  .ref-brain-panel {
+    grid-area: brain;
+  }
+
+  .ref-analysis-grid {
+    grid-area: analysis;
+  }
+
+  .ref-insight-grid {
+    grid-area: insights;
+  }
+
+  .ref-notes-dashboard {
+    grid-area: notes;
+  }
+
+  .ref-secondary-lower {
+    grid-area: lower;
+  }
+
+  .ref-quick-actions {
+    grid-area: quick;
+  }
+}
+
+.ref-panel,
+.ref-quick-actions,
+.ref-active-session,
+.ref-footer,
+.ref-mission-list section,
+.ref-weak-list section,
+.ref-activity-list > span,
+.ref-brain-signals span,
+.ref-subject-list > span,
+.ref-chart-summary > span,
+.ref-notes-summary > span,
+.ref-research-summary > span,
+.ref-quick-actions a,
+.ref-panel-link,
+.ref-mission-footer a,
+.ref-notes-open,
+.ref-research-open {
+  transition:
+    transform var(--aimers-transition-fast),
+    border-color var(--aimers-transition-fast),
+    background var(--aimers-transition-fast),
+    color var(--aimers-transition-fast),
+    box-shadow var(--aimers-transition-fast),
+    opacity var(--aimers-transition-fast);
+}
+
+.ref-dashboard
+  :where(
+    a,
+    button
+  ):active:not(:disabled) {
+  transform:
+    translateY(0)
+    scale(0.975);
+}
+
+@media (
+  hover: hover
+) and (
+  pointer: fine
+) {
+  .ref-panel:hover,
+  .ref-quick-actions:hover,
+  .ref-active-session:hover,
+  .ref-footer:hover {
+    transform:
+      translateY(-2px);
+    border-color:
+      rgba(133, 96, 255, 0.25);
+    box-shadow:
+      var(--aimers-shadow-panel),
+      0 17px 42px
+        rgba(18, 10, 48, 0.24);
+  }
+
+  .ref-mission-list section:hover,
+  .ref-weak-list section:hover,
+  .ref-activity-list > span:hover,
+  .ref-brain-signals span:hover,
+  .ref-subject-list > span:hover,
+  .ref-chart-summary > span:hover,
+  .ref-notes-summary > span:hover,
+  .ref-research-summary > span:hover {
+    transform:
+      translateX(2px);
+    border-color:
+      rgba(134, 99, 247, 0.2);
+    background:
+      rgba(124, 82, 234, 0.045);
+  }
+
+  .ref-quick-actions a:hover,
+  .ref-panel-link:hover,
+  .ref-mission-footer a:hover,
+  .ref-notes-open:hover,
+  .ref-research-open:hover,
+  .ref-dashboard button:hover:not(:disabled) {
+    transform:
+      translateY(-2px);
+    border-color:
+      rgba(149, 103, 255, 0.3);
+    color: #ffffff;
+    box-shadow:
+      0 9px 22px
+        rgba(89, 53, 178, 0.16);
+  }
+
+  .ref-metric > header > a:hover {
+    transform:
+      translateY(-1px)
+      rotate(4deg);
+    background:
+      rgba(255, 255, 255, 0.075);
+  }
+
+  .ref-voice > a > span {
+    transition:
+      transform var(--aimers-transition-fast),
+      box-shadow var(--aimers-transition-fast);
+  }
+
+  .ref-voice:hover
+    > a
+    > span {
+    transform:
+      scale(1.04);
+    box-shadow:
+      0 0 42px
+        rgba(180, 64, 235, 0.28);
+  }
+}
