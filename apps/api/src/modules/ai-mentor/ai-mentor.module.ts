@@ -18,6 +18,10 @@ import {
   AiMentorService,
 } from "./ai-mentor.service";
 
+import {
+  DetailedActivityContextService,
+} from "./detailed-activity-context.service";
+
 @Module({
   imports: [
     DatabaseModule,
@@ -30,6 +34,7 @@ import {
 
   providers: [
     AiMentorService,
+    DetailedActivityContextService,
   ],
 
   exports: [

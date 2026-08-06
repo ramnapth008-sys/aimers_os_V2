@@ -476,6 +476,8 @@ model StudentProfile {
   mentorDailyBriefs   MentorDailyBrief[]
   mentorCheckIns      MentorCheckIn[]
 
+  mentorContextAudits MentorContextAudit[]
+
   @@unique([userId, organizationId])
   @@unique([organizationId, admissionNumber])
   @@index([organizationId, status])
@@ -2462,4 +2464,36 @@ model MentorCheckInResponse {
   checkIn MentorCheckIn @relation(fields: [checkInId], references: [id], onDelete: Cascade)
 
   @@map("mentor_check_in_responses")
+}
+
+// AIMERS_DETAILED_AI_CONTEXT_POLICY_V3
+
+model MentorContextAudit {
+  id                  String    @id @default(uuid()) @db.Uuid
+  studentProfileId    String    @map("student_profile_id") @db.Uuid
+  purpose             String    @db.VarChar(60)
+  policyVersion       String    @map("policy_version") @db.VarChar(40)
+  consentScope        String    @map("consent_scope") @db.VarChar(80)
+  agreementAcceptedAt DateTime? @map("agreement_accepted_at") @db.Timestamptz(6)
+  windowStart         DateTime? @map("window_start") @db.Timestamptz(6)
+  windowEnd           DateTime? @map("window_end") @db.Timestamptz(6)
+  rawEventCount       Int       @default(0) @map("raw_event_count")
+  includedEventCount  Int       @default(0) @map("included_event_count")
+  fullUrlCount        Int       @default(0) @map("full_url_count")
+  sanitizedUrlCount   Int       @default(0) @map("sanitized_url_count")
+  redactedValueCount  Int       @default(0) @map("redacted_value_count")
+  includedEventIds    Json      @map("included_event_ids")
+  sourceSummary       Json      @map("source_summary")
+  sanitizationSummary Json      @map("sanitization_summary")
+  payloadHash         String    @map("payload_hash") @db.VarChar(64)
+  provider            String?   @db.VarChar(40)
+  model               String?   @db.VarChar(120)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  @@index([studentProfileId, createdAt])
+  @@index([studentProfileId, purpose, payloadHash])
+  @@index([policyVersion, createdAt])
+  @@map("mentor_context_audits")
 }

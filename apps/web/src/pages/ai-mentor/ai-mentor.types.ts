@@ -192,6 +192,48 @@ export interface MentorContext {
       message:
         string;
     }>;
+  detailedActivity: {
+    enabled:
+      boolean;
+    reason:
+      string | null;
+    policyVersion:
+      string;
+    agreementAcceptedAt:
+      string | null;
+    windowStart:
+      string;
+    windowEnd:
+      string;
+    rawEventCount:
+      number;
+    includedEventCount:
+      number;
+    fullUrlCount:
+      number;
+    sanitizedUrlCount:
+      number;
+    redactedValueCount:
+      number;
+    auditId:
+      string | null;
+    events:
+      Array<{
+        id: string;
+        source: string | null;
+        category: string | null;
+        confidence: string | null;
+        eventType: string | null;
+        appName: string | null;
+        domain: string | null;
+        pageTitle: string | null;
+        sanitizedUrl: string | null;
+        startedAt: string | null;
+        endedAt: string | null;
+        durationSeconds: number | null;
+        foreground: boolean | null;
+      }>;
+  };
   privacy: {
     aiContextEnabled:
       boolean;
@@ -200,9 +242,9 @@ export interface MentorContext {
     notificationsEligible:
       boolean;
     rawActivityIncluded:
-      false;
+      boolean;
     fullUrlsIncluded:
-      false;
+      boolean;
   };
 }
 
@@ -237,9 +279,13 @@ export interface AiMentorWorkspace {
     MentorContext;
   boundaries: {
     rawActivityIncluded:
-      false;
+      boolean;
     fullUrlsIncluded:
-      false;
+      boolean;
+    detailedContextPolicyVersion:
+      string;
+    contextAuditId:
+      string | null;
     medicalDiagnosis:
       false;
     pushNotificationsImplemented:

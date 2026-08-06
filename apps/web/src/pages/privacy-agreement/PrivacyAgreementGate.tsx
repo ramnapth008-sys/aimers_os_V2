@@ -389,7 +389,8 @@ export function PrivacyAgreementGate() {
           </div>
         )}
 
-        <div className="privacy-agreement-actions">
+        {/* AIMERS_PRIVACY_CHOICE_BAR_V5 */}
+        <div className="privacy-agreement-actions privacy-agreement-choice-bar-v5">
           {!blockedForMinor && (
             <button
               className="primary"

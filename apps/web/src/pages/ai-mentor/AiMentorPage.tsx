@@ -428,6 +428,11 @@ export function AiMentorPage() {
       .behavior
       .signals[0];
 
+  const detailedActivity =
+    workspace
+      .context
+      .detailedActivity;
+
   return (
     <div className="mentor-page">
       <header className="mentor-hero">
@@ -479,7 +484,9 @@ export function AiMentorPage() {
 
           <span>
             <ShieldCheck size={14} />
-            Raw URLs excluded
+            {detailedActivity.enabled
+              ? `${detailedActivity.includedEventCount} detailed events · ${detailedActivity.sanitizedUrlCount} sanitized URLs`
+              : "Detailed context awaiting V3 consent"}
           </span>
         </section>
       </header>
@@ -906,9 +913,10 @@ export function AiMentorPage() {
               <ShieldCheck size={15} />
 
               <p>
-                Raw activity, full URLs and private
-                external chats are not sent into the
-                mentor context.
+                {detailedActivity.enabled
+                  ? `Privacy Policy V3 enabled ${detailedActivity.includedEventCount} event-level records and ${detailedActivity.sanitizedUrlCount} sanitized URLs for this mentor context. ${detailedActivity.redactedValueCount} sensitive value(s) were removed.`
+                  : detailedActivity.reason ??
+                    "Detailed activity context is not enabled."}
               </p>
             </div>
           </article>
@@ -934,3 +942,5 @@ export function AiMentorPage() {
     </div>
   );
 }
+
+// AIMERS_DETAILED_AI_CONTEXT_POLICY_V3

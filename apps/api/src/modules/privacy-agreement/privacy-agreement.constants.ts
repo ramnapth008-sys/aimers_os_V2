@@ -4,7 +4,7 @@ import {
 } from "@aimers/database";
 
 export const PRIVACY_POLICY_VERSION =
-  "aimers-privacy-data-v2";
+  "aimers-privacy-data-v3";
 
 export const PRIVACY_POLICY_TITLE =
   "AIMERS Privacy & Data Use";
@@ -69,7 +69,7 @@ export const PRIVACY_POLICY = {
         "Data covered by this agreement",
 
       paragraphs: [
-        "AIMERS may process activity inside AIMERS; approved external website, domain, page-title, and full-URL activity when enabled; permitted past browser history; registered-device and app-usage signals; YouTube and connected learning-platform account data; lecture progress; historical imports; academic progress; cross-device signals; and generated behavior and AI summaries. The AIMERS Web Collector records internal AIMERS route sessions, active duration, focus and visibility changes, idle periods, and collector health after agreement. Agreeing creates the corresponding AIMERS consent grants automatically. External collection begins when the required browser, operating-system, extension, OAuth, or provider approval has also succeeded.",
+        "AIMERS may process activity inside AIMERS; approved external website, domain, page-title, and full-URL activity when enabled; permitted past browser history; registered-device and app-usage signals; YouTube and connected learning-platform account data; lecture progress; historical imports; academic progress; cross-device signals; and generated behavior and AI summaries. Under Privacy Policy V3, the AI Mentor may also process permitted event-level activity evidence, page titles, domains, timestamps, activity sequences, and sanitized full URLs for focus-drift analysis, interest-pattern analysis, daily briefings, personalized guidance, interventions, and next-action recommendations. The AIMERS Web Collector records internal AIMERS route sessions, active duration, focus and visibility changes, idle periods, and collector health after agreement. Agreeing creates the corresponding AIMERS consent grants automatically. External collection begins when the required browser, operating-system, extension, OAuth, or provider approval has also succeeded.",
       ],
 
       bullets: [
@@ -149,9 +149,14 @@ export const PRIVACY_POLICY = {
       bullets: [
         "External access uses official authorization paths where available",
         "App-open duration is not represented as exact lecture completion",
-        "Raw URLs and raw activity are excluded from AI Mentor context",
+        "Under Privacy Policy V3, AI Mentor may use permitted raw activity events, page titles, domains, precise timestamps, activity sequences, and sanitized full URLs to analyze focus drift, learning interest, procrastination, routine consistency, and personalized next actions. Passwords, authentication tokens, payment details, typed form content, private messages, and sensitive URL parameters remain excluded.",
         "Sensitive minor accounts require a dedicated guardian and safety flow",
       ],
     },
   ],
 } as const;
+
+
+// AIMERS_DETAILED_AI_CONTEXT_POLICY_V3
+export const DETAILED_AI_CONTEXT_POLICY_VERSION =
+  "aimers-privacy-data-v3" as const;

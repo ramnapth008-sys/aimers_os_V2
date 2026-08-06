@@ -195,7 +195,7 @@ const PERMISSIONS:
       description:
         "Share structured academic and behavior summaries with AIMERS AI Mentor.",
       detail:
-        "Raw activity and full URLs are excluded from the mentor context.",
+        "Privacy Policy V3 permits AI Mentor to use event-level activity evidence and sanitized full URLs when Raw Activity, Full URL Storage, and AI Context are enabled. Passwords, tokens, payment details, typed form content, and private external chats remain excluded.",
       icon:
         <UserCheck size={18} />,
       sensitivity:
@@ -2348,7 +2348,7 @@ export function SettingsPage() {
             "Registering a device does not install monitoring software.",
             "Registering a connector does not authorize an external account by itself.",
             "App-open time is not presented as exact lecture completion.",
-            "AI Mentor context excludes raw activity, full URLs and private external chats.",
+            "With Privacy Policy V3 accepted, AI Mentor can use permitted raw activity events and sanitized full URLs. Passwords, authentication tokens, payment details, typed form content, and private external chats remain excluded unless the student explicitly shares or imports them.",
             "Focus controls are never activated automatically.",
             "Revoking consent stops future permitted processing but is separate from permanent deletion.",
           ].map(
