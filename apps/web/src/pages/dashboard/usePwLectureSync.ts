@@ -27,23 +27,26 @@ const getSyncPermissions = async (apiFetch: ReturnType<typeof useAuth>["apiFetch
   ]);
   return {consent,privacy};
 };
-function receiveFromExtension():Promise<PwSnapshot|null>{
-  if(!extensionId || !/^[a-p]{32}$/.test(extensionId))return Promise.resolve(null);
+type BridgeResult={connected:boolean;snapshot:PwSnapshot|null};
+function receiveFromExtension():Promise<BridgeResult>{
+  const missing:BridgeResult={connected:false,snapshot:null};
+  if(!extensionId || !/^[a-p]{32}$/.test(extensionId))return Promise.resolve(missing);
   const runtime=(window as unknown as {chrome?:{runtime?:{sendMessage:(id:string,message:object,cb:(r?:BridgeAnswer)=>void)=>void;lastError?:{message?:string}}}}).chrome?.runtime;
-  if(!runtime?.sendMessage)return Promise.resolve(null);
+  if(!runtime?.sendMessage)return Promise.resolve(missing);
   return new Promise(resolve=>{
     let resolved=false;
-    const finish=(value:PwSnapshot|null)=>{if(!resolved){resolved=true;resolve(value);}};
-    const timeout=window.setTimeout(()=>finish(null),1800);
+    const finish=(value:BridgeResult)=>{if(!resolved){resolved=true;resolve(value);}};
+    const timeout=window.setTimeout(()=>finish(missing),1800);
     try{runtime.sendMessage(extensionId,{kind:"AIMERS_LECTURE_SNAPSHOT_V1"},answer=>{
       clearTimeout(timeout);
-      if(runtime.lastError || answer?.kind!=="AIMERS_LECTURE_SNAPSHOT_V1")return finish(null);
+      if(runtime.lastError || answer?.kind!=="AIMERS_LECTURE_SNAPSHOT_V1")return finish(missing);
       const s=answer.snapshot;
-      if(!s || !/^[\w-]{8,100}$/.test(s.sessionId)||s.platform!=="pw.live"||!Number.isFinite(Date.parse(s.measuredAt))||!Number.isFinite(Date.parse(s.startedAt)))return finish(null);
+      if(!s)return finish({connected:true,snapshot:null});
+      if(!/^[\\w-]{8,100}$/.test(s.sessionId)||s.platform!=="pw.live"||!Number.isFinite(Date.parse(s.measuredAt))||!Number.isFinite(Date.parse(s.startedAt)))return finish({connected:true,snapshot:null});
       const values=[s.elapsedSeconds,s.playSeconds,s.positionSeconds,s.pauses,s.rewinds];
-      if(values.some(v=>!Number.isFinite(v)||v<0))return finish(null);
-      return finish(s);
-    });}catch{clearTimeout(timeout);finish(null);}
+      if(values.some(v=>!Number.isFinite(v)||v<0))return finish({connected:true,snapshot:null});
+      return finish({connected:true,snapshot:s});
+    });}catch{clearTimeout(timeout);finish(missing);}
   });
 }
 export function usePwLectureSync(){
@@ -131,8 +134,11 @@ export function usePwLectureSync(){
           lastConsentCheck=now;
           if(!authorized){setState("Monitoring disabled or consent revoked");setEnabled(false);localStorage.removeItem(storageKey(userId));return;}
         }
-        const snapshot=await receiveFromExtension();
+        const bridge=await receiveFromExtension();
         if(cancelled)return;
+        if(!bridge.connected){setLive(null);setState("Extension unreachable · check Chrome extension ID and local site access");return;}
+        const snapshot=bridge.snapshot;
+        if(!snapshot){setLive(null);setState("Extension connected · waiting for a supported PW lecture");return;}
         const consentedSince=Number(localStorage.getItem(storageKey(userId)))||0;
         if(snapshot && (Date.parse(snapshot.startedAt)<consentedSince || Date.parse(snapshot.measuredAt)<consentedSince)){setLive(null);setState("Waiting for a new lecture after account connection");return;}
         if(!snapshot || now-Date.parse(snapshot.measuredAt)>10000){setLive(null);setState("Disconnected · waiting for a fresh lecture snapshot");return;}
