@@ -101,7 +101,7 @@ export function usePwLectureSync(){
     if(!enabled || !userId || status!=="authenticated")return;
     let cancelled=false;
     let release:()=>void=()=>{};
-    let timer:number|undefined,readTimer:number|undefined;
+    let timer:number|undefined;
     let inFlight=false;
     let lastSave=0;
     let lastConsentCheck=0;
@@ -168,11 +168,19 @@ export function usePwLectureSync(){
       if(timer!==undefined)clearInterval(timer);
       setUploader(false);
     });
-    readTimer=window.setInterval(()=>{if(document.visibilityState==="visible")void loadSaved();},8000);
+    return ()=>{cancelled=true;controller.abort();release();if(timer!==undefined)clearInterval(timer);setUploader(false);};
+  },[enabled,userId,status,loadSaved]);
+
+  // Every authenticated dashboard reads account data, even when this device isn't uploading.
+  useEffect(()=>{
+    if(!userId || status!=="authenticated")return;
+    const timer=window.setInterval(()=>{
+      if(document.visibilityState==="visible")void loadSaved();
+    },8000);
     const onFocus=()=>{void loadSaved();};
     window.addEventListener("focus",onFocus);
-    return ()=>{cancelled=true;controller.abort();release();if(timer!==undefined)clearInterval(timer);if(readTimer!==undefined)clearInterval(readTimer);window.removeEventListener("focus",onFocus);setUploader(false);};
-  },[enabled,userId,status,loadSaved]);
+    return ()=>{clearInterval(timer);window.removeEventListener("focus",onFocus);};
+  },[userId,status,loadSaved]);
 
   return {enabled,busy,reviewed,setReviewed,state,live,saved,savedAt,error,isUploader,connect,disconnect,configured:Boolean(extensionId && /^[a-p]{32}$/.test(extensionId)),loadSaved};
 }
