@@ -14,9 +14,9 @@ button:disabled{opacity:.42;cursor:not-allowed}.actions{display:flex;gap:8px;fle
 footer{margin-top:12px;border-top:1px solid #383954;padding-top:10px}
 a{color:#c4afff}#title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:6px 0 2px}
 </style></head><body>
-<header><h1>AIMERS · Lecture Tracker</h1><small>Private local pilot · Off until you start</small></header>
+<header><h1>AIMERS · Lecture Tracker</h1><small>Private local pilot · Off by default</small></header>
 <div id="status" role="status" aria-live="polite">Checking current tab…</div>
-<div class="actions"><button id="start" class="primary" type="button">Start on this tab</button><button id="stop" type="button">Stop</button><button id="clear" type="button">Clear data</button></div>
+<label style="display:flex;gap:9px;align-items:center;margin-bottom:12px"><input type="checkbox" id="auto"/> Automatically track PW lecture pages (this browser only)</label><div class="actions"><button id="start" class="primary" type="button">Start on this tab</button><button id="stop" type="button">Stop</button><button id="clear" type="button">Clear data</button></div>
 <section aria-label="Lecture summary"><h2 id="title">No lecture selected</h2><div class="stats">
 <div><strong id="length">—</strong><small>Video length</small></div>
 <div><strong id="elapsed">—</strong><small>Elapsed time</small></div>
