@@ -107,3 +107,41 @@ Stage 5: custom specialized models, additional exam UIs and international expans
 
 ## 11. Open questions
 Pilot cohort: NEET versus broader exam-agnostic? Age range under/over 18? Which regions/languages first? Which features currently fully operational versus conceptual? Which third-party services process student data? Pricing and cost-per-active-student targets? These should be answered by discovery, not invented.
+
+## 12. Cross-device learning continuity and digital wellbeing
+**Product intent:** unify permitted learning events from AIMERS and supported external learning websites/apps across the student's approved devices; recommend practical study improvements. Never describe it as invisible surveillance or blanket control of personal devices.
+
+### Data collection layers
+1. **First-party AIMERS events**: chapter progress, task completion, test results, note and flashcard activity. Available by default as essential app functionality with transparent privacy notice.
+2. **Browser extension, opt-in**: installed explicitly on a named Chrome-compatible browser, with clearly displayed enabled sites, browser permissions, pause button and local filtering. On supported video players, content scripts may observe play/pause/seeks/time position in permitted tabs. DOM/player access is site-specific and fragile; don't claim full Physics Wallah/Vedantu/YouTube compatibility until tested. Prefer partner APIs when offered.
+3. **Native desktop agent, opt-in**: primarily app/window category and focused-study session duration, not screenshots, messages or keyboard activity. macOS permissions and platform policy may limit collection; avoid broad screen recording and accessibility interception as a workaround.
+4. **Android agent, opt-in**: where allowed, Android's UsageStatsManager can report foreground-app usage after special user-granted usage access. It cannot routinely extract an app's private feed, message contents, or precise scroll/rewatch analytics. Respect Play Store policy.
+5. **iOS agent, limited**: permitted Screen Time / Device Activity frameworks require specific entitlements and authorization and tend to expose restricted or privacy-preserving activity. Never promise universal granular cross-app data.
+6. **Official integrations**: use provider-authorized APIs/exports only with validated terms and granular permissions. An app name alone does not justify claiming access to internal engagement signals.
+
+### Cross-device design
+Each device is explicitly paired to the student's account with a visible identity, device-specific permission scopes, expiration and revoke controls. Local collector -> encrypted authenticated event ingestion -> consent/eligibility service -> schema validation & coarse categorization -> retention-limited event storage -> study session correlation -> explainable coaching signals -> student UI. Do not continuously stream raw web histories or private content.
+Cross-device data is available only when each device independently provides lawful permissions. A mobile installation does not silently grant access to a laptop: the laptop must also run an authorized integration/extension (or other supported user-approved sync).
+
+### Supported observations versus inference
+- Lecture pauses and seeks may indicate note taking, confusion, re-listening or external interruptions, not a diagnosis.
+- Academic searches: default to aggregate counts and topic tags; raw search terms only upon explicit separate permission and subject to age restrictions and local processing/redaction.
+- Apps such as Instagram and messaging: aggregate usage windows or user-supplied wellbeing statistics where APIs allow; toxic-feed classification cannot be promised absent lawful content access and would risk sensitive profiling and false positives.
+- Spam messages: use operating-system notification summaries or on-device aggregate counters only where available and explicitly approved; do not read private messages or contacts.
+- Distraction detection: summarize fragmented sessions, repeated app switching or unusually long non-study windows, and ask for context before suggesting changes. Students can correct/delete categorization. Breaks, leisure and social interaction are not automatically harmful.
+- Alerts: selectable quiet hours, frequency limits, non-shaming language and an easy pause. No unsolicited peer/parent reporting.
+
+### Coaching examples (hypotheses, not factual automatic conclusions)
+- "You replayed this portion several times. Want a different explanation?" only after a supported consented replay signal.
+- "Your study session included frequent app switches. Was it research or a distraction?" ask, do not judge.
+- "Would you like a 20-minute focus block?" optional suggestion rather than lockout.
+- "This topic appears often in your study questions" only after limited, permitted topic classification.
+
+### Age/privacy release gate
+For minors in India, DPDP section 9 restrictions on children's tracking and behavioral monitoring, applicable commencement dates/rules and possible limited exemptions require specialist legal review. Do not assume parental consent alone permits monitoring. Launch minors with academic first-party progress and explicitly eligible features; disable cross-app behavior profiling until confirmed lawful. Adult opt-in version must provide genuine purpose-specific choice, accessible revocation, minimization, short retention, processing disclosures and no sale of student data. Apply comparable rules for other countries and app-store policies before expansion.
+
+### Engineering validation
+Implement a capability matrix by browser/platform/provider, permission receipt/version, tested event types and failure modes. Pilot with adults and owned or demonstrably compatible learning players first. Validate signal precision (pause/seek counts), sync deduplication, timezone/session attribution, student interpretation and false-positive rates. Do not label any external provider as supported without live technical tests.
+
+### UX implications
+The student home should not display a surveillance dashboard. Display a small optional "Study habits" insight only when useful and permitted, with a "Why am I seeing this?" explanation and a Privacy & Devices view. Provide one-tap pause, permission review and unlink per device.
