@@ -461,52 +461,21 @@ export function DashboardPage() {
     setError("");
 
     try {
-      const [
-        academicResult,
-        plannerResult,
-        mockTestResult,
-        notesResult,
-        researchResult,
-      ] = await Promise.all([
-        getAcademicWorkspace(
-          apiFetch,
-        ),
-        getPlannerWorkspace(
-          apiFetch,
-        ),
-        getMockTestWorkspace(
-          apiFetch,
-        ),
-        getNotesWorkspace(
-          apiFetch,
-          {
-            status: "ACTIVE",
-          },
-        ),
-        getResearchWorkspace(
-          apiFetch,
-        ),
-      ]);
+      // Optional workspaces should not prevent the main study dashboard from loading.
+      const [academicResult, plannerResult, mockTestResult, notesResult, researchResult] =
+        await Promise.all([
+          getAcademicWorkspace(apiFetch),
+          getPlannerWorkspace(apiFetch),
+          getMockTestWorkspace(apiFetch),
+          getNotesWorkspace(apiFetch, { status: "ACTIVE" }).catch(() => null),
+          getResearchWorkspace(apiFetch).catch(() => null),
+        ]);
 
-      setWorkspace(
-        academicResult,
-      );
-
-      setPlanner(
-        plannerResult,
-      );
-
-      setMockTests(
-        mockTestResult,
-      );
-
-      setNotes(
-        notesResult,
-      );
-
-      setResearch(
-        researchResult,
-      );
+      setWorkspace(academicResult);
+      setPlanner(plannerResult);
+      setMockTests(mockTestResult);
+      setNotes(notesResult);
+      setResearch(researchResult);
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -527,9 +496,7 @@ export function DashboardPage() {
     if (
       !workspace ||
       !planner ||
-      !mockTests ||
-      !notes ||
-      !research
+      !mockTests
     ) {
       return null;
     }
@@ -1003,7 +970,7 @@ export function DashboardPage() {
     )[0] ?? null;
 
     const recentNotes =
-      [...notes.notes]
+      [...(notes?.notes ?? [])]
         .sort((left, right) => {
           const pinDifference =
             Number(right.isPinned) -
@@ -1022,7 +989,7 @@ export function DashboardPage() {
 
 
     const recentResearchProjects =
-      [...research.projects]
+      [...(research?.projects ?? [])]
         .sort((left, right) => {
           const pinDifference =
             Number(right.isPinned) -
@@ -1040,7 +1007,7 @@ export function DashboardPage() {
         .slice(0, 4);
 
     const recentResearchSources =
-      [...research.recentSources]
+      [...(research?.recentSources ?? [])]
         .sort((left, right) => {
           const pinDifference =
             Number(right.isPinned) -
@@ -1199,8 +1166,6 @@ export function DashboardPage() {
     !workspace ||
     !planner ||
     !mockTests ||
-    !notes ||
-    !research ||
     !data
   ) {
     return (
@@ -1743,6 +1708,7 @@ export function DashboardPage() {
             </Panel>
           </section>
 
+          {notes ? (
           <section className="ref-notes-dashboard">
             <Panel
               title="Connected Notes"
@@ -1949,6 +1915,13 @@ export function DashboardPage() {
             </Panel>
           </section>
 
+          ) : (
+            <section className="student-optional-unavailable" role="status">
+              <FileText size={19} aria-hidden="true" />
+              <div><strong>Notes are temporarily unavailable</strong><p>Your study plan and progress are still available. Try opening Notes later.</p></div>
+              <Link to="/notes">Open Notes</Link>
+            </section>
+          )}
           <section className="ref-quick-actions">
             <header><h2>Quick Actions</h2></header>
             <div>
@@ -2070,6 +2043,7 @@ export function DashboardPage() {
         </aside>
       </section>
 
+      {research ? (
       <section className="ref-research-dashboard">
         <Panel
           title="Research AI"
@@ -2301,12 +2275,21 @@ export function DashboardPage() {
         </Panel>
       </section>
 
+      ) : (
+        <section className="student-optional-unavailable" role="status">
+          <Library size={19} aria-hidden="true" />
+          <div><strong>Research AI is temporarily unavailable</strong><p>You can continue studying while this workspace is offline.</p></div>
+          <Link to="/research-ai">Open Research AI</Link>
+        </section>
+      )}
       <footer className="ref-footer">
         <span>
           <i />
           {data.activeStudySession
             ? "Study session active"
-            : "Academic, planner, mock-test, notes and research data connected"}
+            : notes && research
+                ? "Study, notes and research workspaces connected"
+                : "Study dashboard ready · Some optional tools unavailable"}
         </span>
         <button disabled={refreshing} type="button" onClick={() => void load(true)}>
           <RefreshCw className={refreshing ? "ref-spin" : ""} size={14} />
