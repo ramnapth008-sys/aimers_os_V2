@@ -7,8 +7,6 @@ import {
   Routes,
 } from "react-router-dom";
 
-import { AppShell } from "../shell/AppShell";
-
 import { DashboardPage } from "../../pages/dashboard/DashboardPage";
 
 import {
@@ -186,7 +184,6 @@ export function AppRouter() {
                 <PrivacyAgreementGate />
               }
             >
-          <Route element={<AppShell />}>
           <Route
             index
             element={
@@ -323,7 +320,6 @@ export function AppRouter() {
               />
             }
           />
-          </Route>
             </Route>
         </Route>
         </Route>
