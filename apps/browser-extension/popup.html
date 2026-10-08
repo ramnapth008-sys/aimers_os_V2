@@ -14,9 +14,9 @@ button:disabled{opacity:.42;cursor:not-allowed}.actions{display:flex;gap:8px;fle
 footer{margin-top:12px;border-top:1px solid #383954;padding-top:10px}
 a{color:#c4afff}#title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:6px 0 2px}
 </style></head><body>
-<header><h1>AIMERS · Lecture Tracker</h1><small>Private local pilot · Off until you start</small></header>
+<header><h1>AIMERS · Lecture Tracker</h1><small>Private local pilot · Permission-controlled</small></header>
 <div id="status" role="status" aria-live="polite">Checking current tab…</div>
-<div class="actions"><button id="start" class="primary" type="button">Start on this tab</button><button id="stop" type="button">Stop</button><button id="clear" type="button">Clear data</button></div>
+<section style="margin-bottom:12px;padding:12px;border:1px solid #414265;border-radius:10px;background:#20243c"><h2>PW lecture auto-tracking</h2><p>Enable once for pw.live lecture pages. Chrome will ask you to grant site access. Tracking stays local and you can turn it off here.</p><div class="actions"><button id="enable" class="primary" type="button">Enable on PW</button><button id="disable" type="button">Disable</button></div><small id="site-state">Checking permission…</small></section><div class="actions"><button id="start" type="button">Manual start</button><button id="stop" type="button">Stop</button><button id="clear" type="button">Clear data</button></div>
 <section aria-label="Lecture summary"><h2 id="title">No lecture selected</h2><div class="stats">
 <div><strong id="length">—</strong><small>Video length</small></div>
 <div><strong id="elapsed">—</strong><small>Elapsed time</small></div>
@@ -25,5 +25,5 @@ a{color:#c4afff}#title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap
 <div><strong id="rewinds">—</strong><small>Rewinds</small></div>
 <div><strong id="position">—</strong><small>Video position</small></div>
 </div></section>
-<footer><p>Only the video you explicitly start is measured. Data remains in this browser's extension storage; nothing is uploaded. Close or navigate away to end collection. Stop or clear whenever you want. For adult pilot testing only.</p></footer>
+<footer><p>Only videos on authorized PW lecture pages or videos you manually start are measured. Data remains in this browser's extension storage; nothing is uploaded. Close or navigate away to end collection. Stop or clear whenever you want. For adult pilot testing only.</p></footer>
 <script src="popup.js"></script></body></html>
