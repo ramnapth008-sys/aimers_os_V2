@@ -1,5 +1,5 @@
 import { useAuth } from "@aimers/auth";
-import { ArrowRight, BookOpen, BrainCircuit, CalendarCheck2, ClipboardCheck, Clock3, Flame, Layers3, LoaderCircle, RefreshCw, Sparkles, Target, Zap } from "lucide-react";
+import { ArrowRight, BookOpen, BrainCircuit, CalendarCheck2, AlertCircle, CheckCircle2, ClipboardCheck, Clock3, Flame, Layers3, LoaderCircle, RefreshCw, Sparkles, Target, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getAcademicWorkspace } from "../subjects/subjects.service";
@@ -86,6 +86,21 @@ export function DashboardPage() {
   const accuracy = attempts ? clamp(correct / attempts * 100) : null;
   const name = user?.firstName?.trim() || user?.displayName?.trim()?.split(/\s+/)[0] || "Student";
   const weak = tests?.weakTopics[0];
+  const urgentTasks = openTasks.filter(t => t.priority === "URGENT");
+  const overdueTasks = openTasks.filter(t => t.dueAt && new Date(t.dueAt).getTime() < Date.now());
+  const priorityAlerts: Array<{ id: string; title: string; detail: string; tone: "warning" | "info" | "success"; to: string }> = [];
+  if (planner) {
+    if (urgentTasks.length) priorityAlerts.push({ id: "urgent", title: `${urgentTasks.length} urgent study task${urgentTasks.length === 1 ? "" : "s"}`, detail: "Needs your attention", tone: "warning", to: "/planner" });
+    else if (overdueTasks.length) priorityAlerts.push({ id: "overdue", title: `${overdueTasks.length} overdue task${overdueTasks.length === 1 ? "" : "s"}`, detail: "Review your schedule", tone: "warning", to: "/planner" });
+    else if (totalTasks === 0) priorityAlerts.push({ id: "no-plan", title: "Create your study plan", detail: "No tasks scheduled yet", tone: "warning", to: "/planner" });
+    else if (session) priorityAlerts.push({ id: "session", title: "Study session active", detail: "Continue your focused work", tone: "success", to: "/planner" });
+    else priorityAlerts.push({ id: "scheduled", title: `${openTasks.length} remaining task${openTasks.length === 1 ? "" : "s"}`, detail: "Your plan is ready", tone: "info", to: "/planner" });
+  }
+  if (weak) priorityAlerts.push({ id: "revision", title: `Revise ${weak.subject}`, detail: weak.topic, tone: "warning", to: "/mock-tests" });
+  if (academic && nextChapter) priorityAlerts.push({ id: "chapter", title: `${nextChapter.subject} in progress`, detail: nextChapter.name, tone: "info", to: "/subjects" });
+  if (priorityAlerts.length === 0) priorityAlerts.push({ id: "get-started", title: "Start your learning journey", detail: "Browse subjects and choose a chapter", tone: "info", to: "/subjects" });
+  const displayedAlerts = priorityAlerts.slice(0, 3);
+  const chapterPercent = nextChapter ? clamp(progressMap.get(nextChapter.id)?.completionPercent ?? 0) : null;
   const highlight = weak ? `Try reviewing ${weak.topic} in ${weak.subject}.` : "Ask about a difficult concept or request a study plan.";
 
   if (loading) return <main className="student-v3-state"><LoaderCircle className="student-v3-spinner" size={30}/><h1>Preparing your learning space</h1><p>Connecting your study plan and academic progress…</p></main>;
@@ -103,6 +118,11 @@ export function DashboardPage() {
         <div className="student-v3-hero-copy">
           <span className="student-v3-kicker">{session ? "SESSION IN PROGRESS" : "PICK UP WHERE YOU LEFT OFF"}</span>
           <h2>{nextTitle}</h2><p>{nextDetail}</p>
+          <div className="student-v4-insight-chips" aria-label="Current learning signals">
+            {nextChapter && <span><CheckCircle2 size={13}/>{chapterPercent}% chapter complete</span>}
+            {nextChapter && <span><BookOpen size={13}/>{nextChapter.topics.length} topics</span>}
+            {session && <span className="student-v4-chip-active"><Flame size={13}/>Session active</span>}
+          </div>
         </div>
         <div className="student-v3-buttons">
           <Link className="student-v3-primary" to={nextPath}>{session ? "Resume session" : "Continue learning"} <ArrowRight size={17}/></Link>
@@ -110,12 +130,23 @@ export function DashboardPage() {
         </div>
         <span className="student-v3-orb" aria-hidden="true"><BrainCircuit size={90}/></span>
       </section>
-      <section className="student-v3-glass student-v3-plan">
-        <div className="student-v3-card-heading"><span className="student-v3-icon"><CalendarCheck2 size={18}/></span><div><h2>Study plan</h2><p>Your overall task progress</p></div></div>
-        <div className="student-v3-plan-value"><strong>{completedTasks}<small> / {totalTasks}</small></strong><span>{progress}% done</span></div>
-        <div className="student-v3-track" role="progressbar" aria-label="Study plan progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><span style={{width:`${progress}%`}}/></div>
-        <p className="student-v3-plan-extra">{totalTasks ? `${Math.max(0,totalTasks-completedTasks)} tasks remaining` : "No tasks planned yet"}</p>
-        <Link className="student-v3-card-link" to="/planner">Open planner <ArrowRight size={15}/></Link>
+      <section className="student-v3-glass student-v3-plan student-v4-priorities">
+        <div className="student-v3-card-heading">
+          <span className="student-v3-icon"><AlertCircle size={18}/></span>
+          <div><h2>Today's priorities</h2><p>What deserves your attention</p></div>
+          <span className="student-v4-alert-count">{displayedAlerts.length}</span>
+        </div>
+        <div className="student-v4-alert-list">
+          {displayedAlerts.map(item => <Link key={item.id} to={item.to} className={`student-v4-alert student-v4-alert--${item.tone}`}>
+            <span className="student-v4-alert-light" aria-hidden="true"/>
+            <span className="student-v4-alert-copy"><strong>{item.title}</strong><small>{item.detail}</small></span>
+            <ArrowRight size={14} aria-hidden="true"/>
+          </Link>)}
+        </div>
+        <div className="student-v4-priority-footer">
+          <span>{planner ? `${completedTasks}/${totalTasks} tasks done` : "Planner currently unavailable"}</span>
+          <Link to="/planner">Study plan <ArrowRight size={14}/></Link>
+        </div>
       </section>
       <section className="student-v3-glass student-v3-subjects">
         <div className="student-v3-card-heading"><span className="student-v3-icon"><Layers3 size={18}/></span><div><h2>Subjects</h2><p>Your syllabus at a glance</p></div><Link className="student-v3-corner-link" to="/subjects" aria-label="Open all subjects"><ArrowRight size={17}/></Link></div>
