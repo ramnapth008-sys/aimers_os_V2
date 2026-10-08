@@ -43,6 +43,8 @@ import type {
   InterventionResponseType,
 } from "./behavior-ai.types";
 
+import { Link } from "react-router-dom";
+
 import "./behavior-ai.css";
 
 function label(
@@ -677,6 +679,8 @@ export function BehaviorAIPage() {
     );
   }
 
+  const monitoringUnavailable = /behavior analysis is disabled|digital activity monitoring is paused/i.test(error);
+
   if (!workspace) {
     return (
       <div className="behavior-page behavior-state-page">
@@ -684,23 +688,33 @@ export function BehaviorAIPage() {
           <AlertTriangle size={32} />
 
           <h1>
-            Behavior AI unavailable
+            {monitoringUnavailable
+              ? "Behavior insights are turned off"
+              : "Behavior AI unavailable"}
           </h1>
 
           <p>
-            {error ||
-              "No behavior workspace was returned."}
+            {monitoringUnavailable
+              ? "Behavior AI needs your permission and active monitoring to generate insights. You can review these options in Privacy Settings. No monitoring will be enabled automatically."
+              : error || "No behavior workspace was returned."}
           </p>
 
-          <button
-            type="button"
-            onClick={() => {
-              void load();
-            }}
-          >
-            <RefreshCw size={16} />
-            Try again
-          </button>
+          {monitoringUnavailable ? (
+            <Link className="behavior-settings-link" to="/settings">
+              <ShieldCheck size={16} />
+              Review privacy settings
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                void load();
+              }}
+            >
+              <RefreshCw size={16} />
+              Try again
+            </button>
+          )}
         </section>
       </div>
     );
