@@ -1,0 +1,40 @@
+/* Student experience sprint 1: readable, progressive sidebar navigation. */
+.sidebar-section-label {
+  margin: 12px 10px 8px;
+  color: var(--aimers-text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .075em;
+}
+.sidebar-nav-group {
+  margin: 4px 0;
+  border: 1px solid var(--aimers-border-soft);
+  border-radius: 11px;
+}
+.sidebar-nav-group > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 0 12px;
+  color: var(--aimers-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  list-style: none;
+}
+.sidebar-nav-group > summary::-webkit-details-marker { display: none; }
+.sidebar-nav-group > summary::after { content: "⌄"; font-size: 16px; }
+.sidebar-nav-group[open] > summary::after { transform: rotate(180deg); }
+.sidebar-nav-group-links { padding: 2px 5px 6px; }
+.sidebar-nav-group-links .sidebar-link { min-height: 42px; font-size: 13px; }
+.sidebar-link { min-height: 44px; font-size: 13px; }
+.sidebar-link:focus-visible,
+.sidebar-nav-group > summary:focus-visible {
+  outline: 2px solid #c299ff;
+  outline-offset: 2px;
+}
+@media (max-width: 680px) {
+  .sidebar-nav-group > summary,
+  .sidebar-link { min-height: 48px; }
+}
