@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AIMERS Lecture Tracker (Local Pilot)",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Optional, locally stored lecture playback metrics on explicitly enabled learning sites. No uploads.",
   "permissions": [
     "activeTab",
@@ -13,7 +13,6 @@
     "default_title": "AIMERS lecture tracker"
   },
   "optional_host_permissions": [
-    "https://pw.live/*",
-    "https://www.pw.live/*"
+    "https://pw.live/*"
   ]
 }
