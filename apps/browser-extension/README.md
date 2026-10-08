@@ -44,3 +44,12 @@ Saved only under `aimersLectureSummary` in extension-local storage. No browsing 
 
 ## Next integration milestone
 Security review, age verification, student login through extension-specific OAuth PKCE/device authorization, allowlist of tested sites, explicit `LECTURE_PROGRESS` scope, owned connector/device registration, consent receipts, event batching, server-side input validation and rate limiting, app UI source labels, session deduplication and pause/rewind schema. Verify actual backend rejects expired/revoked consent. No copying AIMERS authentication tokens into popup settings, no hardcoded credentials, and no `localhost` credential leakage.
+
+## PW compatibility diagnostic (iteration 0.1.1)
+1. Visit an actual logged-in lecture playback page, not `https://www.pw.live/` homepage.
+2. Click the extension's **Start on this tab**. It now waits up to 20 seconds for a dynamically inserted HTML5 `video` element in the top-level document.
+3. If the message reports no exposed video, that page likely has no player, or uses an embedded or otherwise inaccessible player. No tracking is claimed. Do not bypass DRM or provider access controls.
+4. Send a screenshot of the error and a **redacted URL/path** of the lecture page (remove tokens, personal query parameters and student identifiers) for further integration assessment.
+5. Reload the unpacked extension in Chrome `chrome://extensions` after pulling changes.
+
+This revision is untested against a live PW lecture and does not add new permissions, network uploads, cross-origin iframe access, or background browsing capture.
