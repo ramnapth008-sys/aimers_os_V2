@@ -1,10 +1,25 @@
 // AIMERS local-only lecture observer.
 // Only injected after a student clicks "Start on this tab" in popup.
 // Does not read browser history, page text, searches, messages, or passwords.
-(() => {
+(async () => {
   if (globalThis.__aimersLecturePilot) return;
-  const player = [...document.querySelectorAll("video")].find(v => v instanceof HTMLVideoElement && (v.readyState > 0 || v.currentSrc));
-  if (!player) { chrome.runtime.sendMessage({kind:"AIMERS_NO_VIDEO"}).catch(() => {}); return; }
+  // PW and other SPAs may create video tags after the page has loaded.
+  // Inspect only this document, never cross-origin embedded content.
+  const findPlayer = () => [...document.querySelectorAll("video")]
+    .find(v => v instanceof HTMLVideoElement && (v.currentSrc || v.readyState > 0 || v.duration > 0))
+    || document.querySelector("video");
+  let player = findPlayer();
+  if (!player) {
+    player = await new Promise(resolve => {
+      const observer = new MutationObserver(() => {
+        const found = findPlayer();
+        if (found) { observer.disconnect(); clearTimeout(timeout); resolve(found); }
+      });
+      observer.observe(document.documentElement, {childList:true, subtree:true});
+      const timeout = setTimeout(() => { observer.disconnect(); resolve(null); }, 20000);
+    });
+  }
+  if (!player) return;
   const started = Date.now();
   const info = {
     title: document.title.slice(0,180),
