@@ -49,6 +49,8 @@ import type {
   TopicMastery,
 } from "./subjects.types";
 
+import { useSearchParams } from "react-router-dom";
+
 import "./subjects.css";
 
 type SubjectTone =
@@ -437,6 +439,8 @@ function SubjectsError({
 }
 
 export function SubjectsPage() {
+  const [searchParams] = useSearchParams();
+  const requestedChapterId = searchParams.get("chapter");
   const {
     apiFetch,
   } = useAuth();
@@ -506,20 +510,14 @@ export function SubjectsPage() {
 
           setWorkspace(result);
 
-          setSelectedSubjectId(
-            (current) =>
-              result
-                .syllabusVersion
-                .subjects.some(
-                  (subject) =>
-                    subject.id ===
-                    current,
-                )
-                ? current
-                : result
-                    .syllabusVersion
-                    .subjects[0]
-                    ?.id ?? "",
+          const deepLinkedSubject = result.syllabusVersion.subjects.find(
+            subject => subject.units.some(unit => unit.chapters.some(chapter => chapter.id === requestedChapterId)),
+          );
+          setSelectedSubjectId(current =>
+            deepLinkedSubject?.id ??
+            (result.syllabusVersion.subjects.some(subject => subject.id === current)
+              ? current
+              : result.syllabusVersion.subjects[0]?.id ?? ""),
           );
         } catch (caught) {
           setError(
@@ -532,7 +530,7 @@ export function SubjectsPage() {
           setRefreshing(false);
         }
       },
-      [apiFetch],
+      [apiFetch, requestedChapterId],
     );
 
   useEffect(() => {
