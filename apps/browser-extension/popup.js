@@ -53,7 +53,7 @@ el("clear").addEventListener("click",async()=>{
 
 const PW_ORIGINS=["https://pw.live/*"];
 const PW_SCRIPT_ID="aimers-pw-video-optin";
-const PW_MATCHES=["https://pw.live/watch*","https://www.pw.live/watch*"];
+const PW_MATCHES=["https://pw.live/watch*"];
 async function siteState(){
   const approved=await chrome.permissions.contains({origins:PW_ORIGINS});
   const registered=(await chrome.scripting.getRegisteredContentScripts({ids:[PW_SCRIPT_ID]})).length>0;
