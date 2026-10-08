@@ -87,7 +87,7 @@ export function usePwLectureSync(){
 
   const connect=useCallback(async()=>{
     if(!userId || status!=="authenticated" || !reviewed)return;
-    setBusy(true);setError("");
+    setBusy(true);setError("");setState("Checking extension and account permissions…");
     try{
       if(!extensionId || !/^[a-p]{32}$/.test(extensionId))throw Error("Configure the installed Chrome extension ID in VITE_AIMERS_LECTURE_EXTENSION_ID first.");
       const extension=await receiveFromExtension();
@@ -104,7 +104,7 @@ export function usePwLectureSync(){
       if(identityRef.current!==userId)return;
       localStorage.setItem(storageKey(userId),String(Date.now()));
       setEnabled(true);setState("Connected · waiting for a PW lecture");
-    }catch(e){setError(e instanceof Error?e.message:"Unable to enable PW account sync.");}
+    }catch(e){const message=e instanceof Error?e.message:"Unable to enable PW account sync.";setError(message);setState("Connection failed: "+message);}
     finally{setBusy(false);}
   },[apiFetch,userId,status,reviewed]);
   const disconnect=useCallback(()=>{
