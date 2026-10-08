@@ -16,6 +16,7 @@ import {
 } from "react";
 
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@aimers/auth";
 
 import { allNavigation } from "../../data/navigation";
 
@@ -41,6 +42,12 @@ export function Topbar({
   onOpenSidebar,
 }: TopbarProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const greetingName = (
+    user?.firstName?.trim() ||
+    user?.displayName?.trim().split(/\s+/)[0] ||
+    "Student"
+  );
 
   const searchInputRef =
     useRef<HTMLInputElement>(null);
@@ -126,13 +133,12 @@ export function Topbar({
 
           <div>
             <h1>
-              {getGreeting()}, Ram{" "}
+              {getGreeting()}, {greetingName}{" "}
               <span>👋</span>
             </h1>
 
             <p>
-              “Discipline today, Doctor
-              tomorrow.”
+              Your next learning milestone starts today.
             </p>
           </div>
         </div>
