@@ -89,3 +89,13 @@
  .v5-home .v5-panel:has(.v5-empty){min-height:185px}
  .v5-home .v5-grid{grid-template-rows:auto}
 }
+
+/* Opt-in PW lecture sync: condensed controls inside the existing learning card */
+.v5-lecture-connect{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding-top:9px;border-top:1px solid rgba(189,178,220,.12)}
+.v5-lecture-connect button{font-size:11px;font-weight:650;cursor:pointer;color:#e6d7ff;background:rgba(137,91,221,.16);border:1px solid rgba(180,144,250,.32);border-radius:8px;padding:7px 10px;min-height:31px}
+.v5-lecture-connect button:disabled{cursor:wait;opacity:.7}
+.v5-lecture-connect>small{color:#e7bdbd;font-size:10px;line-height:1.4}
+.v5-connection-state{flex:1;min-width:150px;color:#b9c1d3;font-size:11px;line-height:1.45}
+.v5-sync-indicator{display:inline-flex;align-self:flex-start;margin-top:10px;border:1px solid rgba(156,204,180,.25);border-radius:7px;padding:4px 8px;background:rgba(70,140,109,.11);color:#d5f0dd;font-size:10px;font-weight:650}
+.v5-lecture-connect a:focus-visible,.v5-lecture-connect button:focus-visible{outline:2px solid #e0ccff;outline-offset:2px}
+@media(max-width:1100px){.v5-lecture-connect{align-items:flex-start}}
