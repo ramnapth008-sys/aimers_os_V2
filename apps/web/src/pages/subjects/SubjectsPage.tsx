@@ -519,6 +519,9 @@ export function SubjectsPage() {
               ? current
               : result.syllabusVersion.subjects[0]?.id ?? ""),
           );
+          const linkedChapter = deepLinkedSubject?.units.flatMap(unit => unit.chapters)
+            .find(chapter => chapter.id === requestedChapterId);
+          if (linkedChapter) setQuery(linkedChapter.name);
         } catch (caught) {
           setError(
             caught instanceof Error
