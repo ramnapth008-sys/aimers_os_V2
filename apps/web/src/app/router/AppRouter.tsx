@@ -186,6 +186,7 @@ export function AppRouter() {
                 <PrivacyAgreementGate />
               }
             >
+          <Route element={<AppShell />}>
           <Route
             index
             element={
@@ -322,6 +323,7 @@ export function AppRouter() {
               />
             }
           />
+          </Route>
             </Route>
         </Route>
         </Route>
