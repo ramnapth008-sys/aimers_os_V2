@@ -44,6 +44,7 @@ export function usePwLectureSync(){
   const userId=user?.id??null;
   const [enabled,setEnabled]=useState(false);
   const [busy,setBusy]=useState(false);
+  const [reviewed,setReviewed]=useState(false);
   const [state,setState]=useState("Not connected");
   const [live,setLive]=useState<PwSnapshot|null>(null);
   const [saved,setSaved]=useState<LectureSession|null>(null);
@@ -59,17 +60,17 @@ export function usePwLectureSync(){
     try{const sessions=await apiFetch<LectureSession[]>("/activity/lectures");
       setSaved(sessions.find(x=>x.platformName==="pw.live" && x.externalLectureId?.startsWith("aimers-pw:"))??null);
     }catch{ /* Latest live data remains visible on temporary network failures. */ }
-  },[apiFetch,userId,status]);
+  },[apiFetch,userId,status,reviewed]);
 
   useEffect(()=>{
     ack.current="";
-    setLive(null);setSaved(null);setSavedAt(null);setError("");
+    setLive(null);setSaved(null);setSavedAt(null);setError("");setReviewed(false);
     setEnabled(Boolean(userId && localStorage.getItem(storageKey(userId))==="enabled"));
     void loadSaved();
   },[userId,loadSaved]);
 
   const connect=useCallback(async()=>{
-    if(!userId || status!=="authenticated")return;
+    if(!userId || status!=="authenticated" || !reviewed)return;
     setBusy(true);setError("");
     try{
       if(!extensionId || !/^[a-p]{32}$/.test(extensionId))throw Error("Configure the installed Chrome extension ID in VITE_AIMERS_LECTURE_EXTENSION_ID first.");
@@ -164,5 +165,5 @@ export function usePwLectureSync(){
     return ()=>{cancelled=true;controller.abort();release();if(timer!==undefined)clearInterval(timer);if(readTimer!==undefined)clearInterval(readTimer);window.removeEventListener("focus",onFocus);setUploader(false);};
   },[enabled,userId,status,loadSaved]);
 
-  return {enabled,busy,state,live,saved,savedAt,error,isUploader,connect,disconnect,configured:Boolean(extensionId && /^[a-p]{32}$/.test(extensionId)),loadSaved};
+  return {enabled,busy,reviewed,setReviewed,state,live,saved,savedAt,error,isUploader,connect,disconnect,configured:Boolean(extensionId && /^[a-p]{32}$/.test(extensionId)),loadSaved};
 }
