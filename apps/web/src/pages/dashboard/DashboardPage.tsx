@@ -1240,6 +1240,55 @@ export function DashboardPage() {
         </div>
       )}
 
+      <section className="student-next-step" aria-labelledby="student-next-step-title">
+        <div className="student-next-step-copy">
+          <span className="student-next-step-eyebrow">YOUR NEXT STEP</span>
+          <h1 id="student-next-step-title">
+            {data.currentMission
+              ? "Ready for your next study session?"
+              : "You're ready to plan your next lesson."}
+          </h1>
+          <p>
+            {data.currentMission
+              ? data.currentMission.title
+              : "Choose a subject and start a chapter. AIMERS will help you track your progress."}
+          </p>
+          {data.currentMission && (
+            <small>{data.currentMission.detail}</small>
+          )}
+          <div className="student-next-step-actions">
+            <Link
+              className="student-next-step-primary"
+              to={data.missionSource === "planner" ? "/planner" : "/subjects"}
+            >
+              <Play size={16} aria-hidden="true" />
+              {data.currentMission ? "Continue learning" : "Choose a subject"}
+              <ArrowRight size={16} aria-hidden="true" />
+            </Link>
+            <Link className="student-next-step-secondary" to="/ai-mentor">
+              <Bot size={16} aria-hidden="true" />
+              Ask AI Mentor
+            </Link>
+          </div>
+        </div>
+        <div className="student-next-step-progress">
+          <span>TODAY'S PLAN</span>
+          <strong>{missionCompleted} <small>/ {data.missions.length}</small></strong>
+          <p>activities completed</p>
+          <div
+            className="student-next-step-track"
+            role="progressbar"
+            aria-label="Today's study plan completion"
+            aria-valuenow={data.missionProgress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <span style={{ width: `${data.missionProgress}%` }} />
+          </div>
+          <Link to="/planner">View study plan <ArrowRight size={14} aria-hidden="true" /></Link>
+        </div>
+      </section>
+
       <section className="ref-metrics">
         <MetricCard
           label="Study Streak"
