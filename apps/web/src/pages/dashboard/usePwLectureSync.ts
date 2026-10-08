@@ -86,7 +86,8 @@ export function usePwLectureSync(){
   },[userId,loadSaved]);
 
   const connect=useCallback(async()=>{
-    if(!userId || status!=="authenticated" || !reviewed)return;
+    if(!reviewed){setState("Please review and select the consent checkbox first.");return;}
+    if(!userId || status!=="authenticated"){setError("No signed-in student session is available. Sign in again, then retry.");setState("Connection failed: sign-in required");return;}
     setBusy(true);setError("");setState("Checking extension and account permissions…");
     try{
       if(!extensionId || !/^[a-p]{32}$/.test(extensionId))throw Error("Configure the installed Chrome extension ID in VITE_AIMERS_LECTURE_EXTENSION_ID first.");
