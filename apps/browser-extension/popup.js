@@ -1,4 +1,13 @@
 const el=id=>document.getElementById(id);
+chrome.storage.local.get("autoPwTracking").then(v=>{el("auto").checked=Boolean(v.autoPwTracking);});
+el("auto").addEventListener("change",async()=>{
+  const enabled=el("auto").checked;
+  await chrome.storage.local.set({autoPwTracking:enabled});
+  try {const active=await tab(); if (active.url?.startsWith("https://pw.live/watch")) {
+    if (!enabled) await message(active,"AIMERS_STOP");
+    status(enabled?"Auto mode enabled. Reload the PW lecture tab once to begin.":"Automatic tracking disabled.");
+  }else status(enabled?"Automatic tracking enabled for authorized PW lecture pages only.":"Automatic tracking disabled.");}catch(e){status(e.message);}
+});
 const status=message=>{el("status").textContent=message;};
 const pretty=n=> n==null||!Number.isFinite(n)?"—":Math.floor(Math.max(0,n)/60)+"m "+String(Math.round(Math.max(0,n)%60)).padStart(2,"0")+"s";
 const fill=s=>{
@@ -37,9 +46,14 @@ el("start").addEventListener("click",async()=>{
     if(!existing?.active){
       status("Looking for a lecture video in this page (up to 20 seconds)…");
       el("start").disabled=true;
+      await chrome.scripting.executeScript({target:{tabId:active.id},func:()=>{globalThis.__aimersManualStart=true;}});
       await chrome.scripting.executeScript({target:{tabId:active.id},files:["tracker.js"]});
     }
-    const check=await message(active,"AIMERS_STATUS");
+    let check=await message(active,"AIMERS_STATUS");
+    for(let attempt=0;!check?.active && attempt<20;attempt++){
+      await new Promise(resolve=>setTimeout(resolve,1000));
+      check=await message(active,"AIMERS_STATUS");
+    }
     if(!check?.active)throw Error("No video was exposed by this page. Open an actual lecture rather than pw.live homepage. Embedded or DRM players may be inaccessible.");
     fill(check);status("Tracking this tab only · Local data · No upload");el("stop").disabled=false;el("start").disabled=true;
   }catch(e){status(e.message);el("start").disabled=false;}
