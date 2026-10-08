@@ -35,12 +35,14 @@ el("start").addEventListener("click",async()=>{
     if(!/^https?:\/\//.test(active.url||""))throw Error("Open an ordinary webpage containing a video first");
     const existing=await message(active,"AIMERS_STATUS");
     if(!existing?.active){
+      status("Looking for a lecture video in this page (up to 20 seconds)…");
+      el("start").disabled=true;
       await chrome.scripting.executeScript({target:{tabId:active.id},files:["tracker.js"]});
     }
     const check=await message(active,"AIMERS_STATUS");
-    if(!check?.active)throw Error("No accessible HTML5 video found in this tab. Embedded players may not be supported.");
+    if(!check?.active)throw Error("No video was exposed by this page. Open an actual lecture rather than pw.live homepage. Embedded or DRM players may be inaccessible.");
     fill(check);status("Tracking this tab only · Local data · No upload");el("stop").disabled=false;el("start").disabled=true;
-  }catch(e){status(e.message);}
+  }catch(e){status(e.message);el("start").disabled=false;}
 });
 el("stop").addEventListener("click",async()=>{
   try{const active=await tab();await message(active,"AIMERS_STOP");await refresh();}catch(e){status(e.message);}
