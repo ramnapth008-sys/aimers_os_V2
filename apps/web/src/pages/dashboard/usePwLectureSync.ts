@@ -1,0 +1,168 @@
+import { useAuth } from "@aimers/auth";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getSettingsWorkspace, grantConsent, updatePrivacyPreferences } from "../settings/settings.service";
+import type { LectureSession } from "../digital-activity/digital-activity.types";
+
+export interface PwSnapshot {
+  sessionId: string;
+  measuredAt: string;
+  startedAt: string;
+  title: string;
+  platform: string;
+  videoLengthSeconds: number | null;
+  elapsedSeconds: number;
+  playSeconds: number;
+  positionSeconds: number;
+  pauses: number;
+  rewinds: number;
+  state: "PLAYING" | "PAUSED" | "STOPPED";
+}
+type BridgeAnswer = {kind:"AIMERS_LECTURE_SNAPSHOT_V1";snapshot:PwSnapshot|null};
+const extensionId = import.meta.env.VITE_AIMERS_LECTURE_EXTENSION_ID as string | undefined;
+const storageKey = (id:string) => "aimers:pw-account-sync:v1:"+id;
+function receiveFromExtension():Promise<PwSnapshot|null>{
+  if(!extensionId || !/^[a-p]{32}$/.test(extensionId))return Promise.resolve(null);
+  const runtime=(window as unknown as {chrome?:{runtime?:{sendMessage:(id:string,message:object,cb:(r?:BridgeAnswer)=>void)=>void;lastError?:{message?:string}}}}).chrome?.runtime;
+  if(!runtime?.sendMessage)return Promise.resolve(null);
+  return new Promise(resolve=>{
+    let resolved=false;
+    const finish=(value:PwSnapshot|null)=>{if(!resolved){resolved=true;resolve(value);}};
+    const timeout=window.setTimeout(()=>finish(null),1800);
+    try{runtime.sendMessage(extensionId,{kind:"AIMERS_LECTURE_SNAPSHOT_V1"},answer=>{
+      clearTimeout(timeout);
+      if(runtime.lastError || answer?.kind!=="AIMERS_LECTURE_SNAPSHOT_V1")return finish(null);
+      const s=answer.snapshot;
+      if(!s || !/^[\w-]{8,100}$/.test(s.sessionId)||s.platform!=="pw.live"||!Number.isFinite(Date.parse(s.measuredAt))||!Number.isFinite(Date.parse(s.startedAt)))return finish(null);
+      const values=[s.elapsedSeconds,s.playSeconds,s.positionSeconds,s.pauses,s.rewinds];
+      if(values.some(v=>!Number.isFinite(v)||v<0))return finish(null);
+      return finish(s);
+    });}catch{clearTimeout(timeout);finish(null);}
+  });
+}
+export function usePwLectureSync(){
+  const {apiFetch,user,status}=useAuth();
+  const userId=user?.id??null;
+  const [enabled,setEnabled]=useState(false);
+  const [busy,setBusy]=useState(false);
+  const [state,setState]=useState("Not connected");
+  const [live,setLive]=useState<PwSnapshot|null>(null);
+  const [saved,setSaved]=useState<LectureSession|null>(null);
+  const [savedAt,setSavedAt]=useState<string|null>(null);
+  const [error,setError]=useState("");
+  const [isUploader,setUploader]=useState(false);
+  const ack=useRef("");
+  const apiRef=useRef(apiFetch);
+  apiRef.current=apiFetch;
+
+  const loadSaved=useCallback(async()=>{
+    if(!userId || status!=="authenticated")return;
+    try{const sessions=await apiFetch<LectureSession[]>("/activity/lectures");
+      setSaved(sessions.find(x=>x.platformName==="pw.live" && x.externalLectureId?.startsWith("aimers-pw:"))??null);
+    }catch{ /* Latest live data remains visible on temporary network failures. */ }
+  },[apiFetch,userId,status]);
+
+  useEffect(()=>{
+    ack.current="";
+    setLive(null);setSaved(null);setSavedAt(null);setError("");
+    setEnabled(Boolean(userId && localStorage.getItem(storageKey(userId))==="enabled"));
+    void loadSaved();
+  },[userId,loadSaved]);
+
+  const connect=useCallback(async()=>{
+    if(!userId || status!=="authenticated")return;
+    setBusy(true);setError("");
+    try{
+      if(!extensionId || !/^[a-p]{32}$/.test(extensionId))throw Error("Configure the installed Chrome extension ID in VITE_AIMERS_LECTURE_EXTENSION_ID first.");
+      const settings=await getSettingsWorkspace(apiFetch);
+      for(const scope of ["DIGITAL_ACTIVITY_MONITORING","LECTURE_PROGRESS","CROSS_DEVICE_SYNC"] as const){
+        const active=settings.consent.grants.some(grant=>grant.scope===scope && grant.status==="ACTIVE" && !grant.revokedAt && (!grant.expiresAt || Date.parse(grant.expiresAt)>Date.now()));
+        if(!active)await grantConsent(apiFetch,scope);
+      }
+      await updatePrivacyPreferences(apiFetch,{monitoringEnabled:true,crossDeviceSync:true});
+      localStorage.setItem(storageKey(userId),"enabled");
+      setEnabled(true);setState("Connected · waiting for a PW lecture");
+    }catch(e){setError(e instanceof Error?e.message:"Unable to enable PW account sync.");}
+    finally{setBusy(false);}
+  },[apiFetch,userId,status]);
+  const disconnect=useCallback(()=>{
+    if(userId)localStorage.removeItem(storageKey(userId));
+    setEnabled(false);setLive(null);setState("Disconnected");
+  },[userId]);
+
+  useEffect(()=>{
+    if(!enabled || !userId || status!=="authenticated")return;
+    let cancelled=false;
+    let release:()=>void=()=>{};
+    let timer:number|undefined,readTimer:number|undefined;
+    let inFlight=false;
+    let lastSave=0;
+    let lastConsentCheck=0;
+    let authorized=false;
+    let lastSession="";
+    const controller=new AbortController();
+    const poll=async()=>{
+      if(cancelled||inFlight)return;
+      inFlight=true;
+      try{
+        const now=Date.now();
+        if(now-lastConsentCheck>7000){
+          const settings=await getSettingsWorkspace(apiRef.current);
+          if(cancelled)return;
+          authorized=Boolean(settings.privacy.monitoringEnabled && settings.privacy.crossDeviceSync && !settings.privacy.pausedAt &&
+            ["DIGITAL_ACTIVITY_MONITORING","LECTURE_PROGRESS","CROSS_DEVICE_SYNC"].every(scope=>settings.consent.grants.some(g=>g.scope===scope && g.status==="ACTIVE" && !g.revokedAt && (!g.expiresAt || Date.parse(g.expiresAt)>Date.now()))));
+          lastConsentCheck=now;
+          if(!authorized){setState("Monitoring disabled or consent revoked");setEnabled(false);localStorage.removeItem(storageKey(userId));return;}
+        }
+        const snapshot=await receiveFromExtension();
+        if(cancelled)return;
+        if(!snapshot || now-Date.parse(snapshot.measuredAt)>10000){setLive(null);setState("Disconnected · waiting for a fresh lecture snapshot");return;}
+        setLive(snapshot);
+        if(!authorized)return;
+        if(lastSession!==snapshot.sessionId){lastSession=snapshot.sessionId;ack.current="";lastSave=0;}
+        const revision=snapshot.sessionId+":"+snapshot.measuredAt;
+        if(revision===ack.current){setState(snapshot.state==="PAUSED"?"Paused · saved":"Live · saved to your account");return;}
+        setState("Waiting to sync");
+        if(Date.now()-lastSave<4500)return;
+        lastSave=Date.now();
+        const result=await apiRef.current<{success:boolean;lecture:LectureSession}>("/activity/lectures/progress",{
+          method:"POST",signal:controller.signal,body:JSON.stringify({
+            externalLectureId:"aimers-pw:"+snapshot.sessionId,
+            platformName:"pw.live",lectureTitle:snapshot.title.slice(0,300),
+            totalDurationSeconds:snapshot.videoLengthSeconds??undefined,
+            watchedSeconds:Math.round(snapshot.playSeconds),
+            playbackPositionSeconds:Math.round(snapshot.positionSeconds),
+            elapsedSeconds:Math.round(snapshot.elapsedSeconds),
+            pauseCount:Math.round(snapshot.pauses),rewindCount:Math.round(snapshot.rewinds),
+            collectorSessionId:snapshot.sessionId,trackingState:snapshot.state,
+            confidence:"OBSERVED",startedAt:snapshot.startedAt,lastProgressAt:snapshot.measuredAt
+          })
+        });
+        if(cancelled)return;
+        ack.current=revision;setSaved(result.lecture);setSavedAt(new Date().toISOString());setError("");
+        setState(snapshot.state==="PAUSED"?"Paused · saved to your account":"Live · saved to your account");
+      }catch(e){
+        if(cancelled)return;
+        const message=e instanceof Error?e.message:"Unable to sync";
+        setError(message);setState("Waiting to sync · "+message);
+        if(/consent|monitoring|forbidden|403|privacy/i.test(message)){setEnabled(false);localStorage.removeItem(storageKey(userId));}
+      }finally{inFlight=false;}
+    };
+    // Hold the tab-level exclusive lock for the entire upload session.
+    if(!navigator.locks){setState("This browser does not support safe multi-tab syncing");return;}
+    void navigator.locks.request("aimers-pw-sync:"+userId,{mode:"exclusive",ifAvailable:true},async lock=>{
+      if(!lock || cancelled){setUploader(false);return;}
+      setUploader(true);
+      timer=window.setInterval(()=>{void poll();},3000);
+      void poll();
+      await new Promise<void>(resolve=>{release=resolve;});
+      if(timer!==undefined)clearInterval(timer);
+      setUploader(false);
+    });
+    readTimer=window.setInterval(()=>{if(document.visibilityState==="visible")void loadSaved();},8000);
+    const onFocus=()=>{void loadSaved();};
+    window.addEventListener("focus",onFocus);
+    return ()=>{cancelled=true;controller.abort();release();if(timer!==undefined)clearInterval(timer);if(readTimer!==undefined)clearInterval(readTimer);window.removeEventListener("focus",onFocus);setUploader(false);};
+  },[enabled,userId,status,loadSaved]);
+
+  return {enabled,busy,state,live,saved,savedAt,error,isUploader,connect,disconnect,configured:Boolean(extensionId && /^[a-p]{32}$/.test(extensionId)),loadSaved};
+}
