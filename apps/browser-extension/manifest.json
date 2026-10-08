@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "AIMERS Lecture Tracker (Local Pilot)",
+  "version": "0.1.0",
+  "description": "Opt-in lecture playback metrics for the active tab. No uploads or background browser monitoring.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "AIMERS lecture tracker"
+  },
+  "icons": {}
+}
