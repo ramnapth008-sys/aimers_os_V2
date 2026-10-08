@@ -3,6 +3,9 @@
 // Does not read browser history, page text, searches, messages, or passwords.
 (async () => {
   if (globalThis.__aimersLecturePilot) return;
+  const {autoPwTracking = false} = await chrome.storage.local.get("autoPwTracking");
+  if (!autoPwTracking && !globalThis.__aimersManualStart) return;
+  delete globalThis.__aimersManualStart;
   // PW and other SPAs may create video tags after the page has loaded.
   // Inspect only this document, never cross-origin embedded content.
   const findPlayer = () => [...document.querySelectorAll("video")]
