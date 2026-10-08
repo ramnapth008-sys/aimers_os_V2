@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "AIMERS Lecture Tracker (Local Pilot)",
-  "version": "0.2.1",
-  "description": "Optional, locally stored lecture playback metrics on explicitly enabled learning sites. No uploads.",
+  "version": "0.3.0",
+  "description": "Opt-in local PW lecture metrics; restricted read-only AIMERS website snapshot bridge.",
   "permissions": [
     "activeTab",
     "scripting",
@@ -14,5 +14,13 @@
   },
   "optional_host_permissions": [
     "https://pw.live/*"
-  ]
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "externally_connectable": {
+    "matches": [
+      "http://localhost/*"
+    ]
+  }
 }
