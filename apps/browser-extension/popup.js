@@ -50,5 +50,45 @@ el("stop").addEventListener("click",async()=>{
 el("clear").addEventListener("click",async()=>{
   try{const active=await tab();await message(active,"AIMERS_STOP");await chrome.storage.local.remove("aimersLectureSummary");fill(null);status("Local lecture summary cleared");el("start").disabled=false;el("stop").disabled=true;}catch(e){status(e.message);}
 });
+
+const PW_ORIGINS=["https://pw.live/*","https://www.pw.live/*"];
+const PW_SCRIPT_ID="aimers-pw-video-optin";
+const PW_MATCHES=["https://pw.live/watch*","https://www.pw.live/watch*"];
+async function siteState(){
+  const approved=await chrome.permissions.contains({origins:PW_ORIGINS});
+  const registered=(await chrome.scripting.getRegisteredContentScripts({ids:[PW_SCRIPT_ID]})).length>0;
+  el("site-state").textContent=approved&&registered?"Enabled: PW lectures will be measured locally after page reload.":approved?"Chrome allowed PW, but auto-detection is not enabled.":"Disabled: no persistent PW site access.";
+  el("enable").disabled=approved&&registered;
+  el("disable").disabled=!approved&&!registered;
+}
+el("enable").addEventListener("click",async()=>{
+  // A direct click triggers the browser's own site permission dialog.
+  try{
+    const granted=await chrome.permissions.request({origins:PW_ORIGINS});
+    if(!granted){status("Chrome permission was not granted; no automatic tracking.");await siteState();return;}
+    await chrome.scripting.unregisterContentScripts({ids:[PW_SCRIPT_ID]}).catch(()=>{});
+    await chrome.scripting.registerContentScripts([{
+      id:PW_SCRIPT_ID,matches:PW_MATCHES,js:["tracker.js"],
+      runAt:"document_idle",persistAcrossSessions:true,allFrames:false
+    }]);
+    await chrome.storage.local.set({aimersPwAutoEnabled:true});
+    status("PW lecture auto-tracking is enabled locally. Reload an open PW lecture to begin.");
+    await siteState();
+  }catch(error){status("Couldn't enable PW: "+error.message);await siteState();}
+});
+el("disable").addEventListener("click",async()=>{
+  try{
+    await chrome.scripting.unregisterContentScripts({ids:[PW_SCRIPT_ID]}).catch(()=>{});
+    // End any current tracked lecture on authorized PW pages before revoking permission.
+    const tabs=await chrome.tabs.query({url:PW_ORIGINS}).catch(()=>[]);
+    await Promise.all(tabs.map(t=>t.id?chrome.tabs.sendMessage(t.id,{kind:"AIMERS_STOP"}).catch(()=>{}):Promise.resolve()));
+    await chrome.storage.local.set({aimersPwAutoEnabled:false});
+    await chrome.permissions.remove({origins:PW_ORIGINS});
+    status("PW auto-tracking disabled. Existing local summary can be cleared separately.");
+    await siteState();
+  }catch(error){status("Couldn't disable PW: "+error.message);}
+});
+
+void siteState();
 void refresh();
 setInterval(()=>{void refresh();},1300);
