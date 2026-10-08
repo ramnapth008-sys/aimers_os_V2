@@ -265,3 +265,57 @@
     flex-wrap: wrap;
   }
 }
+
+/* Sprint 2: a clear daily starting point, using the existing AIMERS palette. */
+.student-next-step {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 250px);
+  gap: 22px;
+  align-items: center;
+  padding: clamp(18px, 2.2vw, 30px);
+  border: 1px solid rgba(156, 108, 245, .29);
+  border-radius: 18px;
+  background: radial-gradient(circle at 90% 20%, rgba(126, 66, 222, .23), transparent 42%), #0d1027;
+}
+.student-next-step-eyebrow,
+.student-next-step-progress > span {
+  display: block;
+  color: #bc99ff;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: .08em;
+}
+.student-next-step h1 {
+  margin: 10px 0 8px;
+  font-size: clamp(22px, 2.1vw, 31px);
+  line-height: 1.18;
+}
+.student-next-step p { margin: 0; color: #d0cce4; font-size: 15px; line-height: 1.5; }
+.student-next-step-copy > small { display: block; margin-top: 8px; color: #a9a4c1; font-size: 12px; }
+.student-next-step-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+.student-next-step-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 650;
+  text-decoration: none;
+}
+.student-next-step-primary { color: #fff; background: linear-gradient(110deg, #7040d5, #b33ce6); }
+.student-next-step-secondary { color: #e9ddff; border: 1px solid rgba(183, 142, 255, .38); }
+.student-next-step-progress { padding: 18px; border: 1px solid rgba(170, 137, 236, .2); border-radius: 14px; background: rgba(5, 8, 24, .45); }
+.student-next-step-progress > strong { display: block; margin: 8px 0 2px; color: #fff; font-size: 34px; }
+.student-next-step-progress > strong small { font-size: 15px; color: #b7aacd; }
+.student-next-step-progress > p { font-size: 12px; color: #b9b3d0; }
+.student-next-step-track { overflow: hidden; height: 8px; margin: 14px 0; border-radius: 999px; background: rgba(255,255,255,.12); }
+.student-next-step-track > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #9060ed, #d471fd); }
+.student-next-step-progress > a { display: inline-flex; align-items: center; gap: 6px; color: #d6b4ff; font-size: 13px; text-decoration: none; }
+.student-next-step a:focus-visible { outline: 2px solid #e6c4ff; outline-offset: 3px; }
+@media (max-width: 760px) {
+  .student-next-step { grid-template-columns: minmax(0, 1fr); gap: 15px; }
+  .student-next-step-progress { padding: 14px; }
+}
