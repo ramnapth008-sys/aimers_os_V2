@@ -113,3 +113,62 @@
 .student-v3-stat-strip a {margin-left:auto;}
 @media (max-width:1150px), (max-height:760px) {.student-v4-alert-list {justify-content:flex-start;}.student-v3-grid {padding:4px 0;}}
 @media(prefers-reduced-motion:reduce) {.student-v4-alert {transition:none;}.student-v4-alert:hover {transform:none;}}
+
+/* V4.1 visual finishing pass: richer glass separation and clearer reading contrast. */
+.aimers-app-shell:has(.student-v3) {
+  background:
+    radial-gradient(ellipse at 56% 5%, rgba(95,54,183,.16), transparent 46%),
+    radial-gradient(ellipse at 87% 74%, rgba(52,79,168,.12), transparent 45%),
+    #070b19;
+}
+.aimers-app-shell:has(.student-v3) .aimers-sidebar {
+  background:linear-gradient(180deg,rgba(8,11,29,.97),rgba(5,8,22,.97));
+}
+.aimers-app-shell:has(.student-v3) .sidebar-pro-card {
+  background:rgba(85,61,137,.09);
+  box-shadow:none;
+}
+.aimers-app-shell:has(.student-v3) .sidebar-pro-card a {
+  background:linear-gradient(110deg,#6242b8,#8d44c6);
+}
+.aimers-page-content:has(.student-v3) {
+  background:
+    radial-gradient(ellipse at 24% 22%,rgba(108,71,220,.16),transparent 42%),
+    radial-gradient(ellipse at 79% 82%,rgba(36,95,206,.12),transparent 42%);
+}
+.student-v3-glass {
+  background-color:rgba(26,29,63,.46);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.20),
+    inset 0 -1px 0 rgba(185,160,250,.04),
+    0 18px 32px -12px rgba(0,0,0,.83),
+    0 10px 25px -17px rgba(147,86,240,.49);
+}
+.student-v3-glass::after {
+  content:"";
+  position:absolute;
+  inset:1px 1px auto;
+  height:34%;
+  pointer-events:none;
+  border-radius:20px 20px 50% 50%;
+  background:linear-gradient(180deg,rgba(251,246,255,.052),transparent);
+}
+.student-v3-glass > * {position:relative;z-index:1;}
+.student-v3-hero .student-v3-orb {z-index:0;}
+.student-v3-heading h1 {font-weight:700;}
+.student-v3-card-heading p,
+.student-v4-alert-copy small,
+.student-v3-plan-extra {color:#c4bedb;}
+.student-v3-subject > div:first-child {font-size:13px;}
+.student-v3-mentor-idea {color:#efe7fb;}
+.student-v4-alert--warning {border-color:rgba(245,188,114,.23);background:linear-gradient(100deg,rgba(94,64,71,.15),rgba(20,20,52,.38));}
+.student-v4-alert--success {border-color:rgba(105,220,176,.23);}
+.student-v4-alert:hover {border-color:rgba(238,211,255,.45);}
+.student-v3-stat-strip span,.student-v3-stat-strip a {
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  color:#cbc2e4;
+}
+@media (prefers-reduced-motion:reduce) {
+  .student-v3-glass:hover {transform:none;}
+}
