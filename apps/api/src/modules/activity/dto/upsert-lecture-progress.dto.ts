@@ -9,6 +9,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsIn,
   IsUUID,
   Max,
   MaxLength,
@@ -78,6 +79,33 @@ export class UpsertLectureProgressDto {
   @IsOptional()
   @IsBoolean()
   completed?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  collectorSessionId?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(604800)
+  elapsedSeconds?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100000)
+  pauseCount?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100000)
+  rewindCount?: number;
+
+  @IsOptional()
+  @IsIn(["PLAYING", "PAUSED", "STOPPED"])
+  trackingState?: "PLAYING" | "PAUSED" | "STOPPED";
 
   @IsEnum(
     DataConfidenceLevel,
