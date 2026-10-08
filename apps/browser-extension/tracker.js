@@ -2,7 +2,7 @@
 // Only injected after a student clicks "Start on this tab" in popup.
 // Does not read browser history, page text, searches, messages, or passwords.
 (async () => {
-  if (globalThis.__aimersLecturePilot) return;
+  if (globalThis.__aimersLecturePilot || !/^\/watch\/?$/.test(location.pathname)) return;
   // PW and other SPAs may create video tags after the page has loaded.
   // Inspect only this document, never cross-origin embedded content.
   const findPlayer = () => [...document.querySelectorAll("video")]
@@ -20,6 +20,7 @@
     });
   }
   if (!player) return;
+  if (globalThis.__aimersLecturePilot) return;
   const started = Date.now();
   const info = {
     title: document.title.slice(0,180),
