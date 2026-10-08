@@ -22,7 +22,9 @@
   if (!player) return;
   if (globalThis.__aimersLecturePilot) return;
   const started = Date.now();
+  const sessionId = crypto.randomUUID();
   const info = {
+    sessionId, measuredAt: new Date(started).toISOString(), state: player.paused ? "PAUSED" : "PLAYING",
     title: document.title.slice(0,180),
     platform: location.hostname,
     videoLengthSeconds: Number.isFinite(player.duration) ? Math.round(player.duration) : null,
@@ -35,18 +37,19 @@
   let lastTick = performance.now();
   let lastSaved = 0;
   let disposed = false;
-  const save = () => chrome.storage.local.set({aimersLectureSummary:{...info}}).catch(() => {});
+  const save = () => { info.measuredAt = new Date().toISOString(); return chrome.storage.local.set({aimersLectureSummary:{...info}}).catch(() => {}); };
   const update = () => {
     if (disposed) return;
     const now = performance.now();
     const delta = Math.min(Math.max(0,(now-lastTick)/1000),5);
     lastTick = now;
     if (!player.paused && !player.ended) info.playSeconds += delta;
+    info.state = player.ended ? "STOPPED" : player.paused ? "PAUSED" : "PLAYING";
     info.elapsedSeconds = Math.round((Date.now()-started)/1000);
     info.positionSeconds = Math.round(player.currentTime || 0);
     if (Number.isFinite(player.duration)) info.videoLengthSeconds=Math.round(player.duration);
     lastPosition = player.currentTime || 0;
-    if(now-lastSaved>3000){lastSaved=now;void save();}
+    if(now-lastSaved>1000){lastSaved=now;void save();}
   };
   const onPlay=()=>{update();playedOnce=true;void save();};
   const onPause=()=>{update();if(playedOnce&&!player.ended)info.pauses++;void save();};
@@ -56,7 +59,7 @@
   const onEnd=()=>{update();void save();};
   const dispose=()=>{
     if(disposed)return;
-    update();disposed=true;info.active=false;clearInterval(timer);
+    update();disposed=true;info.active=false;info.state="STOPPED";clearInterval(timer);
     player.removeEventListener("play",onPlay);
     player.removeEventListener("pause",onPause);
     player.removeEventListener("seeking",onSeeking);
