@@ -332,3 +332,21 @@
 .student-dashboard-metrics > .ref-metrics { padding: 0 12px 12px; }
 .student-dashboard-metrics > summary:focus-visible { outline: 2px solid #d3a7ff; outline-offset: 2px; }
 @media(max-width: 680px) { .student-dashboard-metrics > summary { align-items: flex-start; } .student-dashboard-metrics > summary small { flex-basis: 100%; margin-left: 27px; } }
+
+/* Optional dashboard services fail gracefully without interrupting studying. */
+.student-optional-unavailable {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 14px;
+  padding: 18px; border-radius: 14px;
+  border: 1px solid rgba(155, 134, 205, .28);
+  background: rgba(23, 18, 43, .68);
+  color: #d3c7ec;
+}
+.student-optional-unavailable > div { flex: 1 1 220px; }
+.student-optional-unavailable strong { display: block; color: #f5eeff; font-size: 15px; }
+.student-optional-unavailable p { margin: 5px 0 0; font-size: 13px; line-height: 1.5; }
+.student-optional-unavailable > a {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 10px 14px;
+  border-radius: 10px; border: 1px solid rgba(165, 127, 255, .38);
+  color: #ebdcff; text-decoration: none; font-size: 13px;
+}
+.student-optional-unavailable > a:focus-visible { outline: 2px solid #dec0ff; outline-offset: 3px; }
