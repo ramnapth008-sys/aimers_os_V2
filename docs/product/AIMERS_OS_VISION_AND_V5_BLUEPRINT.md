@@ -145,3 +145,35 @@ Implement a capability matrix by browser/platform/provider, permission receipt/v
 
 ### UX implications
 The student home should not display a surveillance dashboard. Display a small optional "Study habits" insight only when useful and permitted, with a "Why am I seeing this?" explanation and a Privacy & Devices view. Provide one-tap pause, permission review and unlink per device.
+
+## 13. Two-card lecture coverage and backlog UX (V5 requirement)
+
+**Information design**: Show just two concise student-facing cards; do not add separate pause, activity, lecture, topic, backlog and focus cards. Use visual hierarchy: lecture context -> completion -> comparison of time -> optional expansion, and backlog -> highest-impact next step -> planner action. Sample data is illustrative only.
+
+### Card A: Learning Activity
+- Current/latest **source/platform**, linked **subject / chapter / lecture** (verified mapping only), and explicitly observed **topics covered**.
+- Visible core: lesson name, completion fraction/percentage, **published video duration**, **actual elapsed time** (start to stop excluding offline gaps and with interruption handling), **pause count**; optional rewind count in condensed footer.
+- Separate **video watch time** (media-played seconds) from **wall-clock learning session duration** (real time, including pauses). Playback speed and repeated sections can produce differences; do not label the difference "wasted time." Define how backgrounded tabs, idle time, seek events, replay counts and session resumptions are counted.
+- When exact video/seek telemetry unavailable, display "Not supported" or "Not tracked" instead of 0. Estimated inferred topic coverage must be labeled "estimated" and should support manual correction.
+- Video position 60% is not necessarily 60% of topics learned. Use actual syllabus mappings, lesson metadata, assessments or learner confirmation before claiming topics mastered.
+
+### Card B: Backlog & Next Steps
+- Show maximum two unresolved items with actionable labels and quantities, from **scheduled tasks** and **validated incomplete lecture/topic states**, not from indiscriminate browsing history.
+- Definition of backlog: unfinished **planned/due** learning activity; merely unstarted syllabus chapters are not a personal backlog unless planned.
+- One contextual recommendation: resume an incomplete lesson, finish a specific planned topic, or do a short quiz if the student has covered the prerequisite content.
+- Alerts must be non-shaming, adjustable, scoped to exam goals, and not compare peers without separate opt-in.
+- Empty case: "You're on track" or "No study plan yet" as grounded; connectivity-off case: "Activity monitoring is off" and link to privacy settings; never invent due dates or urgency.
+
+### Current repository data assessment (2026-10-08)
+- Existing `apps/web/src/pages/digital-activity/digital-activity.types.ts` defines `LectureSession`: `platformName`, `courseTitle`, `lectureTitle`, `totalDurationSeconds`, `watchedSeconds`, `focusedSeconds`, `playbackPositionSeconds`, `completionPercent`, `completed`, and `confidence`. Existing `ActivityEvent` carries timestamps, durations, app/domain, device and confidence.
+- Existing `apps/web/src/pages/subjects/subjects.types.ts` models syllabus subjects, chapters, topics and learner chapter/topic progress.
+- Existing `apps/web/src/pages/planner/planner.types.ts` supplies planned tasks, time estimates, completion/due dates and study sessions.
+- Missing verified API fields for pause/rewind counts, lecture-to-topic mapping and elapsed lecture session wall-clock time. Needs an event capture/evaluation design and schema extension; don't equate watchedSeconds to actual elapsed minutes or inferred video completion to topic mastery.
+- V5 is a blueprint only; these two cards must not display invented student monitoring data in production.
+
+### Initial event/schema proposal (subject to privacy/legal review)
+`lecture_session_id`, `linked_device_id`, `platform`, `external_lecture_id`, `syllabus_chapter_id?`, `syllabus_topic_ids[]?`, `started_at`, `last_seen_at`, `ended_at?`, `published_duration_seconds?`, `wall_elapsed_seconds?`, `active_player_seconds?`, `video_progress_seconds?`, `pause_count?`, `rewind_count?`, `seeks_backward_seconds?`, `event_source`, `observation_confidence`, `consent_scope`. Segment by seek/pause/resume/navigation and deduplicate device retries. Separate **observed** from **manually entered** and **inferred** fields.
+Privacy: aggregate locally where possible, no raw search terms or page content required to render these two cards, student-visible device permissions and pause controls. For under-18 students enforce age-specific legal restrictions before collecting external behavior events.
+
+### Acceptance test for novice students
+Within 5 seconds of reading these two cards, a new student should be able to answer: "Which lecture did I study?", "How much did I cover?", "How long did it take?", "What is left to do?", and "Where can I resume?" Test with first-time users; avoid showing more than two backlog items or a second dashboard CTA competing with resume.
