@@ -53,3 +53,16 @@ Security review, age verification, student login through extension-specific OAut
 5. Reload the unpacked extension in Chrome `chrome://extensions` after pulling changes.
 
 This revision is untested against a live PW lecture and does not add new permissions, network uploads, cross-origin iframe access, or background browsing capture.
+
+## PW permission and automatic detection pilot (v0.2.0)
+
+The extension now declares *optional* `https://pw.live/*` and `https://www.pw.live/*` host permissions. These are not granted at install by default.
+
+1. Reload the unpacked extension from the newest v0.2.0 branch using `chrome://extensions`. Remove older duplicates.
+2. Open the extension popup and choose **Enable on PW**. Chrome should display a permission request; explicitly approve it.
+3. After approval, the extension registers an on-page lecture script only for `/watch` pages. Refresh an already open PW lecture. The extension runs automatically only on this authorized website; no Start click should be needed.
+4. In the popup see status, counts and timestamps. Select **Disable** to unregister the script, stop authorized PW trackers and remove the optional site access. Select **Clear data** to erase the retained local summary.
+5. If Chrome says **Blocked** or the permissions cannot be granted, inspect the browser's site restrictions. The extension cannot override Chrome policies.
+6. If a lecture remains undetected, it may use a player in a cross-origin iframe, a closed shadow tree or a protected proprietary player. Compatibility is unverified, and no attempt to bypass DRM or access controls is made.
+
+**Important**: The feature does NOT turn on from merely logging into AIMERS or accepting an overall privacy policy. Explicit website permission is separate, and this prototype has no AIMERS backend pairing. This is an **adult-only**, **local-only** pilot. It does not collect cross-device browsing, social feeds, messages, search history or third-party data. Exact chapter identity, watch completion and lecture topic mapping remain unimplemented.
