@@ -42,7 +42,7 @@ function receiveFromExtension():Promise<BridgeResult>{
       if(runtime.lastError || answer?.kind!=="AIMERS_LECTURE_SNAPSHOT_V1")return finish(missing);
       const s=answer.snapshot;
       if(!s)return finish({connected:true,snapshot:null});
-      if(!/^[\\w-]{8,100}$/.test(s.sessionId)||s.platform!=="pw.live"||!Number.isFinite(Date.parse(s.measuredAt))||!Number.isFinite(Date.parse(s.startedAt)))return finish({connected:true,snapshot:null});
+      if(!/^[A-Za-z0-9_-]{8,100}$/.test(s.sessionId)||s.platform!=="pw.live"||!Number.isFinite(Date.parse(s.measuredAt))||!Number.isFinite(Date.parse(s.startedAt)))return finish({connected:true,snapshot:null});
       const values=[s.elapsedSeconds,s.playSeconds,s.positionSeconds,s.pauses,s.rewinds];
       if(values.some(v=>!Number.isFinite(v)||v<0))return finish({connected:true,snapshot:null});
       return finish({connected:true,snapshot:s});
