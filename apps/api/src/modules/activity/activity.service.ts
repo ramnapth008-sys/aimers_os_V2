@@ -676,6 +676,15 @@ export class ActivityService {
           userId,
         );
 
+    if (dto.collectorSessionId) {
+      if (!profile.dateOfBirth) throw new ForbiddenException("Complete age verification before enabling external lecture account sync.");
+      const birthday = profile.dateOfBirth;
+      const today = new Date();
+      let age = today.getUTCFullYear() - birthday.getUTCFullYear();
+      if (today.getUTCMonth() < birthday.getUTCMonth() || (today.getUTCMonth() === birthday.getUTCMonth() && today.getUTCDate() < birthday.getUTCDate())) age--;
+      if (age < 18) throw new ForbiddenException("External lecture account sync is not available for minors in this pilot.");
+      if (dto.platformName !== "pw.live" || dto.externalLectureId !== "aimers-pw:" + dto.collectorSessionId || dto.confidence !== DataConfidenceLevel.OBSERVED) throw new BadRequestException("Invalid PW collector identity or confidence.");
+    }
     const privacy = await this.requireMonitoringEnabled(profile.id);
     if (dto.collectorSessionId && !privacy.crossDeviceSync) throw new ForbiddenException("Cross-device sync must be enabled.");
     if (dto.collectorSessionId) await this.consentService.assertScopeActiveForProfile(profile.id, ConsentScope.CROSS_DEVICE_SYNC);
