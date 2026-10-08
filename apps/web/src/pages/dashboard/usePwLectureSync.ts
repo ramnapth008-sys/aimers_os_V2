@@ -90,6 +90,8 @@ export function usePwLectureSync(){
     setBusy(true);setError("");
     try{
       if(!extensionId || !/^[a-p]{32}$/.test(extensionId))throw Error("Configure the installed Chrome extension ID in VITE_AIMERS_LECTURE_EXTENSION_ID first.");
+      const extension=await receiveFromExtension();
+      if(!extension.connected)throw Error("AIMERS cannot reach this Chrome extension. Check the extension ID, reload it, and open localhost:5183 in the same browser.");
       const settings=await getSyncPermissions(apiFetch);
       if(identityRef.current!==userId)return;
       for(const scope of ["DIGITAL_ACTIVITY_MONITORING","LECTURE_PROGRESS","CROSS_DEVICE_SYNC"] as const){
