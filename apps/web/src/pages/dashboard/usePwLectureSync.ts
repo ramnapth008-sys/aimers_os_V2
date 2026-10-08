@@ -60,12 +60,12 @@ export function usePwLectureSync(){
     try{const sessions=await apiFetch<LectureSession[]>("/activity/lectures");
       setSaved(sessions.find(x=>x.platformName==="pw.live" && x.externalLectureId?.startsWith("aimers-pw:"))??null);
     }catch{ /* Latest live data remains visible on temporary network failures. */ }
-  },[apiFetch,userId,status,reviewed]);
+  },[apiFetch,userId,status]);
 
   useEffect(()=>{
     ack.current="";
     setLive(null);setSaved(null);setSavedAt(null);setError("");setReviewed(false);
-    setEnabled(Boolean(userId && localStorage.getItem(storageKey(userId))==="enabled"));
+    setEnabled(Boolean(userId && Number(localStorage.getItem(storageKey(userId)))>0));
     void loadSaved();
   },[userId,loadSaved]);
 
@@ -80,11 +80,11 @@ export function usePwLectureSync(){
         if(!active)await grantConsent(apiFetch,scope);
       }
       await updatePrivacyPreferences(apiFetch,{monitoringEnabled:true,crossDeviceSync:true});
-      localStorage.setItem(storageKey(userId),"enabled");
+      localStorage.setItem(storageKey(userId),String(Date.now()));
       setEnabled(true);setState("Connected · waiting for a PW lecture");
     }catch(e){setError(e instanceof Error?e.message:"Unable to enable PW account sync.");}
     finally{setBusy(false);}
-  },[apiFetch,userId,status]);
+  },[apiFetch,userId,status,reviewed]);
   const disconnect=useCallback(()=>{
     if(userId)localStorage.removeItem(storageKey(userId));
     setEnabled(false);setLive(null);setState("Disconnected");
@@ -116,6 +116,8 @@ export function usePwLectureSync(){
         }
         const snapshot=await receiveFromExtension();
         if(cancelled)return;
+        const consentedSince=Number(localStorage.getItem(storageKey(userId)))||0;
+        if(snapshot && (Date.parse(snapshot.startedAt)<consentedSince || Date.parse(snapshot.measuredAt)<consentedSince)){setLive(null);setState("Waiting for a new lecture after account connection");return;}
         if(!snapshot || now-Date.parse(snapshot.measuredAt)>10000){setLive(null);setState("Disconnected · waiting for a fresh lecture snapshot");return;}
         setLive(snapshot);
         if(!authorized)return;
@@ -123,7 +125,7 @@ export function usePwLectureSync(){
         const revision=snapshot.sessionId+":"+snapshot.measuredAt;
         if(revision===ack.current){setState(snapshot.state==="PAUSED"?"Paused · saved":"Live · saved to your account");return;}
         setState("Waiting to sync");
-        if(Date.now()-lastSave<4500)return;
+        if(Date.now()-lastSave<3500)return;
         lastSave=Date.now();
         const result=await apiRef.current<{success:boolean;lecture:LectureSession}>("/activity/lectures/progress",{
           method:"POST",signal:controller.signal,body:JSON.stringify({
@@ -153,7 +155,7 @@ export function usePwLectureSync(){
     void navigator.locks.request("aimers-pw-sync:"+userId,{mode:"exclusive",ifAvailable:true},async lock=>{
       if(!lock || cancelled){setUploader(false);return;}
       setUploader(true);
-      timer=window.setInterval(()=>{void poll();},3000);
+      timer=window.setInterval(()=>{void poll();},2000);
       void poll();
       await new Promise<void>(resolve=>{release=resolve;});
       if(timer!==undefined)clearInterval(timer);
