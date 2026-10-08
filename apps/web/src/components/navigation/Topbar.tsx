@@ -203,6 +203,7 @@ export function Topbar({
           <button
             className="ask-aimers-button"
             type="button"
+            aria-label="Ask AIMERS"
             onClick={() =>
               navigate("/ai-mentor")
             }

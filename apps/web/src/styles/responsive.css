@@ -1,0 +1,267 @@
+/* Keep the original Aimers theme; reflow cards using their available space. */
+.aimers-page-content {
+  min-width: 0;
+}
+
+.ref-dashboard {
+  container: student-workspace / inline-size;
+}
+
+.aimers-app-shell {
+  min-height: 100dvh;
+}
+
+.aimers-sidebar {
+  height: 100dvh;
+}
+
+.aimers-topbar {
+  grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr) auto;
+  gap: 12px;
+}
+
+.topbar-greeting,
+.topbar-greeting > div,
+.topbar-search {
+  min-width: 0;
+}
+
+.topbar-greeting h1 {
+  font-size: clamp(14px, 1.2vw, 18px);
+}
+
+.topbar-search span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ref-main,
+.ref-primary,
+.ref-secondary {
+  min-width: 0;
+}
+
+.ref-top-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
+}
+
+.ref-metrics {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+
+.ref-analysis-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+}
+
+.ref-quick-actions > div {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+}
+
+.ref-dashboard small,
+.ref-metric > header > small,
+.ref-metric > p,
+.ref-metric > small:last-child,
+.ref-metric-value span,
+.ref-panel-heading > div > span,
+.ref-tag,
+.ref-live,
+.ref-offline,
+.ref-progress-ring span,
+.ref-subject-ring span,
+.ref-mission-footer > span,
+.ref-chat > div,
+.ref-mentor-input,
+.ref-chart-legend,
+.ref-chart-summary span,
+.ref-subject-list > span,
+.ref-weak-list b,
+.ref-brain-signals span,
+.ref-brain-status,
+.ref-activity-list > span,
+.ref-memory-score span,
+.ref-memory footer,
+.ref-prediction p,
+.ref-prediction-head small,
+.ref-prediction-stats span,
+.ref-insight p,
+.ref-recent-note > p,
+.ref-recent-note > footer span,
+.ref-quick-note-form input,
+.ref-quick-note-form textarea,
+.ref-footer {
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.ref-panel-heading h2,
+.ref-quick-actions h2 {
+  font-size: 15px;
+}
+
+.ref-mission-list strong,
+.ref-weak-list strong,
+.ref-insight strong,
+.ref-chart-summary strong,
+.ref-recent-notes-empty strong,
+.ref-research-empty strong,
+.ref-recent-note > header strong {
+  font-size: 12px;
+}
+
+.ref-mission-list strong,
+.ref-weak-list strong,
+.ref-metric > p {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.ref-mission-list section,
+.ref-weak-list section,
+.ref-activity-list > span {
+  min-height: 44px;
+}
+
+.ref-mission-footer a,
+.ref-panel-link,
+.ref-quick-actions a,
+.ref-notes-open,
+.ref-research-open,
+.ref-research-empty > a,
+.ref-quick-note-form button,
+.ref-footer button {
+  min-height: 40px;
+  font-size: 11px;
+}
+
+.ref-quick-actions a {
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.ref-chart {
+  grid-template-columns: 32px minmax(0, 1fr);
+}
+
+.ref-chart > div:first-child,
+.ref-chart section > div {
+  font-size: 10px;
+}
+
+.ref-panel-heading {
+  flex-wrap: wrap;
+}
+
+.ref-footer {
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-block: 8px;
+}
+
+/* A laptop can have a wide viewport but much less room beside its sidebar. */
+@container student-workspace (max-width: 1200px) {
+  .ref-main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: none;
+  }
+
+  .ref-primary,
+  .ref-secondary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ref-top-grid,
+  .ref-brain-panel,
+  .ref-analysis-grid,
+  .ref-insight-grid,
+  .ref-notes-dashboard,
+  .ref-secondary-lower,
+  .ref-quick-actions {
+    grid-area: auto;
+  }
+}
+
+@container student-workspace (max-width: 700px) {
+  .ref-insight-grid,
+  .ref-secondary-lower,
+  .ref-notes-dashboard-grid,
+  .ref-research-dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ref-brain-map {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ref-brain-signals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .aimers-topbar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, .9fr) auto;
+  }
+
+  .aimers-sidebar:not(.open),
+  .sidebar-backdrop:not(.visible) {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .aimers-topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+@media (max-width: 680px) {
+  .aimers-topbar {
+    gap: 8px;
+  }
+
+  .topbar-greeting {
+    gap: 8px;
+  }
+
+  .topbar-greeting h1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-menu-button {
+    flex: 0 0 auto;
+  }
+
+  .ref-metric > header > a {
+    width: 36px;
+    height: 36px;
+  }
+
+  .ref-mission-footer a,
+  .ref-panel-link,
+  .ref-quick-actions a,
+  .ref-notes-open,
+  .ref-research-open,
+  .ref-research-empty > a,
+  .ref-quick-note-form button {
+    min-height: 44px;
+  }
+
+  .ref-quick-note-form input,
+  .ref-quick-note-form textarea {
+    font-size: 16px;
+  }
+
+  .aimers-system-footer {
+    gap: 8px;
+    padding: 10px 12px max(10px, env(safe-area-inset-bottom));
+  }
+
+  .aimers-system-footer > div {
+    flex-wrap: wrap;
+  }
+}
