@@ -64,6 +64,7 @@ export interface LectureSession {
   startedAt: string;
   lastProgressAt: string | null;
   completedAt: string | null;
+  metadata?: {collectorSessionId?:string;elapsedSeconds?:number;pauseCount?:number;rewindCount?:number;trackingState?:string;measuredAt?:string} | null;
 }
 
 export interface ActivityOverview {
