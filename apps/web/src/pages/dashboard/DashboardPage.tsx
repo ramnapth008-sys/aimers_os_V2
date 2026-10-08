@@ -1,180 +1,69 @@
 import { useAuth } from "@aimers/auth";
-import { ArrowRight, BookOpen, BrainCircuit, CalendarCheck2, AlertCircle, CheckCircle2, ClipboardCheck, Clock3, Flame, Layers3, LoaderCircle, RefreshCw, Sparkles, Target, Zap } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowRight, BookOpen, CalendarCheck2, CheckCircle2, Clock3, LoaderCircle, Play, RefreshCw, Sparkles, Video, ListTodo, ShieldCheck } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getAcademicWorkspace } from "../subjects/subjects.service";
 import { getPlannerWorkspace } from "../planner/planner.service";
-import { getMockTestWorkspace } from "../mock-tests/mock-tests.service";
+import { getDigitalActivityWorkspace } from "../digital-activity/digital-activity.service";
 import type { AcademicWorkspace } from "../subjects/subjects.types";
-import type { PlannerWorkspace, StudyTask } from "../planner/planner.types";
-import type { MockTestWorkspace } from "../mock-tests/mock-tests.types";
-import "./dashboard-v3.css";
+import type { PlannerWorkspace } from "../planner/planner.types";
+import type { DigitalActivityWorkspace } from "../digital-activity/digital-activity.types";
+import "./dashboard-v5.css";
 
-function clamp(n: number) { return Math.max(0, Math.min(100, Math.round(n))); }
-function duration(m: number) { return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60 ? `${m % 60}m` : ""}`.trim() : `${m}m`; }
-
+const percent = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
+function duration(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return "Not tracked";
+  const m = Math.round(Math.max(0, value) / 60);
+  return m >= 60 ? Math.floor(m / 60) + "h " + String(m % 60).padStart(2, "0") + "m" : m + "m";
+}
 export function DashboardPage() {
   const { apiFetch } = useAuth();
   const [academic, setAcademic] = useState<AcademicWorkspace | null>(null);
   const [planner, setPlanner] = useState<PlannerWorkspace | null>(null);
-  const [tests, setTests] = useState<MockTestWorkspace | null>(null);
+  const [activity, setActivity] = useState<DigitalActivityWorkspace | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(async (silent = false) => {
-    if (silent) setRefreshing(true);
-    else setLoading(true);
-    setError("");
-    setNotice("");
-    try {
-      const results = await Promise.allSettled([
-        getAcademicWorkspace(apiFetch),
-        getPlannerWorkspace(apiFetch),
-        getMockTestWorkspace(apiFetch),
-      ] as const);
-      const [academicResult, plannerResult, testsResult] = results;
-      setAcademic(academicResult.status === "fulfilled" ? academicResult.value : null);
-      setPlanner(plannerResult.status === "fulfilled" ? plannerResult.value : null);
-      setTests(testsResult.status === "fulfilled" ? testsResult.value : null);
-      if (results.every((result) => result.status === "rejected")) {
-        setError("Learning data is temporarily unavailable. Check your connection and retry.");
-      } else if (results.some((result) => result.status === "rejected")) {
-        setNotice("Some progress data is unavailable. Your available learning tools still work.");
-      }
-    } catch {
-      setError("Unable to load the dashboard.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+  const load = useCallback(async (quiet = false) => {
+    if (quiet) setRefreshing(true); else setLoading(true);
+    setError(""); setNotice("");
+    const results = await Promise.allSettled([getAcademicWorkspace(apiFetch), getPlannerWorkspace(apiFetch), getDigitalActivityWorkspace(apiFetch, 7)] as const);
+    const [a, p, d] = results;
+    setAcademic(a.status === "fulfilled" ? a.value : null);
+    setPlanner(p.status === "fulfilled" ? p.value : null);
+    setActivity(d.status === "fulfilled" ? d.value : null);
+    if (results.every(item => item.status === "rejected")) setError("Learning information could not be loaded. Check your connection.");
+    else if (results.some(item => item.status === "rejected")) setNotice("Some information is unavailable. You can still open your learning tools.");
+    setLoading(false); setRefreshing(false);
   }, [apiFetch]);
-
   useEffect(() => { void load(); }, [load]);
-
-  const subjects = useMemo(() => {
-    if (!academic) return [];
-    const byChapter = new Map(academic.chapterProgress.map(p => [p.chapterId, p.completionPercent]));
-    return academic.syllabusVersion.subjects.map(s => {
-      const chapters = s.units.flatMap(u => u.chapters);
-      const percent = chapters.length ? clamp(chapters.reduce((sum, ch) => sum + (byChapter.get(ch.id) ?? 0), 0) / chapters.length) : 0;
-      return { id: s.id, name: s.subject.name, percent, chapters };
-    });
-  }, [academic]);
-
-  const session = planner?.sessions.find(s => s.status === "ACTIVE");
-  const openTasks = planner?.tasks.filter(t => t.status === "IN_PROGRESS" || t.status === "TODO") ?? [];
-  const sortedTasks = [...openTasks].sort((a, b) => {
-    const priority: Record<StudyTask["priority"], number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
-    return (a.status === "IN_PROGRESS" ? -1 : 0) - (b.status === "IN_PROGRESS" ? -1 : 0) || priority[a.priority] - priority[b.priority];
-  });
-  const nextTask = sortedTasks[0] ?? null;
-  const chapters = subjects.flatMap(s => s.chapters.map(c => ({ ...c, subject: s.name })));
-  const progressMap = new Map(academic?.chapterProgress.map(p => [p.chapterId, p]) ?? []);
-  const nextChapter = chapters
-    .filter(c => (progressMap.get(c.id)?.completionPercent ?? 0) < 100)
-    .sort((a,b) => Number((progressMap.get(b.id)?.completionPercent ?? 0) > 0) - Number((progressMap.get(a.id)?.completionPercent ?? 0) > 0))[0];
-  const nextTitle = session?.studyTask?.title ?? nextTask?.title ?? (nextChapter ? `${nextChapter.subject} · ${nextChapter.name}` : "Choose your next chapter");
-  const nextDetail = session ? "Your study session is in progress" : nextTask ? `${nextTask.type.replaceAll("_", " ").toLowerCase()} · ${nextTask.estimatedMinutes} min planned` : nextChapter ? `${nextChapter.topics.length} topics · ${clamp(progressMap.get(nextChapter.id)?.completionPercent ?? 0)}% completed` : "Explore subjects to start learning";
-  const nextPath = session || nextTask ? "/planner" : "/subjects";
-  const totalTasks = planner?.tasks.filter(t => t.status !== "CANCELLED").length ?? 0;
-  const completedTasks = planner?.tasks.filter(t => t.status === "COMPLETED").length ?? 0;
-  const progress = totalTasks ? clamp(completedTasks / totalTasks * 100) : 0;
-  const attempts = tests?.attempts.reduce((n, t) => n + t.attemptedQuestions, 0) ?? 0;
-  const correct = tests?.attempts.reduce((n,t) => n + t.correctAnswers, 0) ?? 0;
-  const accuracy = attempts ? clamp(correct / attempts * 100) : null;
-
-  const weak = tests?.weakTopics[0];
-  const urgentTasks = openTasks.filter(t => t.priority === "URGENT");
-  const overdueTasks = openTasks.filter(t => t.dueAt && new Date(t.dueAt).getTime() < Date.now());
-  const priorityAlerts: Array<{ id: string; title: string; detail: string; tone: "warning" | "info" | "success"; to: string }> = [];
-  if (planner) {
-    if (urgentTasks.length) priorityAlerts.push({ id: "urgent", title: `${urgentTasks.length} urgent study task${urgentTasks.length === 1 ? "" : "s"}`, detail: "Needs your attention", tone: "warning", to: "/planner" });
-    else if (overdueTasks.length) priorityAlerts.push({ id: "overdue", title: `${overdueTasks.length} overdue task${overdueTasks.length === 1 ? "" : "s"}`, detail: "Review your schedule", tone: "warning", to: "/planner" });
-    else if (totalTasks === 0) priorityAlerts.push({ id: "no-plan", title: "Create your study plan", detail: "No tasks scheduled yet", tone: "warning", to: "/planner" });
-    else if (session) priorityAlerts.push({ id: "session", title: "Study session active", detail: "Continue your focused work", tone: "success", to: "/planner" });
-    else priorityAlerts.push({ id: "scheduled", title: `${openTasks.length} remaining task${openTasks.length === 1 ? "" : "s"}`, detail: "Your plan is ready", tone: "info", to: "/planner" });
-  }
-  if (weak) priorityAlerts.push({ id: "revision", title: `Revise ${weak.subject}`, detail: weak.topic, tone: "warning", to: "/mock-tests" });
-  if (academic && nextChapter) priorityAlerts.push({ id: "chapter", title: `${nextChapter.subject} in progress`, detail: nextChapter.name, tone: "info", to: "/subjects" });
-  if (priorityAlerts.length === 0) priorityAlerts.push({ id: "get-started", title: "Start your learning journey", detail: "Browse subjects and choose a chapter", tone: "info", to: "/subjects" });
-  const displayedAlerts = priorityAlerts.slice(0, 3);
-  const chapterPercent = nextChapter ? clamp(progressMap.get(nextChapter.id)?.completionPercent ?? 0) : null;
-  const highlight = weak ? `Try reviewing ${weak.topic} in ${weak.subject}.` : "Ask about a difficult concept or request a study plan.";
-
-  if (loading) return <main className="student-v3-state"><LoaderCircle className="student-v3-spinner" size={30}/><h1>Preparing your learning space</h1><p>Connecting your study plan and academic progress…</p></main>;
-  if (error && !academic && !planner && !tests) return <main className="student-v3-state"><Zap size={30}/><h1>Study dashboard unavailable</h1><p>{error}</p><button onClick={() => void load()}><RefreshCw size={17}/> Try again</button></main>;
-
-  return <main className="student-v3" aria-label="Student dashboard">
-    <div className="student-v3-heading">
-      <div><span className="student-v3-eyebrow">YOUR PERSONAL LEARNING SPACE</span><h1>Pick up where you left off.</h1></div>
-      <button type="button" aria-label="Refresh dashboard data" disabled={refreshing} onClick={() => void load(true)}><RefreshCw size={17} className={refreshing ? "student-v3-spinner" : ""}/></button>
+  const activeSession = planner?.sessions.find(item => item.status === "ACTIVE");
+  const tasks = (planner?.tasks ?? []).filter(item => item.status === "TODO" || item.status === "IN_PROGRESS");
+  const priority = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+  const planned = [...tasks].sort((a,b) => (a.status === "IN_PROGRESS" ? -1 : 0) - (b.status === "IN_PROGRESS" ? -1 : 0) || priority[a.priority] - priority[b.priority]);
+  const overdue = planned.filter(task => task.dueAt && new Date(task.dueAt).getTime() < Date.now());
+  const nextChapter = academic?.syllabusVersion.subjects.flatMap(s => s.units.flatMap(u => u.chapters.map(ch => ({ chapter: ch, subject: s.subject.name }))))
+    .find(item => (academic.chapterProgress.find(p => p.chapterId === item.chapter.id)?.completionPercent ?? 0) < 100);
+  const nextTask = planned[0];
+  const nextTitle = activeSession?.studyTask?.title || nextTask?.title || nextChapter?.chapter.name || "Choose your first subject";
+  const nextContext = activeSession?.chapter?.name || nextTask?.chapter?.name || nextChapter?.subject || "Your learning journey";
+  const nextLink = activeSession || nextTask ? "/planner" : "/subjects";
+  const lecture = activity?.overview.recentLectures[0];
+  const monitoring = Boolean(activity?.overview.monitoring.enabled && !activity.overview.monitoring.pausedAt);
+  if (loading) return <main className="v5-state"><LoaderCircle className="v5-spin" size={28}/><h1>Preparing your learning space</h1></main>;
+  if (error && !academic && !planner && !activity) return <main className="v5-state"><h1>Dashboard unavailable</h1><p>{error}</p><button onClick={() => void load()}><RefreshCw size={16}/> Try again</button></main>;
+  return <main className="v5-home" aria-label="AIMERS student dashboard">
+    <header className="v5-heading"><div><span>YOUR LEARNING SPACE</span><h1>One step closer to your goal.</h1><p>Focus on what matters today. Everything else can wait.</p></div><button onClick={() => void load(true)} disabled={refreshing} aria-label="Refresh dashboard"><RefreshCw size={18} className={refreshing ? "v5-spin" : ""}/></button></header>
+    {notice && <p className="v5-notice" role="status">{notice}</p>}
+    <div className="v5-grid">
+      <section className="v5-panel v5-hero"><span className="v5-eyebrow"><span className="v5-dot"/> YOUR NEXT STEP</span><div className="v5-hero-content"><small>{nextContext}</small><h2>{nextTitle}</h2><p>{activeSession ? "You have an active study session. Return when you're ready." : nextTask ? "Your next study task is ready. Just take one step." : "A good place to begin. We'll help you build momentum."}</p></div><div className="v5-hero-actions"><Link to={nextLink} className="v5-primary"><Play size={15} fill="currentColor"/>{activeSession ? "Resume session" : "Start learning"} <ArrowRight size={16}/></Link><Link to="/subjects" className="v5-subtle-link">Browse subjects <ArrowRight size={15}/></Link></div><BookOpen className="v5-hero-watermark" size={124} strokeWidth={.7} aria-hidden="true"/></section>
+      <section className="v5-panel v5-today"><div className="v5-card-heading"><span className="v5-icon"><CalendarCheck2 size={18}/></span><div><h2>Today</h2><p>Keep your plan manageable</p></div></div><div className="v5-today-body">{planner ? <><strong>{planner.summary.completedTaskCount}</strong><span>tasks completed</span><p>{planned.length ? "You have " + planned.length + " task(s) to work on." : "No pending tasks right now."}</p></> : <p>Your study plan is temporarily unavailable.</p>}</div><Link className="v5-card-action" to="/planner">{planned.length ? "Open your plan" : "Plan your next step"} <ArrowRight size={15}/></Link></section>
+      <section className="v5-panel v5-lecture"><div className="v5-card-heading"><span className="v5-icon"><Video size={18}/></span><div><h2>Learning activity</h2><p>What you studied recently</p></div><Link to="/digital-activity" className="v5-corner" aria-label="Detailed activity"><ArrowRight size={18}/></Link></div>
+      {lecture ? <><div className="v5-lecture-details"><small>{lecture.platformName}{lecture.courseTitle ? " · " + lecture.courseTitle : ""}</small><h3>{lecture.lectureTitle}</h3></div><div className="v5-progress-caption"><span>Video progress</span><strong>{percent(lecture.completionPercent)}%</strong></div><div className="v5-track"><span style={{width: percent(lecture.completionPercent) + "%"}}/></div><div className="v5-lecture-metrics"><div><strong>{duration(lecture.totalDurationSeconds)}</strong><small>Video length</small></div><div><strong>{duration(lecture.watchedSeconds)}</strong><small>Watch time</small></div><div><strong>—</strong><small>Pauses</small></div></div><p className="v5-lecture-foot">Rewinds: not tracked · Elapsed time: not tracked</p></> : <div className="v5-empty"><BookOpen size={21}/><strong>No lecture activity to show</strong><p>{!activity ? "Activity information is unavailable." : !monitoring ? "Monitoring is off or paused." : "Your supported lectures will appear here."}</p><Link to="/digital-activity">Open activity settings <ArrowRight size={14}/></Link></div>}
+      </section>
+      <section className="v5-panel v5-backlog"><div className="v5-card-heading"><span className="v5-icon"><ListTodo size={18}/></span><div><h2>Backlog & next steps</h2><p>What needs your attention</p></div><Link className="v5-corner" to="/planner" aria-label="View backlog"><ArrowRight size={18}/></Link></div>{planner ? <><div className="v5-backlog-summary"><strong>{overdue.length}</strong><span>overdue {overdue.length === 1 ? "task" : "tasks"}</span></div><div className="v5-task-list">{(overdue.length ? overdue : planned).slice(0,2).map(item => <Link key={item.id} className="v5-task" to="/planner"><span className="v5-task-mark"/><span><strong>{item.title}</strong><small>{item.chapter?.name || item.subject?.name || (overdue.includes(item) ? "Overdue" : "Planned")}</small></span><ArrowRight size={14}/></Link>)}{!planned.length && <p className="v5-clear"><CheckCircle2 size={16}/> No pending tasks in your plan.</p>}</div><Link to={planned.length ? "/planner" : "/subjects"} className="v5-card-action">{planned.length ? "Continue next task" : "Explore subjects"} <ArrowRight size={15}/></Link></> : <div className="v5-empty"><p>Your backlog information is unavailable.</p><Link to="/planner">Open planner <ArrowRight size={14}/></Link></div>}</section>
     </div>
-    {notice && <p className="student-v3-notice" role="status">{notice}</p>}
-    <div className="student-v3-grid">
-      <section className="student-v3-glass student-v3-hero">
-        <span className="student-v3-eyebrow"><Sparkles size={14}/> NEXT UP</span>
-        <div className="student-v3-hero-copy">
-          <span className="student-v3-kicker">{session ? "SESSION IN PROGRESS" : "PICK UP WHERE YOU LEFT OFF"}</span>
-          <h2>{nextTitle}</h2><p>{nextDetail}</p>
-          <div className="student-v4-insight-chips" aria-label="Current learning signals">
-            {nextChapter && <span><CheckCircle2 size={13}/>{chapterPercent}% chapter complete</span>}
-            {nextChapter && <span><BookOpen size={13}/>{nextChapter.topics.length} topics</span>}
-            {session && <span className="student-v4-chip-active"><Flame size={13}/>Session active</span>}
-          </div>
-        </div>
-        <div className="student-v3-buttons">
-          <Link className="student-v3-primary" to={nextPath}>{session ? "Resume session" : "Continue learning"} <ArrowRight size={17}/></Link>
-          <Link className="student-v3-secondary" to="/subjects"><BookOpen size={16}/> Browse subjects</Link>
-        </div>
-        <span className="student-v3-orb" aria-hidden="true"><BrainCircuit size={90}/></span>
-      </section>
-      <section className="student-v3-glass student-v3-plan student-v4-priorities">
-        <div className="student-v3-card-heading">
-          <span className="student-v3-icon"><AlertCircle size={18}/></span>
-          <div><h2>Today's priorities</h2><p>What deserves your attention</p></div>
-          <span className="student-v4-alert-count">{displayedAlerts.length}</span>
-        </div>
-        <div className="student-v4-alert-list">
-          {displayedAlerts.map(item => <Link key={item.id} to={item.to} className={`student-v4-alert student-v4-alert--${item.tone}`}>
-            <span className="student-v4-alert-light" aria-hidden="true"/>
-            <span className="student-v4-alert-copy"><strong>{item.title}</strong><small>{item.detail}</small></span>
-            <ArrowRight size={14} aria-hidden="true"/>
-          </Link>)}
-        </div>
-        <div className="student-v4-priority-footer">
-          <span>{planner ? `${completedTasks}/${totalTasks} tasks done` : "Planner currently unavailable"}</span>
-          <Link to="/planner">Study plan <ArrowRight size={14}/></Link>
-        </div>
-      </section>
-      <section className="student-v3-glass student-v3-subjects">
-        <div className="student-v3-card-heading"><span className="student-v3-icon"><Layers3 size={18}/></span><div><h2>Subjects</h2><p>Your syllabus at a glance</p></div><Link className="student-v3-corner-link" to="/subjects" aria-label="Open all subjects"><ArrowRight size={17}/></Link></div>
-        {subjects.length ? <div className="student-v3-subject-list">{subjects.slice(0,3).map(s => <div key={s.id} className="student-v3-subject"><div><span>{s.name}</span><strong>{s.percent}%</strong></div><div className="student-v3-track"><span style={{width:`${s.percent}%`}}/></div></div>)}</div> : <p className="student-v3-empty">Subject progress will appear once your syllabus is available.</p>}
-      </section>
-      <section className="student-v3-glass student-v3-mentor">
-        <div className="student-v3-card-heading"><span className="student-v3-icon"><Sparkles size={18}/></span><div><h2>AI Mentor</h2><p>A little help, right when you need it</p></div></div>
-        <p className="student-v3-mentor-idea">{highlight}</p>
-        <Link to="/ai-mentor" className="student-v3-mentor-action">Ask AIMERS <ArrowRight size={17}/></Link>
-      </section>
-      <section className="student-v3-glass student-v3-launch">
-        <div className="student-v3-card-heading"><span className="student-v3-icon"><Zap size={18}/></span><div><h2>Quick launch</h2><p>Everything one tap away</p></div></div>
-        <div className="student-v3-actions">
-          <Link to="/mock-tests"><ClipboardCheck size={18}/>Mock tests</Link>
-          <Link to="/question-bank"><Target size={18}/>Questions</Link>
-          <Link to="/flashcards"><Layers3 size={18}/>Flashcards</Link>
-          <Link to="/notes"><BookOpen size={18}/>Notes</Link>
-          <Link to="/research-ai"><BrainCircuit size={18}/>Research</Link>
-          <Link to="/planner"><CalendarCheck2 size={18}/>Planner</Link>
-        </div>
-      </section>
-    </div>
-    <div className="student-v3-stat-strip" aria-label="Learning summary">
-      <span><Flame size={15}/><strong>{planner?.activity.studyStreakDays ?? "—"}</strong> day streak</span>
-      <span><Clock3 size={15}/><strong>{planner ? duration(planner.activity.todayMinutes) : "—"}</strong> studied today</span>
-      <span><Target size={15}/><strong>{accuracy === null ? "—" : `${accuracy}%`}</strong> test accuracy</span>
-      <span><ClipboardCheck size={15}/><strong>{tests ? attempts : "—"}</strong> questions attempted</span>
-      <Link to="/analytics">Full progress <ArrowRight size={15}/></Link>
-    </div>
+    <footer className="v5-footer"><span><ShieldCheck size={15}/> Your study activity is under your control.</span><Link to="/ai-mentor"><Sparkles size={15}/> Ask AIMERS <ArrowRight size={14}/></Link><Link to="/digital-activity">Activity details <ArrowRight size={14}/></Link></footer>
   </main>;
 }
