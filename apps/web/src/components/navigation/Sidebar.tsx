@@ -36,6 +36,20 @@ export function Sidebar({
 }: SidebarProps) {
   const location = useLocation();
 
+  const mainItems = [
+    { path: "/dashboard", label: "Home" },
+    { path: "/subjects", label: "Learn" },
+    { path: "/question-bank", label: "Practice" },
+    { path: "/analytics", label: "My Progress" },
+    { path: "/ai-mentor", label: "AI Mentor" },
+  ];
+
+  const extraGroups = [
+    { title: "Study tools", paths: ["/planner", "/mock-tests", "/flashcards", "/notes", "/memory-engine"] },
+    { title: "Explore", paths: ["/research-ai", "/community", "/achievements"] },
+    { title: "Advanced insights", paths: ["/prediction", "/behavior-ai", "/digital-activity"] },
+  ];
+
   const {
     logout,
     user,
@@ -140,29 +154,58 @@ export function Sidebar({
         </header>
 
         <nav className="sidebar-navigation">
-          {primaryNavigation.map((item) => {
+          <p className="sidebar-section-label">YOUR WORKSPACE</p>
+          {mainItems.map(({ path, label }) => {
+            const item = primaryNavigation.find((candidate) => candidate.path === path);
+            if (!item) return null;
             const Icon = item.icon;
-
             return (
               <NavLink
-                key={item.path}
-                to={item.path}
+                key={path}
+                to={path}
+                end
                 className={({ isActive }) =>
-                  isActive
-                    ? "sidebar-link active"
-                    : "sidebar-link"
+                  isActive ? "sidebar-link active" : "sidebar-link"
                 }
                 onClick={onClose}
               >
-                <Icon size={17} />
-
-                <span>{item.label}</span>
-
-                {location.pathname ===
-                  item.path && (
-                  <i />
-                )}
+                <Icon size={18} aria-hidden="true" />
+                <span>{label}</span>
+                {location.pathname === path && <i aria-hidden="true" />}
               </NavLink>
+            );
+          })}
+
+          <div className="sidebar-divider" />
+          <p className="sidebar-section-label">MORE TO EXPLORE</p>
+          {extraGroups.map((group) => {
+            const activeInGroup = group.paths.some(
+              (path) => location.pathname === path || location.pathname.startsWith(path + "/")
+            );
+            return (
+              <details className="sidebar-nav-group" key={group.title} defaultOpen={activeInGroup}>
+                <summary>{group.title}</summary>
+                <div className="sidebar-nav-group-links">
+                  {group.paths.map((path) => {
+                    const item = primaryNavigation.find((candidate) => candidate.path === path);
+                    if (!item) return null;
+                    const Icon = item.icon;
+                    return (
+                      <NavLink
+                        key={path}
+                        to={path}
+                        className={({ isActive }) =>
+                          isActive ? "sidebar-link active" : "sidebar-link"
+                        }
+                        onClick={onClose}
+                      >
+                        <Icon size={17} aria-hidden="true" />
+                        <span>{item.label}</span>
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              </details>
             );
           })}
 
