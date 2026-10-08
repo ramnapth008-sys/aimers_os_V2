@@ -350,3 +350,43 @@
   color: #ebdcff; text-decoration: none; font-size: 13px;
 }
 .student-optional-unavailable > a:focus-visible { outline: 2px solid #dec0ff; outline-offset: 3px; }
+
+/* Keep research accessible without overwhelming the everyday dashboard. */
+.student-dashboard-advanced {
+  min-width: 0;
+  border: 1px solid rgba(146, 116, 221, .22);
+  border-radius: 14px;
+  background: rgba(12, 15, 34, .78);
+}
+.student-dashboard-advanced > summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-height: 64px;
+  padding: 14px 18px;
+  cursor: pointer;
+  list-style: none;
+}
+.student-dashboard-advanced > summary::-webkit-details-marker { display: none; }
+.student-dashboard-advanced > summary > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #f1ebff;
+  font-size: 15px;
+  font-weight: 650;
+}
+.student-dashboard-advanced > summary small {
+  flex: 1 1 170px;
+  color: #bdb3d6;
+  font-size: 13px;
+}
+.student-dashboard-advanced-action { color: #dfc5ff; font-size: 13px; }
+.student-dashboard-advanced[open] .student-dashboard-advanced-action { font-size: 0; }
+.student-dashboard-advanced[open] .student-dashboard-advanced-action::after { content: "Collapse"; font-size: 13px; }
+.student-dashboard-advanced > .ref-research-dashboard { margin: 0 12px 12px; }
+.student-dashboard-advanced > summary:focus-visible { outline: 2px solid #d3a7ff; outline-offset: 2px; }
+@media (max-width: 680px) {
+  .student-dashboard-advanced > summary small { flex-basis: 100%; }
+}
