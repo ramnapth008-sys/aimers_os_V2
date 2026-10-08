@@ -676,9 +676,9 @@ export class ActivityService {
           userId,
         );
 
-    await this.requireMonitoringEnabled(
-      profile.id,
-    );
+    const privacy = await this.requireMonitoringEnabled(profile.id);
+    if (dto.collectorSessionId && !privacy.crossDeviceSync) throw new ForbiddenException("Cross-device sync must be enabled.");
+    if (dto.collectorSessionId) await this.consentService.assertScopeActiveForProfile(profile.id, ConsentScope.CROSS_DEVICE_SYNC);
 
     await this.consentService
       .assertScopeActiveForProfile(
@@ -752,6 +752,12 @@ export class ActivityService {
           },
         });
 
+    const receivedAt = dto.lastProgressAt ? new Date(dto.lastProgressAt) : new Date();
+    if (receivedAt.getTime() > Date.now() + 60000 || receivedAt.getTime() < Date.now() - 604800000) throw new BadRequestException("Lecture snapshot timestamp is invalid.");
+    const existingMeta = existing?.metadata && typeof existing.metadata === "object" && !Array.isArray(existing.metadata) ? existing.metadata as Record<string, unknown> : {};
+    if (dto.collectorSessionId && existingMeta.collectorSessionId && existingMeta.collectorSessionId !== dto.collectorSessionId) throw new BadRequestException("Lecture session key already belongs to another collector.");
+    if (existing?.lastProgressAt && receivedAt <= existing.lastProgressAt) return {success:true, ignoredStale:true, lecture: existing};
+    if (existing && dto.collectorSessionId && (dto.watchedSeconds < existing.watchedSeconds || (dto.elapsedSeconds ?? 0) < Number(existingMeta.elapsedSeconds ?? 0) || (dto.pauseCount ?? 0) < Number(existingMeta.pauseCount ?? 0) || (dto.rewindCount ?? 0) < Number(existingMeta.rewindCount ?? 0))) throw new BadRequestException("Lecture counters cannot decrease.");
     const totalDurationSeconds =
       dto.totalDurationSeconds ??
       existing
@@ -775,27 +781,9 @@ export class ActivityService {
           0,
       );
 
-    const playbackPositionSeconds =
-      Math.max(
-        existing
-          ?.playbackPositionSeconds ??
-          0,
-        dto.playbackPositionSeconds,
-      );
+    const playbackPositionSeconds = dto.collectorSessionId ? dto.playbackPositionSeconds : Math.max(existing?.playbackPositionSeconds ?? 0, dto.playbackPositionSeconds);
 
-    const completionPercent =
-      totalDurationSeconds
-        ? Math.min(
-            100,
-            (
-              watchedSeconds /
-              totalDurationSeconds
-            ) *
-              100,
-          )
-        : existing
-            ?.completionPercent ??
-          0;
+    const completionPercent = totalDurationSeconds ? Math.min(100, playbackPositionSeconds / totalDurationSeconds * 100) : existing?.completionPercent ?? 0;
 
     const verifiedCompletion =
       dto.confidence ===
@@ -874,6 +862,7 @@ export class ActivityService {
       playbackPositionSeconds,
       completionPercent,
       completed,
+      metadata: dto.collectorSessionId ? { collectorSessionId: dto.collectorSessionId, elapsedSeconds: dto.elapsedSeconds ?? 0, pauseCount: dto.pauseCount ?? 0, rewindCount: dto.rewindCount ?? 0, trackingState: dto.trackingState ?? "PAUSED", measuredAt: receivedAt.toISOString(), source: "AIMERS_CHROME_BRIDGE" } : undefined,
 
       confidence:
         dto.confidence,
