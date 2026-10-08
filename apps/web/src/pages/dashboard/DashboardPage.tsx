@@ -14,7 +14,7 @@ function clamp(n: number) { return Math.max(0, Math.min(100, Math.round(n))); }
 function duration(m: number) { return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60 ? `${m % 60}m` : ""}`.trim() : `${m}m`; }
 
 export function DashboardPage() {
-  const { apiFetch, user } = useAuth();
+  const { apiFetch } = useAuth();
   const [academic, setAcademic] = useState<AcademicWorkspace | null>(null);
   const [planner, setPlanner] = useState<PlannerWorkspace | null>(null);
   const [tests, setTests] = useState<MockTestWorkspace | null>(null);
@@ -84,7 +84,7 @@ export function DashboardPage() {
   const attempts = tests?.attempts.reduce((n, t) => n + t.attemptedQuestions, 0) ?? 0;
   const correct = tests?.attempts.reduce((n,t) => n + t.correctAnswers, 0) ?? 0;
   const accuracy = attempts ? clamp(correct / attempts * 100) : null;
-  const name = user?.firstName?.trim() || user?.displayName?.trim()?.split(/\s+/)[0] || "Student";
+
   const weak = tests?.weakTopics[0];
   const urgentTasks = openTasks.filter(t => t.priority === "URGENT");
   const overdueTasks = openTasks.filter(t => t.dueAt && new Date(t.dueAt).getTime() < Date.now());
@@ -108,7 +108,7 @@ export function DashboardPage() {
 
   return <main className="student-v3" aria-label="Student dashboard">
     <div className="student-v3-heading">
-      <div><span className="student-v3-eyebrow">MY LEARNING SPACE</span><h1>Make progress today, {name}.</h1></div>
+      <div><span className="student-v3-eyebrow">YOUR PERSONAL LEARNING SPACE</span><h1>Pick up where you left off.</h1></div>
       <button type="button" aria-label="Refresh dashboard data" disabled={refreshing} onClick={() => void load(true)}><RefreshCw size={17} className={refreshing ? "student-v3-spinner" : ""}/></button>
     </div>
     {notice && <p className="student-v3-notice" role="status">{notice}</p>}
