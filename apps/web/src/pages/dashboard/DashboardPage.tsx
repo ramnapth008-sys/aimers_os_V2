@@ -2044,6 +2044,12 @@ export function DashboardPage() {
       </section>
 
       {research ? (
+      <details className="student-dashboard-advanced">
+        <summary>
+          <span><Brain size={17} aria-hidden="true" /> Research workspace</span>
+          <small>Projects, evidence and knowledge connections</small>
+          <span className="student-dashboard-advanced-action">Explore</span>
+        </summary>
       <section className="ref-research-dashboard">
         <Panel
           title="Research AI"
@@ -2274,7 +2280,7 @@ export function DashboardPage() {
           </div>
         </Panel>
       </section>
-
+      </details>
       ) : (
         <section className="student-optional-unavailable" role="status">
           <Library size={19} aria-hidden="true" />
