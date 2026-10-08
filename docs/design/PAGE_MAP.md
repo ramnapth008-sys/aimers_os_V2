@@ -2,7 +2,7 @@
 
 ## Student application
 
-1. Today (`/dashboard`); Detailed dashboard (`/dashboard/details`)
+1. Dashboard
 2. AI Mentor
 3. Behavior AI
 4. Digital Activity

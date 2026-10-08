@@ -1,48 +1,100 @@
 import { RequireAuth } from "@aimers/auth";
 
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+} from "react-router-dom";
+
+import { AppShell } from "../shell/AppShell";
 
 import { DashboardPage } from "../../pages/dashboard/DashboardPage";
-import { TodayPage } from "../../pages/today/TodayPage";
 
 import {
   StudentOnboardingGate,
   StudentOnboardingPage,
 } from "../../pages/onboarding";
 
-import { PrivacyAgreementGate } from "../../pages/privacy-agreement";
-import { SubjectsPage } from "../../pages/subjects";
-import { PlannerPage } from "../../pages/planner";
+import {
+  PrivacyAgreementGate,
+} from "../../pages/privacy-agreement";
+import {
+  SubjectsPage,
+} from "../../pages/subjects";
+import {
+  PlannerPage,
+} from "../../pages/planner";
 
-import { MockTestRunnerPage, MockTestsPage } from "../../pages/mock-tests";
+import {
+  MockTestRunnerPage,
+  MockTestsPage,
+} from "../../pages/mock-tests";
 
-import { PredictionPage } from "../../pages/prediction";
 
-import { AnalyticsPage } from "../../pages/analytics";
+import {
+  PredictionPage,
+} from "../../pages/prediction";
 
-import { QuestionBankPage } from "../../pages/question-bank";
 
-import { FlashcardReviewPage, FlashcardsPage } from "../../pages/flashcards";
+import {
+  AnalyticsPage,
+} from "../../pages/analytics";
 
-import { MemoryEnginePage } from "../../pages/memory-engine";
 
-import { NotesPage } from "../../pages/notes";
+import {
+  QuestionBankPage,
+} from "../../pages/question-bank";
 
-import { ResearchAIPage } from "../../pages/research-ai";
+import {
+  FlashcardReviewPage,
+  FlashcardsPage,
+} from "../../pages/flashcards";
 
-import { AiMentorPage } from "../../pages/ai-mentor";
+import {
+  MemoryEnginePage,
+} from "../../pages/memory-engine";
 
-import { BehaviorAIPage } from "../../pages/behavior-ai";
+import {
+  NotesPage,
+} from "../../pages/notes";
 
-import { DigitalActivityPage } from "../../pages/digital-activity";
+import {
+  ResearchAIPage,
+} from "../../pages/research-ai";
 
-import { IntegrationSetupPage } from "../../pages/integrations";
+import {
+  AiMentorPage,
+} from "../../pages/ai-mentor";
 
-import { StudentLoginPage } from "../../pages/login";
+import {
+  BehaviorAIPage,
+} from "../../pages/behavior-ai";
 
-import { StudentProfilePage } from "../../pages/profile";
+import {
+  DigitalActivityPage,
+} from "../../pages/digital-activity";
 
-import { SettingsPage } from "../../pages/settings";
+import {
+  IntegrationSetupPage,
+} from "../../pages/integrations";
+
+import {
+  StudentLoginPage,
+} from "../../pages/login";
+
+import {
+  StudentProfilePage,
+} from "../../pages/profile";
+
+import {
+  SettingsPage,
+} from "../../pages/settings";
+
+
+
+
+
 
 import { ModulePage } from "../../pages/shared/ModulePage";
 
@@ -51,7 +103,8 @@ const modules = [
     path: "community",
     eyebrow: "LEARNING COMMUNITY",
     title: "Community",
-    description: "Join study groups, discussions, challenges and leaderboards.",
+    description:
+      "Join study groups, discussions, challenges and leaderboards.",
   },
   {
     path: "achievements",
@@ -71,7 +124,8 @@ const modules = [
     path: "calendar",
     eyebrow: "ACADEMIC CALENDAR",
     title: "Calendar",
-    description: "View study plans, tests, classes, reminders and deadlines.",
+    description:
+      "View study plans, tests, classes, reminders and deadlines.",
   },
   {
     path: "focus-room",
@@ -91,7 +145,8 @@ const modules = [
     path: "help-support",
     eyebrow: "AIMERS SUPPORT",
     title: "Help & Support",
-    description: "Find documentation, contact support and submit feedback.",
+    description:
+      "Find documentation, contact support and submit feedback.",
   },
 ];
 
@@ -100,87 +155,175 @@ export function AppRouter() {
     <BrowserRouter>
       <Routes>
         {/* AIMERS_STUDENT_LOCAL_LOGIN_V1 */}
-        <Route path="login" element={<StudentLoginPage />} />
+        <Route
+          path="login"
+          element={<StudentLoginPage />}
+        />
 
-        <Route element={<RequireAuth roles={["STUDENT"]} loginUrl="/login" />}>
-          <Route path="onboarding" element={<StudentOnboardingPage />} />
+        <Route
+          element={
+            <RequireAuth
+              roles={["STUDENT"]}
+              loginUrl="/login"
+            />
+          }
+        >
+          <Route
+            path="onboarding"
+            element={
+              <StudentOnboardingPage />
+            }
+          />
 
-          <Route element={<StudentOnboardingGate />}>
+          <Route
+            element={
+              <StudentOnboardingGate />
+            }
+          >
             {/* AIMERS_PRIVACY_AGREEMENT_GATE_V1 */}
-            <Route element={<PrivacyAgreementGate />}>
-              <Route index element={<Navigate replace to="/dashboard" />} />
-
-              <Route path="dashboard" element={<TodayPage />} />
-
-              <Route path="dashboard/details" element={<DashboardPage />} />
-
-              <Route path="subjects" element={<SubjectsPage />} />
-
-              <Route path="planner" element={<PlannerPage />} />
-
-              <Route path="mock-tests" element={<MockTestsPage />} />
-
-              <Route
-                path="mock-tests/runner/:attemptId"
-                element={<MockTestRunnerPage />}
+            <Route
+              element={
+                <PrivacyAgreementGate />
+              }
+            >
+          <Route
+            index
+            element={
+              <Navigate
+                replace
+                to="/dashboard"
               />
+            }
+          />
 
-              <Route path="prediction" element={<PredictionPage />} />
+          <Route
+            path="dashboard"
+            element={<DashboardPage />}
+          />
 
-              <Route path="analytics" element={<AnalyticsPage />} />
+          <Route
+            path="subjects"
+            element={<SubjectsPage />}
+          />
 
-              <Route path="question-bank" element={<QuestionBankPage />} />
+          <Route
+            path="planner"
+            element={<PlannerPage />}
+          />
 
-              <Route path="flashcards" element={<FlashcardsPage />} />
+          <Route
+            path="mock-tests"
+            element={<MockTestsPage />}
+          />
 
-              <Route
-                path="flashcards/review/:sessionId"
-                element={<FlashcardReviewPage />}
-              />
+          <Route
+            path="mock-tests/runner/:attemptId"
+            element={<MockTestRunnerPage />}
+          />
 
-              <Route path="memory-engine" element={<MemoryEnginePage />} />
 
-              <Route path="notes" element={<NotesPage />} />
+          <Route
+            path="prediction"
+            element={<PredictionPage />}
+          />
 
-              <Route path="research-ai" element={<ResearchAIPage />} />
+          <Route
+            path="analytics"
+            element={<AnalyticsPage />}
+          />
 
-              {/* AIMERS_INTELLIGENCE_FRONTEND_V1 */}
-              {/* AIMERS_PROACTIVE_AI_MENTOR_FOUNDATION_V1 */}
-              <Route path="ai-mentor" element={<AiMentorPage />} />
+          <Route
+            path="question-bank"
+            element={<QuestionBankPage />}
+          />
 
-              <Route path="behavior-ai" element={<BehaviorAIPage />} />
+          <Route
+            path="flashcards"
+            element={<FlashcardsPage />}
+          />
 
-              <Route
-                path="digital-activity"
-                element={<DigitalActivityPage />}
-              />
+          <Route
+            path="flashcards/review/:sessionId"
+            element={<FlashcardReviewPage />}
+          />
 
-              {/* AIMERS_EXTERNAL_AUTHORIZATION_ORCHESTRATOR_FOUNDATION_V1 */}
-              <Route path="integrations" element={<IntegrationSetupPage />} />
+          <Route
+            path="memory-engine"
+            element={<MemoryEnginePage />}
+          />
 
-              {/* AIMERS_STUDENT_PROFILE_V1 */}
-              <Route path="profile" element={<StudentProfilePage />} />
+          <Route
+            path="notes"
+            element={<NotesPage />}
+          />
 
-              {/* AIMERS_DIGITAL_INTELLIGENCE_SETTINGS_V1 */}
-              <Route path="settings" element={<SettingsPage />} />
+          <Route
+            path="research-ai"
+            element={<ResearchAIPage />}
+          />
 
-              {modules.map((module) => (
-                <Route
-                  key={module.path}
-                  path={module.path}
-                  element={
-                    <ModulePage
-                      eyebrow={module.eyebrow}
-                      title={module.title}
-                      description={module.description}
-                    />
+          {/* AIMERS_INTELLIGENCE_FRONTEND_V1 */}
+          {/* AIMERS_PROACTIVE_AI_MENTOR_FOUNDATION_V1 */}
+          <Route
+            path="ai-mentor"
+            element={<AiMentorPage />}
+          />
+
+          <Route
+            path="behavior-ai"
+            element={<BehaviorAIPage />}
+          />
+
+          <Route
+            path="digital-activity"
+            element={<DigitalActivityPage />}
+          />
+
+          {/* AIMERS_EXTERNAL_AUTHORIZATION_ORCHESTRATOR_FOUNDATION_V1 */}
+          <Route
+            path="integrations"
+            element={<IntegrationSetupPage />}
+          />
+
+          {/* AIMERS_STUDENT_PROFILE_V1 */}
+          <Route
+            path="profile"
+            element={<StudentProfilePage />}
+          />
+
+          {/* AIMERS_DIGITAL_INTELLIGENCE_SETTINGS_V1 */}
+          <Route
+            path="settings"
+            element={<SettingsPage />}
+          />
+
+          {modules.map((module) => (
+            <Route
+              key={module.path}
+              path={module.path}
+              element={
+                <ModulePage
+                  eyebrow={module.eyebrow}
+                  title={module.title}
+                  description={
+                    module.description
                   }
                 />
-              ))}
+              }
+            />
+          ))}
 
-              <Route path="*" element={<Navigate replace to="/dashboard" />} />
+          <Route
+            path="*"
+            element={
+              <Navigate
+                replace
+                to="/dashboard"
+              />
+            }
+          />
             </Route>
-          </Route>
+        </Route>
         </Route>
       </Routes>
     </BrowserRouter>

@@ -1,52 +1,115 @@
-import { ArrowUpRight, Command, Menu, Search, Sparkles, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  Bell,
+  Bot,
+  CalendarDays,
+  Command,
+  Menu,
+  Search,
+  ShieldCheck,
+} from "lucide-react";
+
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+import { useNavigate } from "react-router-dom";
+
 import { allNavigation } from "../../data/navigation";
 
 interface TopbarProps {
   onOpenSidebar: () => void;
-  sidebarOpen: boolean;
 }
 
-export function Topbar({ onOpenSidebar, sidebarOpen }: TopbarProps) {
+function getGreeting(): string {
+  const hour = new Date().getHours();
+
+  if (hour < 12) {
+    return "Good Morning";
+  }
+
+  if (hour < 17) {
+    return "Good Afternoon";
+  }
+
+  return "Good Evening";
+}
+
+export function Topbar({
+  onOpenSidebar,
+}: TopbarProps) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const [query, setQuery] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
-  const pageName =
-    allNavigation.find((item) => item.path === location.pathname)?.label ??
-    "Your workspace";
-  const results = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return normalized
-      ? allNavigation.filter((item) =>
-          `${item.label} ${item.keywords ?? ""}`
-            .toLowerCase()
-            .includes(normalized),
-        )
-      : allNavigation;
-  }, [query]);
+
+  const searchInputRef =
+    useRef<HTMLInputElement>(null);
+
+  const [query, setQuery] =
+    useState("");
+
+  const [searchOpen, setSearchOpen] =
+    useState(false);
+
+  const [focusMode, setFocusMode] =
+    useState(false);
+
   useEffect(() => {
-    function handleKeyboard(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+    function handleKeyboard(
+      event: KeyboardEvent,
+    ) {
+      if (
+        (event.metaKey ||
+          event.ctrlKey) &&
+        event.key.toLowerCase() === "k"
+      ) {
         event.preventDefault();
-        setSearchOpen((current) => !current);
+        setSearchOpen(true);
+
+        window.setTimeout(() => {
+          searchInputRef.current?.focus();
+        }, 0);
+      }
+
+      if (event.key === "Escape") {
+        setSearchOpen(false);
       }
     }
-    window.addEventListener("keydown", handleKeyboard);
-    return () => window.removeEventListener("keydown", handleKeyboard);
+
+    window.addEventListener(
+      "keydown",
+      handleKeyboard,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyboard,
+      );
+    };
   }, []);
-  useEffect(() => {
-    if (searchOpen) {
-      dialogRef.current?.showModal();
-      searchInputRef.current?.focus();
-    } else {
-      dialogRef.current?.close();
-      setQuery("");
+
+  const results = useMemo(() => {
+    const normalized =
+      query.trim().toLowerCase();
+
+    if (!normalized) {
+      return allNavigation.slice(0, 6);
     }
-  }, [searchOpen]);
+
+    return allNavigation.filter(
+      (item) =>
+        item.label
+          .toLowerCase()
+          .includes(normalized),
+    );
+  }, [query]);
+
+  function openResult(path: string) {
+    navigate(path);
+    setQuery("");
+    setSearchOpen(false);
+  }
 
   return (
     <>
@@ -56,97 +119,172 @@ export function Topbar({ onOpenSidebar, sidebarOpen }: TopbarProps) {
             className="mobile-menu-button"
             type="button"
             aria-label="Open navigation"
-            aria-expanded={sidebarOpen}
-            aria-controls="student-navigation"
             onClick={onOpenSidebar}
           >
             <Menu size={21} />
           </button>
+
           <div>
-            <small>YOUR LEARNING SPACE</small>
-            <strong>{pageName}</strong>
+            <h1>
+              {getGreeting()}, Ram{" "}
+              <span>👋</span>
+            </h1>
+
+            <p>
+              “Discipline today, Doctor
+              tomorrow.”
+            </p>
           </div>
         </div>
+
         <button
           className="topbar-search"
           type="button"
-          aria-label="Search tools"
-          onClick={() => setSearchOpen(true)}
+          onClick={() => {
+            setSearchOpen(true);
+
+            window.setTimeout(() => {
+              searchInputRef.current?.focus();
+            }, 0);
+          }}
         >
           <Search size={17} />
-          <span>Find a tool or workspace</span>
+
+          <span>Search anything...</span>
+
           <kbd>
             <Command size={12} /> K
           </kbd>
         </button>
+
         <div className="topbar-actions">
           <button
-            className="student-mobile-search"
+            className={
+              focusMode
+                ? "focus-toggle active"
+                : "focus-toggle"
+            }
             type="button"
-            aria-label="Search tools"
-            onClick={() => setSearchOpen(true)}
+            onClick={() =>
+              setFocusMode(
+                (current) => !current,
+              )
+            }
           >
-            <Search size={19} />
+            <ShieldCheck size={16} />
+
+            <span>Focus Mode</span>
+
+            <i>
+              <b />
+            </i>
           </button>
-          <Link className="ask-aimers-button" to="/ai-mentor">
-            <Sparkles size={17} />
-            <span>Talk to Aimers</span>
-            <ArrowUpRight size={14} />
-          </Link>
+
+          <button
+            className="topbar-icon-button"
+            type="button"
+            aria-label="Notifications"
+          >
+            <Bell size={18} />
+            <span>2</span>
+          </button>
+
+          <button
+            className="topbar-icon-button"
+            type="button"
+            aria-label="Calendar"
+            onClick={() =>
+              navigate("/calendar")
+            }
+          >
+            <CalendarDays size={18} />
+          </button>
+
+          <button
+            className="ask-aimers-button"
+            type="button"
+            aria-label="Ask AIMERS"
+            onClick={() =>
+              navigate("/ai-mentor")
+            }
+          >
+            <Bot size={18} />
+
+            <span>Ask AIMERS</span>
+          </button>
         </div>
       </header>
-      <dialog
-        ref={dialogRef}
-        className="student-search-dialog"
-        aria-labelledby="student-search-title"
-        onCancel={() => setSearchOpen(false)}
-        onClose={() => setSearchOpen(false)}
-        onClick={(event) => {
-          if (event.target === event.currentTarget) setSearchOpen(false);
-        }}
-      >
-        <header>
-          <Search size={19} />
-          <input
-            ref={searchInputRef}
-            value={query}
-            aria-label="Search all student tools"
-            placeholder="What would you like to do?"
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <button
-            type="button"
-            aria-label="Close search"
-            onClick={() => setSearchOpen(false)}
+
+      {searchOpen && (
+        <div
+          className="command-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              setSearchOpen(false);
+            }
+          }}
+        >
+          <section
+            className="command-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Search AIMERS OS"
           >
-            <X size={19} />
-          </button>
-        </header>
-        <div className="command-results">
-          <p id="student-search-title">All your tools, in one place</p>
-          {results.length === 0 ? (
-            <div className="command-empty">No tools match that search.</div>
-          ) : (
-            results.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.path}
-                  type="button"
-                  onClick={() => {
-                    navigate(item.path);
-                    setSearchOpen(false);
-                  }}
-                >
-                  <Icon size={17} />
-                  <span>{item.label}</span>
-                  <ArrowUpRight size={14} />
-                </button>
-              );
-            })
-          )}
+            <header>
+              <Search size={19} />
+
+              <input
+                ref={searchInputRef}
+                value={query}
+                placeholder="Search AIMERS OS..."
+                onChange={(event) =>
+                  setQuery(
+                    event.target.value,
+                  )
+                }
+              />
+
+              <kbd>ESC</kbd>
+            </header>
+
+            <div className="command-results">
+              <p>Navigate to</p>
+
+              {results.length === 0 ? (
+                <div className="command-empty">
+                  No modules found.
+                </div>
+              ) : (
+                results.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <button
+                      key={item.path}
+                      type="button"
+                      onClick={() =>
+                        openResult(
+                          item.path,
+                        )
+                      }
+                    >
+                      <Icon size={17} />
+                      <span>
+                        {item.label}
+                      </span>
+                      <small>Open</small>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </section>
         </div>
-      </dialog>
+      )}
     </>
   );
 }

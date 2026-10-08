@@ -1,6 +1,8 @@
-# Aimers OS: simpler student experience
+# Aimers OS: feature inventory and UI review
 
 Reviewed and updated on 8 October 2026.
+
+**Current decision:** the user prefers the original Aimers UI. The experimental olive Today screen and grouped navigation were removed. The original student interface was restored from `9db905e`, with targeted responsive layout and readability fixes. Future improvements should preserve that visual identity and proceed incrementally.
 
 ## Product opinion
 
@@ -8,18 +10,14 @@ The strongest direction is helping a student choose a useful next action, unders
 
 A student should see a clear daily learning experience. Five specialised AI roles can sit behind it: navigator, planner, tutor, examiner, and focus coach. The companion presents their help consistently. Multiple roles do not require five separately trained models. The existing project does not yet implement the full five-model vision or lifelong career-decision workflow.
 
-## What changed
+## Restoration
 
-- `/dashboard` now opens **Today**: one next study action, up to three tasks, recorded progress, and a companion entry point.
-- Five everyday destinations: **Today, Learn, Plan, Progress, Companion**.
-- Specialist tools remain in expandable groups and searchable by their existing names.
-- The previous dashboard remains at `/dashboard/details`.
-- Starting and finishing a study session use the existing planner APIs. Ending a session records time; it does not claim that a task is complete or a concept is mastered.
-- Syllabus coverage is described as recorded progress. Test accuracy comes from attempted mock-test questions. Missing evidence is shown as unknown, not a fabricated score.
-- Optional subjects, test-results or privacy outages do not prevent access to an available study plan.
-- The authenticated student's profile replaces the hardcoded dashboard name and career aspiration. Static PRO labels, notification counts, focus toggles and system-health claims were removed from the shared shell.
-- Generic unimplemented modules explicitly say they are planned, with working links to existing study tools.
-- The reference's dark olive, cream and lime palette is applied to the student shell, Today, and shared workspace surfaces. Existing specialist pages retain their detailed layouts and some subject-specific accents; this is not a redesign of every internal form.
+- Original Dashboard is again the default at `/dashboard`.
+- Original sidebar, top bar, shared shell, styling, favicon and module screens were restored together.
+- The experimental Today page, theme override and its dedicated tests were removed; the experiment remains recoverable in Git history.
+- The original dashboard, routes and feature screens are retained. A final responsive stylesheet reflows dashboard cards using their available space, including the space taken by the sidebar. Small labels and controls are more readable, and closed mobile navigation is hidden from keyboard focus.
+- The Ask AIMERS button keeps its accessible name when its text is hidden on mobile.
+- The feature inventory is retained as a planning reference. Many features remain prototypes or scaffolds as described below.
 
 ## Student feature inventory
 
@@ -27,27 +25,27 @@ A student should see a clear daily learning experience. Five specialised AI role
 
 | Feature                                                          | Existing implementation                                                                     | Where the student finds it        |
 | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------- |
-| Daily dashboard                                                  | New Today screen plus previous detailed dashboard                                           | Today / More insights             |
+| Daily dashboard                                                  | Original detailed dashboard restored                                           | Dashboard             |
 | Academic onboarding and exam target                              | UI + API code                                                                               | Initial onboarding, profile       |
-| Subjects, syllabus, chapter progress, topic mastery              | UI + API code                                                                               | Learn                             |
-| Study plans, tasks and recorded sessions                         | UI + API code                                                                               | Plan, Today                       |
-| Question bank, bookmarks and practice sessions                   | UI + API code                                                                               | Study tools                       |
-| Mock tests, attempts, runner and results                         | UI + API code                                                                               | Study tools                       |
-| Flashcards and review sessions                                   | UI + API code                                                                               | Study tools                       |
-| Notes, folders, tags, links and revisions                        | UI + API code                                                                               | Study tools                       |
-| Research projects, evidence, citations, mind maps and AI replies | UI + API code                                                                               | Study tools                       |
-| AI mentor, conversations, briefs and check-ins                   | UI + API/provider code; requires configured service and credentials                         | Companion                         |
-| Behavior analysis and interventions                              | UI + API code; data and consent dependent                                                   | More insights / Study habits      |
-| Digital activity and permission settings                         | UI + API code; consent-gated in-app collector exists                                        | More insights, Settings & privacy |
-| Analytics and readiness estimates                                | UI / calculation / API integration code                                                     | Progress, More insights           |
-| Revision-memory workspace                                        | UI + API code                                                                               | More insights                     |
-| Integration setup and device records                             | UI + API code; several connectors explicitly pending                                        | Connections                       |
+| Subjects, syllabus, chapter progress, topic mastery              | UI + API code                                                                               | Subjects                             |
+| Study plans, tasks and recorded sessions                         | UI + API code                                                                               | Planner / Dashboard                       |
+| Question bank, bookmarks and practice sessions                   | UI + API code                                                                               | Original specialist navigation                       |
+| Mock tests, attempts, runner and results                         | UI + API code                                                                               | Original specialist navigation                       |
+| Flashcards and review sessions                                   | UI + API code                                                                               | Original specialist navigation                       |
+| Notes, folders, tags, links and revisions                        | UI + API code                                                                               | Original specialist navigation                       |
+| Research projects, evidence, citations, mind maps and AI replies | UI + API code                                                                               | Original specialist navigation                       |
+| AI mentor, conversations, briefs and check-ins                   | UI + API/provider code; requires configured service and credentials                         | AI Mentor                         |
+| Behavior analysis and interventions                              | UI + API code; data and consent dependent                                                   | Behavior AI      |
+| Digital activity and permission settings                         | UI + API code; consent-gated in-app collector exists                                        | Digital Activity / Settings |
+| Analytics and readiness estimates                                | UI / calculation / API integration code                                                     | Analytics / Prediction           |
+| Revision-memory workspace                                        | UI + API code                                                                               | Memory Engine                     |
+| Integration setup and device records                             | UI + API code; several connectors explicitly pending                                        | Integrations                       |
 | Profile, settings, consent and privacy agreement                 | UI + API code                                                                               | Account, Settings & privacy       |
-| Community, achievements, calendar, focus room                    | Generic planned-feature screens                                                             | Explore                           |
+| Community, achievements, calendar, focus room                    | Generic planned-feature screens                                                             | Original specialist navigation                           |
 | Subscription, billing and help/support pages                     | Generic planned-feature screens                                                             | Search, footer                    |
 | Lifelong education-path comparison and career experiments        | Product direction; not implemented                                                          | Future navigator workflow         |
 | Five independent dedicated AI models                             | Not implemented as five running models                                                      | Future internal architecture      |
-| Personal AI life friend                                          | Current mentor can be a starting point; full proposed companion behavior is not implemented | Companion direction               |
+| Personal AI life friend                                          | Current mentor can be a starting point; full proposed companion behavior is not implemented | AI Mentor direction               |
 | AI voice assistant                                               | Dashboard entry exists; separate voice service is a scaffold                                | Future capability                 |
 
 ## Other workspaces in the repository
@@ -69,7 +67,7 @@ These workspace names describe the broader vision. The first student pilot does 
 | Platform / source                                       | Code evidence                                                        | Practical implication                                           |
 | ------------------------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------- |
 | Student web app                                         | React/Vite application with substantial pages                        | Current functional UI target                                    |
-| Phone and tablet browser                                | Responsive web CSS, mobile drawer and bottom navigation              | Same web app adapts to viewport; not a native app               |
+| Phone and tablet browser                                | Responsive web CSS and mobile navigation drawer                       | Same web app adapts to viewport; not a native app               |
 | Native mobile                                           | `apps/mobile/src/app/App.tsx` contains `export {};`                  | Native app is not implemented                                   |
 | Desktop agent UI                                        | `apps/desktop-agent/src/app/renderer.tsx` contains `export {};`      | No complete desktop companion                                   |
 | Browser extension                                       | Background entry contains `export {};`                               | No installed cross-site collector yet                           |
@@ -83,14 +81,12 @@ The app should offer availability throughout the day and separately selectable a
 
 ## Validation
 
+- The restored student web source was compared with the previous commit. Final differences are limited to the responsive stylesheet/import and the mobile Ask AIMERS accessible label.
 - Student TypeScript check and production Vite build passed.
-- Eight Node tests passed: timezone boundaries, cancelled/future tasks, active sessions, missing evidence, actual completion dates, optional outages and required planner failure.
-- Manual browser checks against the actual Vite app and an explicitly synthetic local API verified session start, running elapsed timer, finish/save, mutation failure, search by legacy names, no-results search, Escape closing search and navigation, navigation to the existing Learn workspace, empty plan, optional subjects outage and required planner outage.
-- Responsive CSS provides desktop, tablet and phone layouts. The phone preview was visually reviewed. Wider preview capture was constrained by the in-app browser's viewport/capture behavior, so exact width and overflow verification is incomplete.
-- A Playwright harness covers five widths (1440, 1024, 768, 390 and 320px) and the above states. Browser subprocess launch was blocked by the macOS sandbox; the harness is provided but its end-to-end run did not pass validation in this environment.
-- Preview screenshots are **sample student data**, not evidence from a real learner.
+- Browser checks confirmed the dashboard loaded at CSS viewport widths of 320, 390, 768, 1024, 1440 and 1920 pixels. Main content and header elements stayed within the viewport; dashboard cards reflowed and the mobile drawer opened and closed.
+- The local browser preview uses explicit synthetic responses for academic, planner, mock-test, notes and research workspaces. It demonstrates the original interface, not live account or database integration.
 - Live database persistence, native apps, external collectors, model quality and exam outcomes are outside this UI verification.
-- A large JavaScript chunk warning remains in the build. Route-level lazy loading is a sensible subsequent performance task.
+- The existing large JavaScript chunk warning remains a future performance task.
 
 ## Small next product experiment
 
