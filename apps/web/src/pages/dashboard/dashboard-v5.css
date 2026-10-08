@@ -66,3 +66,26 @@
 @media(max-width:1150px),(max-height:740px){.aimers-app-shell:has(.v5-home),.aimers-main-column:has(.v5-home){height:auto;min-height:100dvh;overflow:visible}.aimers-page-content:has(.v5-home){height:auto;overflow:visible}.v5-home{height:auto;min-height:0}.v5-grid{grid-template-rows:auto}.v5-panel{min-height:225px}.v5-lecture,.v5-backlog{min-height:295px}}
 @media(max-width:750px){.v5-grid{grid-template-columns:1fr}.v5-panel{min-height:210px}.v5-feature{min-height:255px}.v5-hero-content{max-width:90%}.v5-footer{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.v5-spin{animation:none}}
+
+/* V5.1: purposeful empty states and novice-friendly hierarchy */
+.v5-setup{display:flex;flex-direction:column;gap:8px;max-width:32ch}
+.v5-setup strong{font-size:16px;letter-spacing:-.02em;color:#f5efff}
+.v5-setup p{margin:0;color:#b8c0d5;font-size:12px;line-height:1.5}
+.v5-setup>span{font-size:10px;color:#baaad9}
+.v5-home .v5-panel:has(.v5-empty){background:linear-gradient(135deg,rgba(27,34,59,.76),rgba(19,26,48,.79));border-style:solid}
+.v5-home .v5-panel:has(.v5-empty) .v5-empty{align-items:flex-start;gap:8px}
+.v5-home .v5-panel:has(.v5-empty) .v5-empty>svg{color:#ad9ad6}
+.v5-home .v5-panel:has(.v5-empty) .v5-empty a{min-height:32px}
+.v5-home .v5-panel:has(.v5-empty) .v5-card-heading{opacity:.97}
+.v5-home .v5-panel:has(.v5-clear) .v5-backlog-summary strong{font-size:23px}
+.v5-home .v5-panel:has(.v5-clear) .v5-task-list{flex:1;justify-content:center}
+.v5-home .v5-hero-content h2{max-width:21ch}
+.v5-home .v5-primary:focus-visible,.v5-home a:focus-visible,.v5-home button:focus-visible{outline:2px solid #ddc6ff;outline-offset:3px}
+@media(max-width:1150px),(max-height:740px){
+ .v5-home .v5-panel:has(.v5-empty){min-height:185px}
+ .v5-home .v5-panel:has(.v5-clear){min-height:195px}
+}
+@media(max-width:750px){
+ .v5-home .v5-panel:has(.v5-empty){min-height:185px}
+ .v5-home .v5-grid{grid-template-rows:auto}
+}
