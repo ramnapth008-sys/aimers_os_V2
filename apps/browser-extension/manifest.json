@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AIMERS Lecture Tracker (Local Pilot)",
-  "version": "0.1.0",
-  "description": "Opt-in lecture playback metrics for the active tab. No uploads or background browser monitoring.",
+  "name": "AIMERS Lecture Tracker (PW Pilot)",
+  "version": "0.2.0",
+  "description": "Optional automatic local lecture measurements on authorized PW pages; no data uploads.",
   "permissions": [
     "activeTab",
     "scripting",
@@ -12,5 +12,20 @@
     "default_popup": "popup.html",
     "default_title": "AIMERS lecture tracker"
   },
-  "icons": {}
+  "host_permissions": [
+    "https://pw.live/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://pw.live/watch/*",
+        "https://pw.live/watch*"
+      ],
+      "js": [
+        "tracker.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
 }
