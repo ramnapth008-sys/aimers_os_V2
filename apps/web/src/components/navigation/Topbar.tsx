@@ -1,115 +1,52 @@
-import {
-  Bell,
-  Bot,
-  CalendarDays,
-  Command,
-  Menu,
-  Search,
-  ShieldCheck,
-} from "lucide-react";
-
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-
-import { useNavigate } from "react-router-dom";
-
+import { ArrowUpRight, Command, Menu, Search, Sparkles, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { allNavigation } from "../../data/navigation";
 
 interface TopbarProps {
   onOpenSidebar: () => void;
+  sidebarOpen: boolean;
 }
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-
-  if (hour < 12) {
-    return "Good Morning";
-  }
-
-  if (hour < 17) {
-    return "Good Afternoon";
-  }
-
-  return "Good Evening";
-}
-
-export function Topbar({
-  onOpenSidebar,
-}: TopbarProps) {
+export function Topbar({ onOpenSidebar, sidebarOpen }: TopbarProps) {
   const navigate = useNavigate();
-
-  const searchInputRef =
-    useRef<HTMLInputElement>(null);
-
-  const [query, setQuery] =
-    useState("");
-
-  const [searchOpen, setSearchOpen] =
-    useState(false);
-
-  const [focusMode, setFocusMode] =
-    useState(false);
-
-  useEffect(() => {
-    function handleKeyboard(
-      event: KeyboardEvent,
-    ) {
-      if (
-        (event.metaKey ||
-          event.ctrlKey) &&
-        event.key.toLowerCase() === "k"
-      ) {
-        event.preventDefault();
-        setSearchOpen(true);
-
-        window.setTimeout(() => {
-          searchInputRef.current?.focus();
-        }, 0);
-      }
-
-      if (event.key === "Escape") {
-        setSearchOpen(false);
-      }
-    }
-
-    window.addEventListener(
-      "keydown",
-      handleKeyboard,
-    );
-
-    return () => {
-      window.removeEventListener(
-        "keydown",
-        handleKeyboard,
-      );
-    };
-  }, []);
-
+  const location = useLocation();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const pageName =
+    allNavigation.find((item) => item.path === location.pathname)?.label ??
+    "Your workspace";
   const results = useMemo(() => {
-    const normalized =
-      query.trim().toLowerCase();
-
-    if (!normalized) {
-      return allNavigation.slice(0, 6);
-    }
-
-    return allNavigation.filter(
-      (item) =>
-        item.label
-          .toLowerCase()
-          .includes(normalized),
-    );
+    const normalized = query.trim().toLowerCase();
+    return normalized
+      ? allNavigation.filter((item) =>
+          `${item.label} ${item.keywords ?? ""}`
+            .toLowerCase()
+            .includes(normalized),
+        )
+      : allNavigation;
   }, [query]);
-
-  function openResult(path: string) {
-    navigate(path);
-    setQuery("");
-    setSearchOpen(false);
-  }
+  useEffect(() => {
+    function handleKeyboard(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen((current) => !current);
+      }
+    }
+    window.addEventListener("keydown", handleKeyboard);
+    return () => window.removeEventListener("keydown", handleKeyboard);
+  }, []);
+  useEffect(() => {
+    if (searchOpen) {
+      dialogRef.current?.showModal();
+      searchInputRef.current?.focus();
+    } else {
+      dialogRef.current?.close();
+      setQuery("");
+    }
+  }, [searchOpen]);
 
   return (
     <>
@@ -119,171 +56,97 @@ export function Topbar({
             className="mobile-menu-button"
             type="button"
             aria-label="Open navigation"
+            aria-expanded={sidebarOpen}
+            aria-controls="student-navigation"
             onClick={onOpenSidebar}
           >
             <Menu size={21} />
           </button>
-
           <div>
-            <h1>
-              {getGreeting()}, Ram{" "}
-              <span>👋</span>
-            </h1>
-
-            <p>
-              “Discipline today, Doctor
-              tomorrow.”
-            </p>
+            <small>YOUR LEARNING SPACE</small>
+            <strong>{pageName}</strong>
           </div>
         </div>
-
         <button
           className="topbar-search"
           type="button"
-          onClick={() => {
-            setSearchOpen(true);
-
-            window.setTimeout(() => {
-              searchInputRef.current?.focus();
-            }, 0);
-          }}
+          aria-label="Search tools"
+          onClick={() => setSearchOpen(true)}
         >
           <Search size={17} />
-
-          <span>Search anything...</span>
-
+          <span>Find a tool or workspace</span>
           <kbd>
             <Command size={12} /> K
           </kbd>
         </button>
-
         <div className="topbar-actions">
           <button
-            className={
-              focusMode
-                ? "focus-toggle active"
-                : "focus-toggle"
-            }
+            className="student-mobile-search"
             type="button"
-            onClick={() =>
-              setFocusMode(
-                (current) => !current,
-              )
-            }
+            aria-label="Search tools"
+            onClick={() => setSearchOpen(true)}
           >
-            <ShieldCheck size={16} />
-
-            <span>Focus Mode</span>
-
-            <i>
-              <b />
-            </i>
+            <Search size={19} />
           </button>
-
-          <button
-            className="topbar-icon-button"
-            type="button"
-            aria-label="Notifications"
-          >
-            <Bell size={18} />
-            <span>2</span>
-          </button>
-
-          <button
-            className="topbar-icon-button"
-            type="button"
-            aria-label="Calendar"
-            onClick={() =>
-              navigate("/calendar")
-            }
-          >
-            <CalendarDays size={18} />
-          </button>
-
-          <button
-            className="ask-aimers-button"
-            type="button"
-            onClick={() =>
-              navigate("/ai-mentor")
-            }
-          >
-            <Bot size={18} />
-
-            <span>Ask AIMERS</span>
-          </button>
+          <Link className="ask-aimers-button" to="/ai-mentor">
+            <Sparkles size={17} />
+            <span>Talk to Aimers</span>
+            <ArrowUpRight size={14} />
+          </Link>
         </div>
       </header>
-
-      {searchOpen && (
-        <div
-          className="command-overlay"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (
-              event.target ===
-              event.currentTarget
-            ) {
-              setSearchOpen(false);
-            }
-          }}
-        >
-          <section
-            className="command-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Search AIMERS OS"
+      <dialog
+        ref={dialogRef}
+        className="student-search-dialog"
+        aria-labelledby="student-search-title"
+        onCancel={() => setSearchOpen(false)}
+        onClose={() => setSearchOpen(false)}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) setSearchOpen(false);
+        }}
+      >
+        <header>
+          <Search size={19} />
+          <input
+            ref={searchInputRef}
+            value={query}
+            aria-label="Search all student tools"
+            placeholder="What would you like to do?"
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <button
+            type="button"
+            aria-label="Close search"
+            onClick={() => setSearchOpen(false)}
           >
-            <header>
-              <Search size={19} />
-
-              <input
-                ref={searchInputRef}
-                value={query}
-                placeholder="Search AIMERS OS..."
-                onChange={(event) =>
-                  setQuery(
-                    event.target.value,
-                  )
-                }
-              />
-
-              <kbd>ESC</kbd>
-            </header>
-
-            <div className="command-results">
-              <p>Navigate to</p>
-
-              {results.length === 0 ? (
-                <div className="command-empty">
-                  No modules found.
-                </div>
-              ) : (
-                results.map((item) => {
-                  const Icon = item.icon;
-
-                  return (
-                    <button
-                      key={item.path}
-                      type="button"
-                      onClick={() =>
-                        openResult(
-                          item.path,
-                        )
-                      }
-                    >
-                      <Icon size={17} />
-                      <span>
-                        {item.label}
-                      </span>
-                      <small>Open</small>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </section>
+            <X size={19} />
+          </button>
+        </header>
+        <div className="command-results">
+          <p id="student-search-title">All your tools, in one place</p>
+          {results.length === 0 ? (
+            <div className="command-empty">No tools match that search.</div>
+          ) : (
+            results.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.path}
+                  type="button"
+                  onClick={() => {
+                    navigate(item.path);
+                    setSearchOpen(false);
+                  }}
+                >
+                  <Icon size={17} />
+                  <span>{item.label}</span>
+                  <ArrowUpRight size={14} />
+                </button>
+              );
+            })
+          )}
         </div>
-      )}
+      </dialog>
     </>
   );
 }
