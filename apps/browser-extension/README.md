@@ -53,3 +53,16 @@ Security review, age verification, student login through extension-specific OAut
 5. Reload the unpacked extension in Chrome `chrome://extensions` after pulling changes.
 
 This revision is untested against a live PW lecture and does not add new permissions, network uploads, cross-origin iframe access, or background browsing capture.
+
+
+## PW automatic mode (0.2.0)
+This is a local-only **adult** technical prototype. It does not integrate with AIMERS login, cloud sync, account consent, or the Dashboard Learning Activity card.
+
+1. Uninstall **both** older duplicate AIMERS tracker extensions from chrome://extensions to avoid confusion.
+2. Load unpacked the updated `apps/browser-extension` folder from branch `codex/pw-auto-lecture-pilot-20261008` (extension name: AIMERS Lecture Tracker (PW Pilot), version 0.2.0).
+3. Chrome -> extension Details -> Site access: authorize `https://pw.live` explicitly (Chrome's per-site `Don't allow any extensions` setting must not block it).
+4. Open the popup and check `Automatically track PW lecture pages`; consent is **off by default**. Reload the PW /watch lecture tab once.
+5. If the actual video is an accessible top-level HTML5 `video`, it begins measuring when loaded, without clicking Start. Popup shows live local playback stats.
+6. Untick automatic mode to disable future auto-start and stop the current lecture in the active PW tab. Clear data erases the saved local summary.
+
+PW could use a cross-origin iframe, DRM or other player architecture that doesn't expose the top-level video. **Do not claim this works on PW until tested**. No mechanism is included to evade provider controls. This mode does not collect social activity or browser history.
