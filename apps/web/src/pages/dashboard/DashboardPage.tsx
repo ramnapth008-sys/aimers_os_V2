@@ -1289,7 +1289,16 @@ export function DashboardPage() {
         </div>
       </section>
 
-      <section className="ref-metrics">
+      <details className="student-dashboard-metrics">
+        <summary>
+          <span>
+            <BarChart3 size={17} aria-hidden="true" />
+            Study statistics
+            <small>Streak, mastery, study time, questions and accuracy</small>
+          </span>
+          <span className="student-dashboard-metrics-toggle">View details</span>
+        </summary>
+        <section className="ref-metrics">
         <MetricCard
           label="Study Streak"
           value={`${data.studyStreakDays}`}
@@ -1342,7 +1351,8 @@ export function DashboardPage() {
           progress={data.accuracy}
           to="/mock-tests"
         />
-      </section>
+        </section>
+      </details>
 
       {data.activeStudySession && (
         <section className="ref-active-session">
