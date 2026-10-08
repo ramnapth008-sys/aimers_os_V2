@@ -792,7 +792,8 @@ export class ActivityService {
 
     const playbackPositionSeconds = dto.collectorSessionId ? dto.playbackPositionSeconds : Math.max(existing?.playbackPositionSeconds ?? 0, dto.playbackPositionSeconds);
 
-    const completionPercent = totalDurationSeconds ? Math.min(100, playbackPositionSeconds / totalDurationSeconds * 100) : existing?.completionPercent ?? 0;
+    // Position is not unique coverage or knowledge mastery; keep legacy behavior unchanged.
+    const completionPercent = dto.collectorSessionId ? (existing?.completionPercent ?? 0) : totalDurationSeconds ? Math.min(100, watchedSeconds / totalDurationSeconds * 100) : (existing?.completionPercent ?? 0);
 
     const verifiedCompletion =
       dto.confidence ===
@@ -818,6 +819,7 @@ export class ActivityService {
       new Date(
         dto.startedAt,
       );
+    if (dto.collectorSessionId && (requestedStart.getTime() > receivedAt.getTime() || receivedAt.getTime() - requestedStart.getTime() > 604800000 || (dto.elapsedSeconds ?? 0) > (receivedAt.getTime() - requestedStart.getTime()) / 1000 + 30 || dto.watchedSeconds > (dto.elapsedSeconds ?? 0) + 5)) throw new BadRequestException("Lecture timing is inconsistent.");
 
     const startedAt =
       existing &&
