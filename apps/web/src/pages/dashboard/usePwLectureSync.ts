@@ -91,16 +91,19 @@ export function usePwLectureSync(){
     setBusy(true);setError("");setState("Checking extension and account permissions…");
     try{
       if(!extensionId || !/^[a-p]{32}$/.test(extensionId))throw Error("Configure the installed Chrome extension ID in VITE_AIMERS_LECTURE_EXTENSION_ID first.");
+      setState("Step 1/4 · Checking Chrome extension…");
       const extension=await receiveFromExtension();
       if(!extension.connected)throw Error("AIMERS cannot reach this Chrome extension. Check the extension ID, reload it, and open localhost:5183 in the same browser.");
+      setState("Step 2/4 · Checking AIMERS account consent…");
       const settings=await getSyncPermissions(apiFetch);
       if(identityRef.current!==userId)return;
       for(const scope of ["CROSS_DEVICE_SYNC","DIGITAL_ACTIVITY_MONITORING","LECTURE_PROGRESS"] as const){
         if(identityRef.current!==userId)return;
         const active=settings.consent.grants.some(grant=>grant.scope===scope && grant.status==="ACTIVE" && !grant.revokedAt && (!grant.expiresAt || Date.parse(grant.expiresAt)>Date.now()));
-        if(!active)await grantConsent(apiFetch,scope);
+        if(!active){setState("Step 3/4 · Requesting "+scope+" permission…");await grantConsent(apiFetch,scope);}
       }
       if(identityRef.current!==userId)return;
+      setState("Step 4/4 · Enabling authorized account synchronization…");
       await updatePrivacyPreferences(apiFetch,{monitoringEnabled:true,crossDeviceSync:true});
       if(identityRef.current!==userId)return;
       localStorage.setItem(storageKey(userId),String(Date.now()));
