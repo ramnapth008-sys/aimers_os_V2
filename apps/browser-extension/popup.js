@@ -64,7 +64,8 @@ async function siteState(){
 el("enable").addEventListener("click",async()=>{
   // A direct click triggers the browser's own site permission dialog.
   try{
-    // Request only the actual lecture host, avoiding an unnecessary second host.\n    const granted=await chrome.permissions.request({origins:PW_ORIGINS});
+    // Request only the actual lecture host, avoiding an unnecessary second host.
+    const granted=await chrome.permissions.request({origins:PW_ORIGINS});
     if(!granted){status("Chrome permission was not granted; no automatic tracking.");await siteState();return;}
     await chrome.scripting.unregisterContentScripts({ids:[PW_SCRIPT_ID]}).catch(()=>{});
     await chrome.scripting.registerContentScripts([{
