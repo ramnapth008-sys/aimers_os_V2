@@ -26,6 +26,7 @@ import {
 
 export function AppShell() {
   const location = useLocation();
+  const isDashboard = location.pathname === "/dashboard";
 
   const [sidebarOpen, setSidebarOpen] =
     useState(false);
@@ -52,13 +53,13 @@ export function AppShell() {
           }
         />
 
-        <ConnectorSetupBanner />
+        {!isDashboard && <ConnectorSetupBanner />}
 
         <main className="aimers-page-content">
           <Outlet />
         </main>
 
-        <footer className="aimers-system-footer">
+        {!isDashboard && <footer className="aimers-system-footer">
           <div>
             <span />
             System Status
@@ -85,7 +86,7 @@ export function AppShell() {
 
             <span>v2.0.0</span>
           </nav>
-        </footer>
+        </footer>}
       </div>
     </div>
   );
