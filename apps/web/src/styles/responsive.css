@@ -319,3 +319,16 @@
   .student-next-step { grid-template-columns: minmax(0, 1fr); gap: 15px; }
   .student-next-step-progress { padding: 14px; }
 }
+
+/* Sprint 2: show the next learning action first; preserve metrics behind a native disclosure. */
+.student-dashboard-metrics { min-width: 0; border: 1px solid rgba(146, 116, 221, .22); border-radius: 14px; background: rgba(12, 15, 34, .78); }
+.student-dashboard-metrics > summary { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 58px; cursor: pointer; padding: 12px 18px; list-style: none; }
+.student-dashboard-metrics > summary::-webkit-details-marker { display: none; }
+.student-dashboard-metrics > summary > span:first-child { display: flex; align-items: center; gap: 10px; color: #f1ebff; font-size: 14px; font-weight: 650; flex-wrap: wrap; }
+.student-dashboard-metrics > summary small { color: #b0a8c7; font-size: 12px; font-weight: 400; }
+.student-dashboard-metrics-toggle { flex: 0 0 auto; color: #d8baff; font-size: 13px; }
+.student-dashboard-metrics[open] .student-dashboard-metrics-toggle { font-size: 0; }
+.student-dashboard-metrics[open] .student-dashboard-metrics-toggle::after { content: "Hide details"; font-size: 13px; }
+.student-dashboard-metrics > .ref-metrics { padding: 0 12px 12px; }
+.student-dashboard-metrics > summary:focus-visible { outline: 2px solid #d3a7ff; outline-offset: 2px; }
+@media(max-width: 680px) { .student-dashboard-metrics > summary { align-items: flex-start; } .student-dashboard-metrics > summary small { flex-basis: 100%; margin-left: 27px; } }
