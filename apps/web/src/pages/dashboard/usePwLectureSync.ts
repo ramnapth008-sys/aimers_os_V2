@@ -58,18 +58,24 @@ export function usePwLectureSync(){
   const [savedAt,setSavedAt]=useState<string|null>(null);
   const [error,setError]=useState("");
   const [isUploader,setUploader]=useState(false);
+  const identityRef=useRef(userId);
+  identityRef.current=userId;
+  const savedRequestRef=useRef(0);
   const ack=useRef("");
   const apiRef=useRef(apiFetch);
   apiRef.current=apiFetch;
 
   const loadSaved=useCallback(async()=>{
     if(!userId || status!=="authenticated")return;
+    const requestId=++savedRequestRef.current;
     try{const sessions=await apiFetch<LectureSession[]>("/activity/lectures");
+      if(identityRef.current!==userId || savedRequestRef.current!==requestId)return;
       setSaved(sessions.find(x=>x.platformName==="pw.live" && x.externalLectureId?.startsWith("aimers-pw:"))??null);
     }catch{ /* Latest live data remains visible on temporary network failures. */ }
   },[apiFetch,userId,status]);
 
   useEffect(()=>{
+    savedRequestRef.current++;
     ack.current="";
     setLive(null);setSaved(null);setSavedAt(null);setError("");setReviewed(false);
     setEnabled(Boolean(userId && Number(localStorage.getItem(storageKey(userId)))>0));
@@ -82,11 +88,15 @@ export function usePwLectureSync(){
     try{
       if(!extensionId || !/^[a-p]{32}$/.test(extensionId))throw Error("Configure the installed Chrome extension ID in VITE_AIMERS_LECTURE_EXTENSION_ID first.");
       const settings=await getSyncPermissions(apiFetch);
+      if(identityRef.current!==userId)return;
       for(const scope of ["DIGITAL_ACTIVITY_MONITORING","LECTURE_PROGRESS","CROSS_DEVICE_SYNC"] as const){
+        if(identityRef.current!==userId)return;
         const active=settings.consent.grants.some(grant=>grant.scope===scope && grant.status==="ACTIVE" && !grant.revokedAt && (!grant.expiresAt || Date.parse(grant.expiresAt)>Date.now()));
         if(!active)await grantConsent(apiFetch,scope);
       }
+      if(identityRef.current!==userId)return;
       await updatePrivacyPreferences(apiFetch,{monitoringEnabled:true,crossDeviceSync:true});
+      if(identityRef.current!==userId)return;
       localStorage.setItem(storageKey(userId),String(Date.now()));
       setEnabled(true);setState("Connected · waiting for a PW lecture");
     }catch(e){setError(e instanceof Error?e.message:"Unable to enable PW account sync.");}
@@ -164,7 +174,7 @@ export function usePwLectureSync(){
       setUploader(true);
       timer=window.setInterval(()=>{void poll();},2000);
       void poll();
-      await new Promise<void>(resolve=>{release=resolve;});
+      await new Promise<void>(resolve=>{release=()=>resolve();});
       if(timer!==undefined)clearInterval(timer);
       setUploader(false);
     });
