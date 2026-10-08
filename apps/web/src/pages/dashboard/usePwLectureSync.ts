@@ -1,6 +1,7 @@
 import { useAuth } from "@aimers/auth";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getSettingsWorkspace, grantConsent, updatePrivacyPreferences } from "../settings/settings.service";
+import { grantConsent, updatePrivacyPreferences } from "../settings/settings.service";
+import type { ConsentWorkspace, PrivacyPreference } from "../settings/settings.types";
 import type { LectureSession } from "../digital-activity/digital-activity.types";
 
 export interface PwSnapshot {
@@ -20,6 +21,12 @@ export interface PwSnapshot {
 type BridgeAnswer = {kind:"AIMERS_LECTURE_SNAPSHOT_V1";snapshot:PwSnapshot|null};
 const extensionId = import.meta.env.VITE_AIMERS_LECTURE_EXTENSION_ID as string | undefined;
 const storageKey = (id:string) => "aimers:pw-account-sync:v1:"+id;
+const getSyncPermissions = async (apiFetch: ReturnType<typeof useAuth>["apiFetch"]) => {
+  const [consent, privacy] = await Promise.all([
+    apiFetch<ConsentWorkspace>("/consent"), apiFetch<PrivacyPreference>("/privacy"),
+  ]);
+  return {consent,privacy};
+};
 function receiveFromExtension():Promise<PwSnapshot|null>{
   if(!extensionId || !/^[a-p]{32}$/.test(extensionId))return Promise.resolve(null);
   const runtime=(window as unknown as {chrome?:{runtime?:{sendMessage:(id:string,message:object,cb:(r?:BridgeAnswer)=>void)=>void;lastError?:{message?:string}}}}).chrome?.runtime;
@@ -74,7 +81,7 @@ export function usePwLectureSync(){
     setBusy(true);setError("");
     try{
       if(!extensionId || !/^[a-p]{32}$/.test(extensionId))throw Error("Configure the installed Chrome extension ID in VITE_AIMERS_LECTURE_EXTENSION_ID first.");
-      const settings=await getSettingsWorkspace(apiFetch);
+      const settings=await getSyncPermissions(apiFetch);
       for(const scope of ["DIGITAL_ACTIVITY_MONITORING","LECTURE_PROGRESS","CROSS_DEVICE_SYNC"] as const){
         const active=settings.consent.grants.some(grant=>grant.scope===scope && grant.status==="ACTIVE" && !grant.revokedAt && (!grant.expiresAt || Date.parse(grant.expiresAt)>Date.now()));
         if(!active)await grantConsent(apiFetch,scope);
@@ -107,7 +114,7 @@ export function usePwLectureSync(){
       try{
         const now=Date.now();
         if(now-lastConsentCheck>7000){
-          const settings=await getSettingsWorkspace(apiRef.current);
+          const settings=await getSyncPermissions(apiRef.current);
           if(cancelled)return;
           authorized=Boolean(settings.privacy.monitoringEnabled && settings.privacy.crossDeviceSync && !settings.privacy.pausedAt &&
             ["DIGITAL_ACTIVITY_MONITORING","LECTURE_PROGRESS","CROSS_DEVICE_SYNC"].every(scope=>settings.consent.grants.some(g=>g.scope===scope && g.status==="ACTIVE" && !g.revokedAt && (!g.expiresAt || Date.parse(g.expiresAt)>Date.now()))));
