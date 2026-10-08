@@ -94,7 +94,7 @@ export function usePwLectureSync(){
       if(!extension.connected)throw Error("AIMERS cannot reach this Chrome extension. Check the extension ID, reload it, and open localhost:5183 in the same browser.");
       const settings=await getSyncPermissions(apiFetch);
       if(identityRef.current!==userId)return;
-      for(const scope of ["DIGITAL_ACTIVITY_MONITORING","LECTURE_PROGRESS","CROSS_DEVICE_SYNC"] as const){
+      for(const scope of ["CROSS_DEVICE_SYNC","DIGITAL_ACTIVITY_MONITORING","LECTURE_PROGRESS"] as const){
         if(identityRef.current!==userId)return;
         const active=settings.consent.grants.some(grant=>grant.scope===scope && grant.status==="ACTIVE" && !grant.revokedAt && (!grant.expiresAt || Date.parse(grant.expiresAt)>Date.now()));
         if(!active)await grantConsent(apiFetch,scope);
