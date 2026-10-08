@@ -183,7 +183,7 @@ export function Sidebar({
               (path) => location.pathname === path || location.pathname.startsWith(path + "/")
             );
             return (
-              <details className="sidebar-nav-group" key={group.title} defaultOpen={activeInGroup}>
+              <details className="sidebar-nav-group" key={group.title} open={activeInGroup}>
                 <summary>{group.title}</summary>
                 <div className="sidebar-nav-group-links">
                   {group.paths.map((path) => {
