@@ -110,3 +110,5 @@
 .v5-lecture .v5-lecture-foot{margin:3px 0 0}
 .v5-lecture .v5-lecture-connect{gap:6px;margin-top:7px;padding-top:7px}
 @media(max-height:760px){.v5-lecture{overflow:auto}}
+
+.v5-source-disclaimer{font-size:10px;line-height:1.45;color:#c3bad8;margin:6px 0 0;max-width:54ch}
